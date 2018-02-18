@@ -1,9 +1,11 @@
 <?php
 namespace Psalm\Checker;
 
+use JsonRPC\Server;
 use Psalm\Codebase;
 use Psalm\Config;
 use Psalm\Context;
+use Psalm\LanguageServer\{LanguageServer, ProtocolStreamReader, ProtocolStreamWriter};
 use Psalm\Provider\ClassLikeStorageCacheProvider;
 use Psalm\Provider\ClassLikeStorageProvider;
 use Psalm\Provider\FileProvider;
@@ -16,6 +18,7 @@ use Psalm\Provider\StatementsProvider;
 use Psalm\Type;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Sabre\Event\Loop;
 
 class ProjectChecker
 {
@@ -234,7 +237,111 @@ class ProjectChecker
     }
 
     /**
-     * @return ProjectChecker
+     * @param  string $base_dir
+     * @param  string|null $address
+     * @param  bool $server_mode
+     * @return void
+     */
+    public function server($address = '127.0.0.1:12345', $server_mode = true)
+    {
+        $this->file_reference_provider->loadReferenceCache();
+        $this->codebase->enterServerMode();
+
+        $cwd = getcwd();
+
+        if (!$cwd) {
+            throw new \InvalidArgumentException('Cannot work with empty cwd');
+        }
+
+        foreach ($this->config->getProjectDirectories() as $dir_name) {
+            $this->checkDirWithConfig($dir_name, $this->config);
+        }
+
+        $this->output_format = self::TYPE_JSON;
+
+        @cli_set_process_title('Psalm PHP Language Server');
+
+        if (!$server_mode && $address) {
+            // Connect to a TCP server
+            $socket = stream_socket_client('tcp://' . $address, $errno, $errstr);
+            if ($socket === false) {
+                fwrite(STDERR, "Could not connect to language client. Error $errno\n$errstr");
+                exit(1);
+            }
+            stream_set_blocking($socket, false);
+            new LanguageServer(
+                new ProtocolStreamReader($socket),
+                new ProtocolStreamWriter($socket),
+                $this
+            );
+            Loop\run();
+        } elseif ($server_mode && $address) {
+            // Run a TCP Server
+            $tcpServer = stream_socket_server('tcp://' . $address, $errno, $errstr);
+            if ($tcpServer === false) {
+                fwrite(STDERR, "Could not listen on $address. Error $errno\n$errstr");
+                exit(1);
+            }
+            fwrite(STDOUT, "Server listening on $address\n");
+            if (!extension_loaded('pcntl')) {
+                fwrite(STDERR, "PCNTL is not available. Only a single connection will be accepted\n");
+            }
+            while ($socket = stream_socket_accept($tcpServer, -1)) {
+                fwrite(STDOUT, "Connection accepted\n");
+                stream_set_blocking($socket, false);
+                if (extension_loaded('pcntl')) {
+                    // If PCNTL is available, fork a child process for the connection
+                    // An exit notification will only terminate the child process
+                    $pid = pcntl_fork();
+                    if ($pid === -1) {
+                        fwrite(STDERR, "Could not fork\n");
+                        exit(1);
+                    }
+
+                    if ($pid === 0) {
+                        // Child process
+                        $reader = new ProtocolStreamReader($socket);
+                        $reader->on(
+                            'close',
+                            /** @return void */
+                            function () {
+                                fwrite(STDOUT, "Connection closed\n");
+                            }
+                        );
+                        new LanguageServer(
+                            $reader,
+                            new ProtocolStreamWriter($socket),
+                            $this
+                        );
+                        Loop\run();
+                        // Just for safety
+                        exit(0);
+                    }
+                } else {
+                    // If PCNTL is not available, we only accept one connection.
+                    // An exit notification will terminate the server
+                    new LanguageServer(
+                        new ProtocolStreamReader($socket),
+                        new ProtocolStreamWriter($socket),
+                        $this
+                    );
+                    Loop\run();
+                }
+            }
+        } else {
+            // Use STDIO
+            stream_set_blocking(STDIN, false);
+            new LanguageServer(
+                new ProtocolStreamReader(STDIN),
+                new ProtocolStreamWriter(STDOUT),
+                $this
+            );
+            Loop\run();
+        }
+    }
+
+    /**
+     * @return self
      */
     public static function getInstance()
     {
@@ -626,10 +733,11 @@ class ProjectChecker
 
     /**
      * @param  array<string>  $diff_files
+     * @param  bool           $include_referencing_files
      *
-     * @return array<string>
+     * @return array<string, string>
      */
-    public function getReferencedFilesFromDiff(array $diff_files)
+    public function getReferencedFilesFromDiff(array $diff_files, $include_referencing_files = true)
     {
         $all_inherited_files_to_check = $diff_files;
 
@@ -645,12 +753,14 @@ class ProjectChecker
 
         $all_files_to_check = $all_inherited_files_to_check;
 
-        foreach ($all_inherited_files_to_check as $file_name) {
-            $dependent_files = $this->file_reference_provider->getFilesReferencingFile($file_name);
-            $all_files_to_check = array_merge($dependent_files, $all_files_to_check);
+        if ($include_referencing_files) {
+            foreach ($all_inherited_files_to_check as $file_name) {
+                $dependent_files = $this->file_reference_provider->getFilesReferencingFile($file_name);
+                $all_files_to_check = array_merge($dependent_files, $all_files_to_check);
+            }
         }
 
-        return array_unique($all_files_to_check);
+        return array_combine($all_files_to_check, $all_files_to_check);
     }
 
     /**
@@ -764,7 +874,9 @@ class ProjectChecker
             $file_checker = $this->getFileCheckerForClassLike($appearing_fq_class_name);
         }
 
-        $stmts = $this->codebase->getStatementsForFile($file_checker->getFilePath());
+        $stmts = $this->codebase->getStatementsForFile(
+            $file_checker->getFilePath()
+        );
 
         $file_checker->populateCheckers($stmts);
 

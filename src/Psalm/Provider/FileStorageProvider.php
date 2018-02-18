@@ -70,6 +70,7 @@ class FileStorageProvider
         $cached_value = $this->cache->getLatestFromCache($file_path, $file_contents);
 
         if (!$cached_value) {
+
             return false;
         }
 

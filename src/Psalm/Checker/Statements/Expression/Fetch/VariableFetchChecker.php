@@ -37,6 +37,9 @@ class VariableFetchChecker
         $array_assignment = false,
         $from_global = false
     ) {
+        $project_checker = $statements_checker->getFileChecker()->project_checker;
+        $codebase = $project_checker->codebase;
+
         if ($stmt->name === 'this') {
             if ($statements_checker->isStatic()) {
                 if (IssueBuffer::accepts(
@@ -68,6 +71,10 @@ class VariableFetchChecker
             }
 
             $stmt->inferredType = clone $context->vars_in_scope['$this'];
+
+            if ($codebase->server_mode && isset($stmt->inferredType)) {
+                $codebase->addNodeType($statements_checker->getFilePath(), $stmt, (string) $stmt->inferredType);
+            }
 
             return null;
         }
@@ -203,8 +210,6 @@ class VariableFetchChecker
             $first_appearance = $statements_checker->getFirstAppearance($var_name);
 
             if ($first_appearance && !$context->inside_isset && !$context->inside_unset) {
-                $project_checker = $statements_checker->getFileChecker()->project_checker;
-
                 if ($context->is_global) {
                     if ($project_checker->alter_code) {
                         if (!isset($project_checker->getIssuesToFix()['PossiblyUndefinedGlobalVariable'])) {
@@ -261,6 +266,10 @@ class VariableFetchChecker
             }
         } else {
             $stmt->inferredType = clone $context->vars_in_scope[$var_name];
+
+            if ($codebase->server_mode && isset($stmt->inferredType)) {
+                $codebase->addNodeType($statements_checker->getFilePath(), $stmt, (string) $stmt->inferredType);
+            }
         }
 
         return null;

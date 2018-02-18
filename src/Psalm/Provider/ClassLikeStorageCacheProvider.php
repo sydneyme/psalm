@@ -18,7 +18,7 @@ class ClassLikeStorageCacheProvider
 
     const CLASS_CACHE_DIRECTORY = 'class_cache';
 
-    public function __construct(Config $config)
+    public function __construct(Config $config, bool $server_mode = false)
     {
         $this->config = $config;
 
@@ -43,7 +43,7 @@ class ClassLikeStorageCacheProvider
             $this->modified_timestamps .= ' ' . filemtime($dependent_file_path);
         }
 
-        $this->modified_timestamps .= PSALM_VERSION;
+        $this->modified_timestamps .= PSALM_VERSION . ($server_mode ? 'server' : '');;
     }
 
     /**
@@ -77,7 +77,7 @@ class ClassLikeStorageCacheProvider
         $cached_value = $this->loadFromCache($fq_classlike_name_lc, $file_path);
 
         if (!$cached_value) {
-            throw new \UnexpectedValueException('Should be in cache');
+            throw new \UnexpectedValueException($fq_classlike_name_lc . ' should be in cache');
         }
 
         $cache_hash = $this->getCacheHash($file_path, $file_contents);
@@ -88,7 +88,7 @@ class ClassLikeStorageCacheProvider
         ) {
             unlink($this->getCacheLocationForClass($fq_classlike_name_lc, $file_path));
 
-            throw new \UnexpectedValueException('Should not be outdated');
+            throw new \UnexpectedValueException($fq_classlike_name_lc . ' should not be outdated');
         }
 
         return $cached_value;

@@ -78,6 +78,16 @@ class FileStorage
     public $type_aliases = [];
 
     /**
+     * @var array<int, array{0: int, 1: string}>|null
+     */
+    public $reference_map = null;
+
+    /**
+     * @var array<int, array{0: int, 1: string}>|null
+     */
+    public $type_map = null;
+
+    /**
      * @param string $file_path
      */
     public function __construct($file_path)

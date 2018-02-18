@@ -555,6 +555,16 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                     return false;
                 }
             }
+
+            if ($codebase->server_mode && $method_id) {
+                /** @psalm-suppress PossiblyInvalidArgument never a string, PHP Parser bug */
+                $codebase->addNodeReference($statements_checker->getFilePath(), $stmt->name, $method_id);
+            }
+
+            if ($codebase->server_mode && isset($stmt->inferredType)) {
+                /** @psalm-suppress PossiblyInvalidArgument never a string, PHP Parser bug */
+                $codebase->addNodeType($statements_checker->getFilePath(), $stmt->name, (string) $stmt->inferredType);
+            }
         }
 
         if ($method_id === null) {

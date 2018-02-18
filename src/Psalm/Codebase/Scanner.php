@@ -117,6 +117,18 @@ class Scanner
     }
 
     /**
+     * @param string $file_path
+     *
+     * @return void
+     */
+    public function removeFile($file_path)
+    {
+        unset(
+            $this->scanned_files[$file_path]
+        );
+    }
+
+    /**
      * @param array<string, string> $files_to_scan
      *
      * @return void
@@ -156,18 +168,6 @@ class Scanner
     {
         $this->files_to_scan[$file_path] = $file_path;
         $this->files_to_deep_scan[$file_path] = $file_path;
-    }
-
-    /**
-     * @param string $file_path
-     *
-     * @return void
-     */
-    public function removeFile($file_path)
-    {
-        unset(
-            $this->scanned_files[$file_path]
-        );
     }
 
     /**

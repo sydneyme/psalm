@@ -11,6 +11,7 @@ use Psalm\Provider\StatementsProvider;
 use Psalm\Storage\ClassLikeStorage;
 use Psalm\Storage\FileStorage;
 use Psalm\Storage\FunctionLikeStorage;
+use Psalm\Checker\ClassLikeChecker;
 
 class Codebase
 {
@@ -130,6 +131,22 @@ class Codebase
     public $populator;
 
     /**
+     * @var bool
+     */
+    public $server_mode = false;
+
+    /**
+     * @var array<string, array<int, array{0: int, 1: string}>>
+     */
+    private $reference_map = [];
+
+    /**
+     * @var array<string, array<int, array{0: int, 1: string}>>
+     */
+    private $type_map = [];
+
+    /**
+     * @param bool $collect_references
      * @param bool $debug_output
      */
     public function __construct(
@@ -171,13 +188,14 @@ class Codebase
             $providers->classlike_storage_provider,
             $providers->file_reference_provider
         );
+
         $this->classlikes = new Codebase\ClassLikes(
-            $config,
+            $this->config,
             $this,
             $providers->classlike_storage_provider,
             $this->scanner,
             $this->methods,
-            $debug_output
+            $this->debug_output
         );
         $this->populator = new Codebase\Populator(
             $config,
@@ -187,6 +205,8 @@ class Codebase
             $providers->file_reference_provider,
             $debug_output
         );
+
+        $this->loadAnalyzer();
     }
 
     /**
@@ -214,7 +234,7 @@ class Codebase
 
         $project_checker->file_reference_provider->loadReferenceCache();
 
-        $referenced_files = $project_checker->getReferencedFilesFromDiff($diff_files);
+        $referenced_files = $project_checker->getReferencedFilesFromDiff($diff_files, false);
 
         foreach ($diff_files as $diff_file_path) {
             $this->invalidateInformationForFile($diff_file_path);
@@ -234,6 +254,11 @@ class Codebase
 
             $this->file_storage_provider->remove($referenced_file_path);
             $this->scanner->removeFile($referenced_file_path);
+
+            unset(
+                $this->type_map[strtolower($referenced_file_path)],
+                $this->reference_map[strtolower($referenced_file_path)]
+            );
         }
 
         $referenced_files = array_combine($referenced_files, $referenced_files);
@@ -241,9 +266,15 @@ class Codebase
         $this->scanner->addFilesToDeepScan($referenced_files);
         $this->scanner->scanFiles($this->classlikes);
 
-        $project_checker->file_reference_provider->updateReferenceCache($project_checker, $referenced_files);
+        $project_checker->file_reference_provider->updateReferenceCache($this, $referenced_files);
 
         $this->populator->populateCodebase($this);
+    }
+
+    /** @return void */
+    public function enterServerMode()
+    {
+        $this->server_mode = true;
     }
 
     /**
@@ -312,6 +343,88 @@ class Codebase
             $file_path,
             $this->debug_output
         );
+    }
+
+    public function addNodeType(string $file_path, PhpParser\Node $node, string $node_type) : void
+    {
+        $this->type_map[strtolower($file_path)][(int)$node->getAttribute('startFilePos')] = [
+            (int)$node->getAttribute('endFilePos'),
+            $node_type
+        ];
+    }
+
+    public function addNodeReference(string $file_path, PhpParser\Node $node, string $reference) : void
+    {
+        $this->reference_map[strtolower($file_path)][(int)$node->getAttribute('startFilePos')] = [
+            (int)$node->getAttribute('endFilePos'),
+            $reference
+        ];
+    }
+
+    /**
+     * @param  string $file_path
+     * @return void
+     */
+    public function cacheMapsForFile(string $file_path)
+    {
+        $file_contents = $this->file_provider->getContents($file_path);
+
+        $cached_value = null;
+
+        if ($this->file_storage_provider->cache) {
+            $cached_value = $this->file_storage_provider->cache->getLatestFromCache($file_path, $file_contents);
+        }
+
+        if (!$cached_value) {
+            throw new \UnexpectedValueException('Bad');
+        }
+
+        $file_path_lc = strtolower($file_path);
+
+        if (isset($this->reference_map[$file_path_lc])) {
+            ksort($this->reference_map[$file_path_lc]);
+        }
+
+        if (isset($this->type_map[$file_path_lc])) {
+            ksort($this->type_map[$file_path_lc]);
+        }
+
+        $cached_value->reference_map = $this->reference_map[$file_path_lc] ?? [];
+        $cached_value->type_map = $this->type_map[$file_path_lc] ?? [];
+
+        if ($this->file_storage_provider->cache) {
+            $this->file_storage_provider->cache->writeToCache(
+                $cached_value,
+                $file_contents
+            );
+        }
+
+        $this->file_storage_provider->remove($file_path);
+
+        $this->file_storage_provider->has($file_path, $file_contents);
+    }
+
+    /**
+     * @return array{0: ?array<int, array{0: int, 1: string}>, 1: ?array<int, array{0: int, 1: string}>}
+     */
+    public function getMapsForFile(\Psalm\Checker\ProjectChecker $project_checker, string $file_path)
+    {
+        $file_contents = $this->file_provider->getContents($file_path);
+
+        if ($this->file_storage_provider->cache) {
+            $cached_value = $this->file_storage_provider->cache->getLatestFromCache($file_path, $file_contents);
+        } else {
+            $cached_value = null;
+        }
+
+        if (!$cached_value || $cached_value->reference_map === null || $cached_value->type_map === null) {
+            $this->addFilesToAnalyze([$file_path => $file_path]);
+            $this->analyzer->analyzeFiles($project_checker, 1, false);
+        }
+
+        $storage = $this->file_storage_provider->get($file_path);
+
+        return [$storage->reference_map, $storage->type_map];
     }
 
     /**
@@ -745,7 +858,7 @@ class Codebase
      *
      * @return void
      */
-    private function invalidateInformationForFile($file_path)
+    private function invalidateInformationForFile(string $file_path)
     {
         $this->scanner->removeFile($file_path);
 
@@ -761,5 +874,94 @@ class Codebase
         }
 
         $this->file_storage_provider->remove($file_path);
+    }
+
+    public function getSymbolInformation(string $file_path, string $symbol) : ?string
+    {
+        error_log('getting info for ' . $symbol);
+        try {
+            if (strpos($symbol, '::')) {
+                list(, $symbol_name) = explode('::', $symbol);
+
+                if (strpos($symbol, '$') !== false) {
+                    $storage = $this->properties->getStorage($symbol);
+
+                    return $storage->getInfo() . ' ' . $symbol_name;
+                }
+
+                $declaring_method_id = $this->methods->getDeclaringMethodId($symbol);
+
+                if (!$declaring_method_id) {
+                    return null;
+                }
+
+                $storage = $this->methods->getStorage($declaring_method_id);
+
+                return (string) $storage;
+            }
+
+            if (strpos($symbol, '()')) {
+                $file_storage = $this->file_storage_provider->get($file_path);
+
+                $function_name = substr($symbol, 0, -2);
+
+                if (isset($file_storage->functions[$function_name])) {
+                    $function_storage = $file_storage->functions[$function_name];
+
+                    return (string)$function_storage;
+                }
+
+                return null;
+            }
+
+            $storage = $this->classlike_storage_provider->get($symbol);
+
+            return ($storage->abstract ? 'abstract ' : '') . 'class ' . $storage->name;
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            return null;
+        }
+    }
+
+    public function getSymbolLocation(string $file_path, string $symbol) : ?\Psalm\CodeLocation
+    {
+        try {
+            if (strpos($symbol, '::')) {
+                if (strpos($symbol, '$') !== false) {
+                    $storage = $this->properties->getStorage($symbol);
+
+                    return $storage->location;
+                }
+
+                $declaring_method_id = $this->methods->getDeclaringMethodId($symbol);
+
+                if (!$declaring_method_id) {
+                    return null;
+                }
+
+                $storage = $this->methods->getStorage($declaring_method_id);
+
+                return $storage->location;
+            }
+
+            if (strpos($symbol, '()')) {
+                $file_storage = $this->file_storage_provider->get($file_path);
+
+                $function_name = substr($symbol, 0, -2);
+
+                if (isset($file_storage->functions[$function_name])) {
+                    return $file_storage->functions[$function_name]->location;
+                }
+
+                return null;
+            }
+
+            $storage = $this->classlike_storage_provider->get($symbol);
+
+            return $storage->location;
+        } catch (\UnexpectedValueException $e) {
+            error_log($e->getMessage());
+            return null;
+        }
     }
 }

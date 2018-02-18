@@ -314,7 +314,7 @@ class IssueBuffer
         $add_stats = false
     ) {
         $scanned_files = $project_checker->codebase->scanner->getScannedFiles();
-        $project_checker->file_reference_provider->updateReferenceCache($project_checker, $scanned_files);
+        $project_checker->file_reference_provider->updateReferenceCache($project_checker->codebase, $scanned_files);
 
         if ($project_checker->output_format === ProjectChecker::TYPE_CONSOLE) {
             echo "\n";
@@ -494,6 +494,19 @@ class IssueBuffer
         self::$recording_level = 0;
         self::$recorded_issues = [];
         self::$console_issues = [];
+    }
+
+    /**
+     * @return array<int, array{severity: string, line_from: int, line_to: int, type: string, message: string,
+     *  file_name: string, file_path: string, snippet: string, from: int, to: int, snippet_from: int, snippet_to: int,
+     *  column_from: int, column_to: int}>
+     */
+    public static function clear()
+    {
+        $current_data = self::$issues_data;
+        self::$issues_data = [];
+        self::$emitted = [];
+        return $current_data;
     }
 
     /**

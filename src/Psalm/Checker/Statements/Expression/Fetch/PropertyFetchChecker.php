@@ -85,7 +85,11 @@ class PropertyFetchChecker
 
             $codebase->analyzer->incrementNonMixedCount($statements_checker->getFilePath());
 
-            if ($context->collect_references
+            if ($codebase->server_mode) {
+                $codebase->addNodeType($statements_checker->getFilePath(), $stmt->name, (string) $stmt->inferredType);
+            }
+
+            if (($context->collect_references || $codebase->server_mode)
                 && isset($stmt->var->inferredType)
                 && $stmt->var->inferredType->hasObjectType()
                 && $stmt->name instanceof PhpParser\Node\Identifier
@@ -104,6 +108,10 @@ class PropertyFetchChecker
                             $context->calling_method_id,
                             new CodeLocation($statements_checker->getSource(), $stmt)
                         );
+
+                        if ($codebase->server_mode) {
+                            $codebase->addNodeReference($statements_checker->getFilePath(), $stmt->name, $property_id);
+                        }
                     }
                 }
             }
@@ -163,6 +171,10 @@ class PropertyFetchChecker
             }
 
             $stmt->inferredType = Type::getMixed();
+
+            if ($codebase->server_mode) {
+                $codebase->addNodeType($statements_checker->getFilePath(), $stmt->name, (string) $stmt->inferredType);
+            }
 
             return null;
         }
@@ -252,6 +264,10 @@ class PropertyFetchChecker
             }
 
             $property_id = $lhs_type_part->value . '::$' . $prop_name;
+
+            if ($codebase->server_mode) {
+                $codebase->addNodeReference($statements_checker->getFilePath(), $stmt->name, $property_id);
+            }
 
             $statements_checker_source = $statements_checker->getSource();
 
@@ -427,6 +443,10 @@ class PropertyFetchChecker
             } else {
                 $stmt->inferredType = $class_property_type;
             }
+        }
+
+        if ($codebase->server_mode && isset($stmt->inferredType)) {
+            $codebase->addNodeType($statements_checker->getFilePath(), $stmt->name, (string) $stmt->inferredType);
         }
 
         if ($invalid_fetch_types) {

@@ -42,6 +42,7 @@ $valid_long_options = [
     'use-ini-defaults',
     'version',
     'cache-results',
+    'server',
 ];
 
 $args = array_slice($argv, 1);
@@ -185,6 +186,9 @@ Options:
 
     --disable-extension=[extension]
         Used to disable certain extensions while Psalm is running.
+
+    --server
+        Start Psalm in server mode
 
 HELP;
 
@@ -396,8 +400,8 @@ if (isset($options['no-cache'])) {
     $providers = new Psalm\Provider\Providers(
         new Psalm\Provider\FileProvider,
         new Psalm\Provider\ParserCacheProvider,
-        new Psalm\Provider\FileStorageCacheProvider($config),
-        new Psalm\Provider\ClassLikeStorageCacheProvider($config),
+        new Psalm\Provider\FileStorageCacheProvider($config, array_key_exists('server', $options)),
+        new Psalm\Provider\ClassLikeStorageCacheProvider($config, array_key_exists('server', $options)),
         new Psalm\Provider\FileReferenceCacheProvider($config)
     );
 }
@@ -414,7 +418,7 @@ $project_checker = new ProjectChecker(
     !isset($options['show-snippet']) || $options['show-snippet'] !== "false"
 );
 
-$project_checker->cache_results = isset($options['cache-results']);
+$project_checker->cache_results = isset($options['cache-results']) || isset($options['server']);
 
 $start_time = (float) microtime(true);
 
@@ -447,7 +451,9 @@ foreach ($plugins as $plugin_path) {
     Config::getInstance()->addPluginPath($current_dir . DIRECTORY_SEPARATOR . $plugin_path);
 }
 
-if ($paths_to_check === null) {
+if (array_key_exists('server', $options)) {
+    $project_checker->server(null);
+} elseif ($paths_to_check === null) {
     $project_checker->check($current_dir, $is_diff);
 } elseif ($paths_to_check) {
     $project_checker->checkPaths($paths_to_check);
