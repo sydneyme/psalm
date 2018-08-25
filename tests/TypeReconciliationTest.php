@@ -16,10 +16,10 @@ class TypeReconciliationTest extends TestCase
     use Traits\FileCheckerValidCodeParseTestTrait;
 
     /** @var FileChecker */
-    protected $file_checker;
+    protected $fileChecker;
 
     /** @var StatementsChecker */
-    protected $statements_checker;
+    protected $statementsChecker;
 
     /**
      * @return void
@@ -28,9 +28,9 @@ class TypeReconciliationTest extends TestCase
     {
         parent::setUp();
 
-        $this->file_checker = new FileChecker($this->project_checker, 'somefile.php', 'somefile.php');
-        $this->file_checker->context = new Context();
-        $this->statements_checker = new StatementsChecker($this->file_checker);
+        $this->fileChecker = new FileChecker($this->projectChecker, 'somefile.php', 'somefile.php');
+        $this->fileChecker->context = new Context();
+        $this->statementsChecker = new StatementsChecker($this->fileChecker);
     }
 
     /**
@@ -48,7 +48,7 @@ class TypeReconciliationTest extends TestCase
             $type,
             Type::parseString($string),
             null,
-            $this->statements_checker
+            $this->statementsChecker
         );
 
         $this->assertSame(
@@ -75,7 +75,7 @@ class TypeReconciliationTest extends TestCase
     {
         $this->assertTrue(
             TypeChecker::isContainedBy(
-                $this->project_checker->codebase,
+                $this->projectChecker->codebase,
                 Type::parseString($input),
                 Type::parseString($container)
             )
@@ -91,41 +91,41 @@ class TypeReconciliationTest extends TestCase
             new Clause(['$a' => ['!falsy']]),
         ];
 
-        $negated_formula = Algebra::negateFormula($formula);
+        $negatedFormula = Algebra::negateFormula($formula);
 
-        $this->assertSame(1, count($negated_formula));
-        $this->assertSame(['$a' => ['falsy']], $negated_formula[0]->possibilities);
+        $this->assertSame(1, count($negatedFormula));
+        $this->assertSame(['$a' => ['falsy']], $negatedFormula[0]->possibilities);
 
         $formula = [
             new Clause(['$a' => ['!falsy'], '$b' => ['!falsy']]),
         ];
 
-        $negated_formula = Algebra::negateFormula($formula);
+        $negatedFormula = Algebra::negateFormula($formula);
 
-        $this->assertSame(2, count($negated_formula));
-        $this->assertSame(['$a' => ['falsy']], $negated_formula[0]->possibilities);
-        $this->assertSame(['$b' => ['falsy']], $negated_formula[1]->possibilities);
+        $this->assertSame(2, count($negatedFormula));
+        $this->assertSame(['$a' => ['falsy']], $negatedFormula[0]->possibilities);
+        $this->assertSame(['$b' => ['falsy']], $negatedFormula[1]->possibilities);
 
         $formula = [
             new Clause(['$a' => ['!falsy']]),
             new Clause(['$b' => ['!falsy']]),
         ];
 
-        $negated_formula = Algebra::negateFormula($formula);
+        $negatedFormula = Algebra::negateFormula($formula);
 
-        $this->assertSame(1, count($negated_formula));
-        $this->assertSame(['$a' => ['falsy'], '$b' => ['falsy']], $negated_formula[0]->possibilities);
+        $this->assertSame(1, count($negatedFormula));
+        $this->assertSame(['$a' => ['falsy'], '$b' => ['falsy']], $negatedFormula[0]->possibilities);
 
         $formula = [
             new Clause(['$a' => ['int', 'string'], '$b' => ['!falsy']]),
         ];
 
-        $negated_formula = Algebra::negateFormula($formula);
+        $negatedFormula = Algebra::negateFormula($formula);
 
-        $this->assertSame(3, count($negated_formula));
-        $this->assertSame(['$a' => ['!int']], $negated_formula[0]->possibilities);
-        $this->assertSame(['$a' => ['!string']], $negated_formula[1]->possibilities);
-        $this->assertSame(['$b' => ['falsy']], $negated_formula[2]->possibilities);
+        $this->assertSame(3, count($negatedFormula));
+        $this->assertSame(['$a' => ['!int']], $negatedFormula[0]->possibilities);
+        $this->assertSame(['$a' => ['!string']], $negatedFormula[1]->possibilities);
+        $this->assertSame(['$b' => ['falsy']], $negatedFormula[2]->possibilities);
     }
 
     /**
@@ -174,11 +174,11 @@ class TypeReconciliationTest extends TestCase
             new Clause(['$a' => ['falsy'], '$b' => ['falsy']]),
         ];
 
-        $simplified_formula = Algebra::simplifyCNF($formula);
+        $simplifiedFormula = Algebra::simplifyCNF($formula);
 
-        $this->assertSame(2, count($simplified_formula));
-        $this->assertSame(['$a' => ['!falsy']], $simplified_formula[0]->possibilities);
-        $this->assertSame(['$b' => ['falsy']], $simplified_formula[1]->possibilities);
+        $this->assertSame(2, count($simplifiedFormula));
+        $this->assertSame(['$a' => ['!falsy']], $simplifiedFormula[0]->possibilities);
+        $this->assertSame(['$b' => ['falsy']], $simplifiedFormula[1]->possibilities);
     }
 
     /**
@@ -764,8 +764,8 @@ class TypeReconciliationTest extends TestCase
             'isAClass' => [
                 '<?php
                     class A {}
-                    $a_class = rand(0, 1) ? A::class : "blargle";
-                    if (is_a($a_class, A::class, true)) {
+                    $aClass = rand(0, 1) ? A::class : "blargle";
+                    if (is_a($aClass, A::class, true)) {
                       echo "cool";
                     }',
             ],
@@ -874,10 +874,10 @@ class TypeReconciliationTest extends TestCase
                     class C {}
                     class D extends C {}
 
-                    $b_or_d = rand(0, 1) ? new B : new D;
+                    $bOrD = rand(0, 1) ? new B : new D;
 
-                    if ($b_or_d instanceof A) {
-                        $b_or_d->foo();
+                    if ($bOrD instanceof A) {
+                        $bOrD->foo();
                     }',
             ],
             'SKIPPED-isArrayOnArrayKeyOffset' => [

@@ -4,33 +4,33 @@ namespace Psalm\FileManipulation;
 class FileManipulationBuffer
 {
     /** @var array<string, FileManipulation[]> */
-    private static $file_manipulations = [];
+    private static $fileManipulations = [];
 
     /**
-     * @param string $file_path
-     * @param FileManipulation[] $file_manipulations
+     * @param string $filePath
+     * @param FileManipulation[] $fileManipulations
      *
      * @return void
      */
-    public static function add($file_path, array $file_manipulations)
+    public static function add($filePath, array $fileManipulations)
     {
-        self::$file_manipulations[$file_path] = isset(self::$file_manipulations[$file_path])
-            ? array_merge(self::$file_manipulations[$file_path], $file_manipulations)
-            : $file_manipulations;
+        self::$fileManipulations[$filePath] = isset(self::$fileManipulations[$filePath])
+            ? array_merge(self::$fileManipulations[$filePath], $fileManipulations)
+            : $fileManipulations;
     }
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      *
      * @return FileManipulation[]
      */
-    public static function getForFile($file_path)
+    public static function getForFile($filePath)
     {
-        if (!isset(self::$file_manipulations[$file_path])) {
+        if (!isset(self::$fileManipulations[$filePath])) {
             return [];
         }
 
-        return self::$file_manipulations[$file_path];
+        return self::$fileManipulations[$filePath];
     }
 
     /**
@@ -38,6 +38,6 @@ class FileManipulationBuffer
      */
     public static function clearCache()
     {
-        self::$file_manipulations = [];
+        self::$fileManipulations = [];
     }
 }

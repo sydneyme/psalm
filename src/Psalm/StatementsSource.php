@@ -36,26 +36,26 @@ interface StatementsSource extends FileSource
     public function getParentFQCLN();
 
     /**
-     * @param string $file_path
-     * @param string $file_name
+     * @param string $filePath
+     * @param string $fileName
      *
      * @return void
      */
-    public function setRootFilePath($file_path, $file_name);
+    public function setRootFilePath($filePath, $fileName);
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      *
      * @return bool
      */
-    public function hasParentFilePath($file_path);
+    public function hasParentFilePath($filePath);
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      *
      * @return bool
      */
-    public function hasAlreadyRequiredFilePath($file_path);
+    public function hasAlreadyRequiredFilePath($filePath);
 
     /**
      * @return int
@@ -80,16 +80,16 @@ interface StatementsSource extends FileSource
     public function getSuppressedIssues();
 
     /**
-     * @param array<int, string> $new_issues
+     * @param array<int, string> $newIssues
      *
      * @return void
      */
-    public function addSuppressedIssues(array $new_issues);
+    public function addSuppressedIssues(array $newIssues);
 
     /**
-     * @param array<int, string> $new_issues
+     * @param array<int, string> $newIssues
      *
      * @return void
      */
-    public function removeSuppressedIssues(array $new_issues);
+    public function removeSuppressedIssues(array $newIssues);
 }

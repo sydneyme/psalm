@@ -18,7 +18,7 @@ class Methods
     /**
      * @var ClassLikeStorageProvider
      */
-    private $classlike_storage_provider;
+    private $classlikeStorageProvider;
 
     /**
      * @var \Psalm\Config
@@ -28,76 +28,76 @@ class Methods
     /**
      * @var bool
      */
-    public $collect_references = false;
+    public $collectReferences = false;
 
     /**
-     * @param ClassLikeStorageProvider $storage_provider
+     * @param ClassLikeStorageProvider $storageProvider
      */
     public function __construct(
         \Psalm\Config $config,
-        ClassLikeStorageProvider $storage_provider
+        ClassLikeStorageProvider $storageProvider
     ) {
-        $this->classlike_storage_provider = $storage_provider;
+        $this->classlikeStorageProvider = $storageProvider;
         $this->config = $config;
     }
 
     /**
      * Whether or not a given method exists
      *
-     * @param  string       $method_id
-     * @param  CodeLocation|null $code_location
+     * @param  string       $methodId
+     * @param  CodeLocation|null $codeLocation
      *
      * @return bool
      */
     public function methodExists(
-        $method_id,
-        CodeLocation $code_location = null
+        $methodId,
+        CodeLocation $codeLocation = null
     ) {
         // remove trailing backslash if it exists
-        $method_id = preg_replace('/^\\\\/', '', $method_id);
-        list($fq_class_name, $method_name) = explode('::', $method_id);
-        $method_name = strtolower($method_name);
-        $method_id = $fq_class_name . '::' . $method_name;
+        $methodId = preg_replace('/^\\\\/', '', $methodId);
+        list($fqClassName, $methodName) = explode('::', $methodId);
+        $methodName = strtolower($methodName);
+        $methodId = $fqClassName . '::' . $methodName;
 
-        $old_method_id = null;
+        $oldMethodId = null;
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->declaring_method_ids[$method_name])) {
-            if ($this->collect_references && $code_location) {
-                $declaring_method_id = $class_storage->declaring_method_ids[$method_name];
-                list($declaring_method_class, $declaring_method_name) = explode('::', $declaring_method_id);
+        if (isset($classStorage->declaringMethodIds[$methodName])) {
+            if ($this->collectReferences && $codeLocation) {
+                $declaringMethodId = $classStorage->declaringMethodIds[$methodName];
+                list($declaringMethodClass, $declaringMethodName) = explode('::', $declaringMethodId);
 
-                $declaring_class_storage = $this->classlike_storage_provider->get($declaring_method_class);
-                $declaring_method_storage = $declaring_class_storage->methods[strtolower($declaring_method_name)];
-                if ($declaring_method_storage->referencing_locations === null) {
-                    $declaring_method_storage->referencing_locations = [];
+                $declaringClassStorage = $this->classlikeStorageProvider->get($declaringMethodClass);
+                $declaringMethodStorage = $declaringClassStorage->methods[strtolower($declaringMethodName)];
+                if ($declaringMethodStorage->referencingLocations === null) {
+                    $declaringMethodStorage->referencingLocations = [];
                 }
-                $declaring_method_storage->referencing_locations[$code_location->file_path][] = $code_location;
+                $declaringMethodStorage->referencingLocations[$codeLocation->filePath][] = $codeLocation;
 
-                foreach ($class_storage->class_implements as $fq_interface_name) {
-                    $interface_storage = $this->classlike_storage_provider->get($fq_interface_name);
-                    if (isset($interface_storage->methods[$method_name])) {
-                        $interface_method_storage = $interface_storage->methods[$method_name];
-                        if (!isset($interface_method_storage->referencing_locations)) {
-                            $interface_method_storage->referencing_locations = [];
+                foreach ($classStorage->classImplements as $fqInterfaceName) {
+                    $interfaceStorage = $this->classlikeStorageProvider->get($fqInterfaceName);
+                    if (isset($interfaceStorage->methods[$methodName])) {
+                        $interfaceMethodStorage = $interfaceStorage->methods[$methodName];
+                        if (!isset($interfaceMethodStorage->referencingLocations)) {
+                            $interfaceMethodStorage->referencingLocations = [];
                         }
-                        $interface_method_storage->referencing_locations[$code_location->file_path][] = $code_location;
+                        $interfaceMethodStorage->referencingLocations[$codeLocation->filePath][] = $codeLocation;
                     }
                 }
 
-                if (isset($declaring_class_storage->overridden_method_ids[$declaring_method_name])) {
-                    $overridden_method_ids = $declaring_class_storage->overridden_method_ids[$declaring_method_name];
+                if (isset($declaringClassStorage->overriddenMethodIds[$declaringMethodName])) {
+                    $overriddenMethodIds = $declaringClassStorage->overriddenMethodIds[$declaringMethodName];
 
-                    foreach ($overridden_method_ids as $overridden_method_id) {
-                        list($overridden_method_class, $overridden_method_name) = explode('::', $overridden_method_id);
+                    foreach ($overriddenMethodIds as $overriddenMethodId) {
+                        list($overriddenMethodClass, $overriddenMethodName) = explode('::', $overriddenMethodId);
 
-                        $class_storage = $this->classlike_storage_provider->get($overridden_method_class);
-                        $method_storage = $class_storage->methods[strtolower($overridden_method_name)];
-                        if ($method_storage->referencing_locations === null) {
-                            $method_storage->referencing_locations = [];
+                        $classStorage = $this->classlikeStorageProvider->get($overriddenMethodClass);
+                        $methodStorage = $classStorage->methods[strtolower($overriddenMethodName)];
+                        if ($methodStorage->referencingLocations === null) {
+                            $methodStorage->referencingLocations = [];
                         }
-                        $method_storage->referencing_locations[$code_location->file_path][] = $code_location;
+                        $methodStorage->referencingLocations[$codeLocation->filePath][] = $codeLocation;
                     }
                 }
             }
@@ -105,19 +105,19 @@ class Methods
             return true;
         }
 
-        if ($class_storage->abstract && isset($class_storage->overridden_method_ids[$method_name])) {
+        if ($classStorage->abstract && isset($classStorage->overriddenMethodIds[$methodName])) {
             return true;
         }
 
         // support checking oldstyle constructors
-        if ($method_name === '__construct') {
-            $method_name_parts = explode('\\', $fq_class_name);
-            $old_constructor_name = array_pop($method_name_parts);
-            $old_method_id = $fq_class_name . '::' . $old_constructor_name;
+        if ($methodName === '__construct') {
+            $methodNameParts = explode('\\', $fqClassName);
+            $oldConstructorName = array_pop($methodNameParts);
+            $oldMethodId = $fqClassName . '::' . $oldConstructorName;
         }
 
-        if (!$class_storage->user_defined
-            && (CallMap::inCallMap($method_id) || ($old_method_id && CallMap::inCallMap($method_id)))
+        if (!$classStorage->userDefined
+            && (CallMap::inCallMap($methodId) || ($oldMethodId && CallMap::inCallMap($methodId)))
         ) {
             return true;
         }
@@ -126,130 +126,130 @@ class Methods
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return array<int, \Psalm\Storage\FunctionLikeParameter>
      */
-    public function getMethodParams($method_id)
+    public function getMethodParams($methodId)
     {
-        if ($method_id = $this->getDeclaringMethodId($method_id)) {
-            $storage = $this->getStorage($method_id);
+        if ($methodId = $this->getDeclaringMethodId($methodId)) {
+            $storage = $this->getStorage($methodId);
 
             return $storage->params;
         }
 
-        throw new \UnexpectedValueException('Cannot get method params for ' . $method_id);
+        throw new \UnexpectedValueException('Cannot get method params for ' . $methodId);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return bool
      */
-    public function isVariadic($method_id)
+    public function isVariadic($methodId)
     {
-        $method_id = (string) $this->getDeclaringMethodId($method_id);
+        $methodId = (string) $this->getDeclaringMethodId($methodId);
 
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        return $this->classlike_storage_provider->get($fq_class_name)->methods[$method_name]->variadic;
+        return $this->classlikeStorageProvider->get($fqClassName)->methods[$methodName]->variadic;
     }
 
     /**
-     * @param  string $method_id
-     * @param  string $self_class
+     * @param  string $methodId
+     * @param  string $selfClass
      * @param  array<int, PhpParser\Node\Arg>|null $args
      *
      * @return Type\Union|null
      */
-    public function getMethodReturnType($method_id, &$self_class, array $args = null)
+    public function getMethodReturnType($methodId, &$selfClass, array $args = null)
     {
-        if ($this->config->use_phpdoc_methods_without_call) {
-            list($original_fq_class_name, $original_method_name) = explode('::', $method_id);
+        if ($this->config->usePhpdocMethodsWithoutCall) {
+            list($originalFqClassName, $originalMethodName) = explode('::', $methodId);
 
-            $original_class_storage = $this->classlike_storage_provider->get($original_fq_class_name);
+            $originalClassStorage = $this->classlikeStorageProvider->get($originalFqClassName);
 
-            if (isset($original_class_storage->pseudo_methods[strtolower($original_method_name)])) {
-                return $original_class_storage->pseudo_methods[strtolower($original_method_name)]->return_type;
+            if (isset($originalClassStorage->pseudoMethods[strtolower($originalMethodName)])) {
+                return $originalClassStorage->pseudoMethods[strtolower($originalMethodName)]->returnType;
             }
         }
 
-        $declaring_method_id = $this->getDeclaringMethodId($method_id);
+        $declaringMethodId = $this->getDeclaringMethodId($methodId);
 
-        if (!$declaring_method_id) {
+        if (!$declaringMethodId) {
             return null;
         }
 
-        $appearing_method_id = $this->getAppearingMethodId($method_id);
+        $appearingMethodId = $this->getAppearingMethodId($methodId);
 
-        if (!$appearing_method_id) {
+        if (!$appearingMethodId) {
             return null;
         }
 
-        list($appearing_fq_class_name, $appearing_method_name) = explode('::', $appearing_method_id);
+        list($appearingFqClassName, $appearingMethodName) = explode('::', $appearingMethodId);
 
-        $appearing_fq_class_storage = $this->classlike_storage_provider->get($appearing_fq_class_name);
+        $appearingFqClassStorage = $this->classlikeStorageProvider->get($appearingFqClassName);
 
-        if (!$appearing_fq_class_storage->user_defined && CallMap::inCallMap($appearing_method_id)) {
-            if ($appearing_method_id === 'Closure::fromcallable'
+        if (!$appearingFqClassStorage->userDefined && CallMap::inCallMap($appearingMethodId)) {
+            if ($appearingMethodId === 'Closure::fromcallable'
                 && isset($args[0]->value->inferredType)
                 && $args[0]->value->inferredType->isSingle()
             ) {
-                foreach ($args[0]->value->inferredType->getTypes() as $atomic_type) {
-                    if ($atomic_type instanceof Type\Atomic\TCallable || $atomic_type instanceof Type\Atomic\Fn) {
-                        $callable_type = clone $atomic_type;
+                foreach ($args[0]->value->inferredType->getTypes() as $atomicType) {
+                    if ($atomicType instanceof Type\Atomic\TCallable || $atomicType instanceof Type\Atomic\Fn) {
+                        $callableType = clone $atomicType;
 
                         return new Type\Union([new Type\Atomic\Fn(
                             'Closure',
-                            $callable_type->params,
-                            $callable_type->return_type
+                            $callableType->params,
+                            $callableType->returnType
                         )]);
                     }
                 }
             }
-            return CallMap::getReturnTypeFromCallMap($appearing_method_id);
+            return CallMap::getReturnTypeFromCallMap($appearingMethodId);
         }
 
-        $storage = $this->getStorage($declaring_method_id);
+        $storage = $this->getStorage($declaringMethodId);
 
-        if ($storage->return_type) {
-            $self_class = $appearing_fq_class_name;
+        if ($storage->returnType) {
+            $selfClass = $appearingFqClassName;
 
-            return clone $storage->return_type;
+            return clone $storage->returnType;
         }
 
-        $class_storage = $this->classlike_storage_provider->get($appearing_fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($appearingFqClassName);
 
-        if (!isset($class_storage->overridden_method_ids[$appearing_method_name])) {
+        if (!isset($classStorage->overriddenMethodIds[$appearingMethodName])) {
             return null;
         }
 
-        foreach ($class_storage->overridden_method_ids[$appearing_method_name] as $overridden_method_id) {
-            $overridden_storage = $this->getStorage($overridden_method_id);
+        foreach ($classStorage->overriddenMethodIds[$appearingMethodName] as $overriddenMethodId) {
+            $overriddenStorage = $this->getStorage($overriddenMethodId);
 
-            if ($overridden_storage->return_type) {
-                if ($overridden_storage->return_type->isNull()) {
+            if ($overriddenStorage->returnType) {
+                if ($overriddenStorage->returnType->isNull()) {
                     return Type::getVoid();
                 }
 
-                list($fq_overridden_class) = explode('::', $overridden_method_id);
+                list($fqOverriddenClass) = explode('::', $overriddenMethodId);
 
-                $overridden_class_storage =
-                    $this->classlike_storage_provider->get($fq_overridden_class);
+                $overriddenClassStorage =
+                    $this->classlikeStorageProvider->get($fqOverriddenClass);
 
-                $overridden_return_type = clone $overridden_storage->return_type;
+                $overriddenReturnType = clone $overriddenStorage->returnType;
 
-                if ($overridden_class_storage->template_types) {
-                    $generic_types = [];
-                    $overridden_return_type->replaceTemplateTypesWithStandins(
-                        $overridden_class_storage->template_types,
-                        $generic_types
+                if ($overriddenClassStorage->templateTypes) {
+                    $genericTypes = [];
+                    $overriddenReturnType->replaceTemplateTypesWithStandins(
+                        $overriddenClassStorage->templateTypes,
+                        $genericTypes
                     );
                 }
 
-                $self_class = $overridden_class_storage->name;
+                $selfClass = $overriddenClassStorage->name;
 
-                return $overridden_return_type;
+                return $overriddenReturnType;
             }
         }
 
@@ -257,218 +257,218 @@ class Methods
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return bool
      */
-    public function getMethodReturnsByRef($method_id)
+    public function getMethodReturnsByRef($methodId)
     {
-        $method_id = $this->getDeclaringMethodId($method_id);
+        $methodId = $this->getDeclaringMethodId($methodId);
 
-        if (!$method_id) {
+        if (!$methodId) {
             return false;
         }
 
-        list($fq_class_name) = explode('::', $method_id);
+        list($fqClassName) = explode('::', $methodId);
 
-        $fq_class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $fqClassStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (!$fq_class_storage->user_defined && CallMap::inCallMap($method_id)) {
+        if (!$fqClassStorage->userDefined && CallMap::inCallMap($methodId)) {
             return false;
         }
 
-        $storage = $this->getStorage($method_id);
+        $storage = $this->getStorage($methodId);
 
-        return $storage->returns_by_ref;
+        return $storage->returnsByRef;
     }
 
     /**
-     * @param  string               $method_id
-     * @param  CodeLocation|null    $defined_location
+     * @param  string               $methodId
+     * @param  CodeLocation|null    $definedLocation
      *
      * @return CodeLocation|null
      */
     public function getMethodReturnTypeLocation(
-        $method_id,
-        CodeLocation &$defined_location = null
+        $methodId,
+        CodeLocation &$definedLocation = null
     ) {
-        $method_id = $this->getDeclaringMethodId($method_id);
+        $methodId = $this->getDeclaringMethodId($methodId);
 
-        if ($method_id === null) {
+        if ($methodId === null) {
             return null;
         }
 
-        $storage = $this->getStorage($method_id);
+        $storage = $this->getStorage($methodId);
 
-        if (!$storage->return_type_location) {
-            $overridden_method_ids = $this->getOverriddenMethodIds($method_id);
+        if (!$storage->returnTypeLocation) {
+            $overriddenMethodIds = $this->getOverriddenMethodIds($methodId);
 
-            foreach ($overridden_method_ids as $overridden_method_id) {
-                $overridden_storage = $this->getStorage($overridden_method_id);
+            foreach ($overriddenMethodIds as $overriddenMethodId) {
+                $overriddenStorage = $this->getStorage($overriddenMethodId);
 
-                if ($overridden_storage->return_type_location) {
-                    $defined_location = $overridden_storage->return_type_location;
+                if ($overriddenStorage->returnTypeLocation) {
+                    $definedLocation = $overriddenStorage->returnTypeLocation;
                     break;
                 }
             }
         }
 
-        return $storage->return_type_location;
+        return $storage->returnTypeLocation;
     }
 
     /**
-     * @param string $method_id
-     * @param string $declaring_method_id
+     * @param string $methodId
+     * @param string $declaringMethodId
      *
      * @return void
      */
     public function setDeclaringMethodId(
-        $method_id,
-        $declaring_method_id
+        $methodId,
+        $declaringMethodId
     ) {
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        $class_storage->declaring_method_ids[$method_name] = $declaring_method_id;
+        $classStorage->declaringMethodIds[$methodName] = $declaringMethodId;
     }
 
     /**
-     * @param string $method_id
-     * @param string $appearing_method_id
+     * @param string $methodId
+     * @param string $appearingMethodId
      *
      * @return void
      */
     public function setAppearingMethodId(
-        $method_id,
-        $appearing_method_id
+        $methodId,
+        $appearingMethodId
     ) {
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        $class_storage->appearing_method_ids[$method_name] = $appearing_method_id;
+        $classStorage->appearingMethodIds[$methodName] = $appearingMethodId;
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return string|null
      */
-    public function getDeclaringMethodId($method_id)
+    public function getDeclaringMethodId($methodId)
     {
-        $method_id = strtolower($method_id);
+        $methodId = strtolower($methodId);
 
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->declaring_method_ids[$method_name])) {
-            return $class_storage->declaring_method_ids[$method_name];
+        if (isset($classStorage->declaringMethodIds[$methodName])) {
+            return $classStorage->declaringMethodIds[$methodName];
         }
 
-        if ($class_storage->abstract && isset($class_storage->overridden_method_ids[$method_name])) {
-            return $class_storage->overridden_method_ids[$method_name][0];
+        if ($classStorage->abstract && isset($classStorage->overriddenMethodIds[$methodName])) {
+            return $classStorage->overriddenMethodIds[$methodName][0];
         }
     }
 
     /**
      * Get the class this method appears in (vs is declared in, which could give a trait)
      *
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return string|null
      */
-    public function getAppearingMethodId($method_id)
+    public function getAppearingMethodId($methodId)
     {
-        $method_id = strtolower($method_id);
+        $methodId = strtolower($methodId);
 
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->appearing_method_ids[$method_name])) {
-            return $class_storage->appearing_method_ids[$method_name];
+        if (isset($classStorage->appearingMethodIds[$methodName])) {
+            return $classStorage->appearingMethodIds[$methodName];
         }
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return array<string>
      */
-    public function getOverriddenMethodIds($method_id)
+    public function getOverriddenMethodIds($methodId)
     {
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->overridden_method_ids[$method_name])) {
-            return $class_storage->overridden_method_ids[$method_name];
+        if (isset($classStorage->overriddenMethodIds[$methodName])) {
+            return $classStorage->overriddenMethodIds[$methodName];
         }
 
         return [];
     }
 
     /**
-     * @param  string $original_method_id
+     * @param  string $originalMethodId
      *
      * @return string
      */
-    public function getCasedMethodId($original_method_id)
+    public function getCasedMethodId($originalMethodId)
     {
-        $method_id = $this->getDeclaringMethodId($original_method_id);
+        $methodId = $this->getDeclaringMethodId($originalMethodId);
 
-        if ($method_id === null) {
-            throw new \UnexpectedValueException('Cannot get declaring method id for ' . $original_method_id);
+        if ($methodId === null) {
+            throw new \UnexpectedValueException('Cannot get declaring method id for ' . $originalMethodId);
         }
 
-        $storage = $this->getStorage($method_id);
+        $storage = $this->getStorage($methodId);
 
-        list($fq_class_name) = explode('::', $method_id);
+        list($fqClassName) = explode('::', $methodId);
 
-        return $fq_class_name . '::' . $storage->cased_name;
+        return $fqClassName . '::' . $storage->casedName;
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return MethodStorage
      */
-    public function getUserMethodStorage($method_id)
+    public function getUserMethodStorage($methodId)
     {
-        $declaring_method_id = $this->getDeclaringMethodId($method_id);
+        $declaringMethodId = $this->getDeclaringMethodId($methodId);
 
-        if (!$declaring_method_id) {
-            throw new \UnexpectedValueException('$storage should not be null for ' . $method_id);
+        if (!$declaringMethodId) {
+            throw new \UnexpectedValueException('$storage should not be null for ' . $methodId);
         }
 
-        $storage = $this->getStorage($declaring_method_id);
+        $storage = $this->getStorage($declaringMethodId);
 
         if (!$storage->location) {
-            throw new \UnexpectedValueException('Storage for ' . $method_id . ' is not user-defined');
+            throw new \UnexpectedValueException('Storage for ' . $methodId . ' is not user-defined');
         }
 
         return $storage;
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return MethodStorage
      */
-    public function getStorage($method_id)
+    public function getStorage($methodId)
     {
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        $method_name_lc = strtolower($method_name);
+        $methodNameLc = strtolower($methodName);
 
-        if (!isset($class_storage->methods[$method_name_lc])) {
-            throw new \UnexpectedValueException('$storage should not be null for ' . $method_id);
+        if (!isset($classStorage->methods[$methodNameLc])) {
+            throw new \UnexpectedValueException('$storage should not be null for ' . $methodId);
         }
 
-        return $class_storage->methods[$method_name_lc];
+        return $classStorage->methods[$methodNameLc];
     }
 }

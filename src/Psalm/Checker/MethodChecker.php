@@ -40,60 +40,60 @@ class MethodChecker extends FunctionLikeChecker
     /**
      * Determines whether a given method is static or not
      *
-     * @param  string          $method_id
-     * @param  bool            $self_call
-     * @param  bool            $is_context_dynamic
-     * @param  CodeLocation    $code_location
-     * @param  array<string>   $suppressed_issues
-     * @param  bool            $is_dynamic_this_method
+     * @param  string          $methodId
+     * @param  bool            $selfCall
+     * @param  bool            $isContextDynamic
+     * @param  CodeLocation    $codeLocation
+     * @param  array<string>   $suppressedIssues
+     * @param  bool            $isDynamicThisMethod
      *
      * @return bool
      */
     public static function checkStatic(
-        $method_id,
-        $self_call,
-        $is_context_dynamic,
-        ProjectChecker $project_checker,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        &$is_dynamic_this_method = false
+        $methodId,
+        $selfCall,
+        $isContextDynamic,
+        ProjectChecker $projectChecker,
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        &$isDynamicThisMethod = false
     ) {
-        $codebase_methods = $project_checker->codebase->methods;
+        $codebaseMethods = $projectChecker->codebase->methods;
 
-        $method_id = $codebase_methods->getDeclaringMethodId($method_id);
+        $methodId = $codebaseMethods->getDeclaringMethodId($methodId);
 
-        if (!$method_id) {
+        if (!$methodId) {
             throw new \LogicException('Method id should not be null');
         }
 
-        $storage = $codebase_methods->getStorage($method_id);
+        $storage = $codebaseMethods->getStorage($methodId);
 
-        if (!$storage->is_static) {
-            if ($self_call) {
-                if (!$is_context_dynamic) {
+        if (!$storage->isStatic) {
+            if ($selfCall) {
+                if (!$isContextDynamic) {
                     if (IssueBuffer::accepts(
                         new NonStaticSelfCall(
-                            'Method ' . $codebase_methods->getCasedMethodId($method_id) .
+                            'Method ' . $codebaseMethods->getCasedMethodId($methodId) .
                                 ' is not static, but is called ' .
                                 'using self::',
-                            $code_location
+                            $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
                 } else {
-                    $is_dynamic_this_method = true;
+                    $isDynamicThisMethod = true;
                 }
             } else {
                 if (IssueBuffer::accepts(
                     new InvalidStaticInvocation(
-                        'Method ' . $codebase_methods->getCasedMethodId($method_id) .
+                        'Method ' . $codebaseMethods->getCasedMethodId($methodId) .
                             ' is not static, but is called ' .
                             'statically',
-                        $code_location
+                        $codeLocation
                     ),
-                    $suppressed_issues
+                    $suppressedIssues
                 )) {
                     return false;
                 }
@@ -104,30 +104,30 @@ class MethodChecker extends FunctionLikeChecker
     }
 
     /**
-     * @param  string       $method_id
-     * @param  CodeLocation $code_location
-     * @param  array        $suppressed_issues
-     * @param  string|null  $source_method_id
+     * @param  string       $methodId
+     * @param  CodeLocation $codeLocation
+     * @param  array        $suppressedIssues
+     * @param  string|null  $sourceMethodId
      *
      * @return bool|null
      */
     public static function checkMethodExists(
-        ProjectChecker $project_checker,
-        $method_id,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        $source_method_id = null
+        ProjectChecker $projectChecker,
+        $methodId,
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        $sourceMethodId = null
     ) {
-        if ($project_checker->codebase->methodExists(
-            $method_id,
-            $source_method_id !== $method_id ? $code_location : null
+        if ($projectChecker->codebase->methodExists(
+            $methodId,
+            $sourceMethodId !== $methodId ? $codeLocation : null
         )) {
             return true;
         }
 
         if (IssueBuffer::accepts(
-            new UndefinedMethod('Method ' . $method_id . ' does not exist', $code_location, $method_id),
-            $suppressed_issues
+            new UndefinedMethod('Method ' . $methodId . ' does not exist', $codeLocation, $methodId),
+            $suppressedIssues
         )) {
             return false;
         }
@@ -136,32 +136,32 @@ class MethodChecker extends FunctionLikeChecker
     }
 
     /**
-     * @param  string       $method_id
-     * @param  CodeLocation $code_location
-     * @param  array        $suppressed_issues
+     * @param  string       $methodId
+     * @param  CodeLocation $codeLocation
+     * @param  array        $suppressedIssues
      *
      * @return false|null
      */
     public static function checkMethodNotDeprecated(
-        ProjectChecker $project_checker,
-        $method_id,
-        CodeLocation $code_location,
-        array $suppressed_issues
+        ProjectChecker $projectChecker,
+        $methodId,
+        CodeLocation $codeLocation,
+        array $suppressedIssues
     ) {
-        $codebase_methods = $project_checker->codebase->methods;
+        $codebaseMethods = $projectChecker->codebase->methods;
 
-        $method_id = (string) $codebase_methods->getDeclaringMethodId($method_id);
-        $storage = $codebase_methods->getStorage($method_id);
+        $methodId = (string) $codebaseMethods->getDeclaringMethodId($methodId);
+        $storage = $codebaseMethods->getStorage($methodId);
 
         if ($storage->deprecated) {
             if (IssueBuffer::accepts(
                 new DeprecatedMethod(
-                    'The method ' . $codebase_methods->getCasedMethodId($method_id) .
+                    'The method ' . $codebaseMethods->getCasedMethodId($methodId) .
                         ' has been marked as deprecated',
-                    $code_location,
-                    $method_id
+                    $codeLocation,
+                    $methodId
                 ),
-                $suppressed_issues
+                $suppressedIssues
             )) {
                 return false;
             }
@@ -171,72 +171,72 @@ class MethodChecker extends FunctionLikeChecker
     }
 
     /**
-     * @param  string           $method_id
-     * @param  string|null      $calling_context
+     * @param  string           $methodId
+     * @param  string|null      $callingContext
      * @param  StatementsSource $source
-     * @param  CodeLocation     $code_location
-     * @param  array            $suppressed_issues
+     * @param  CodeLocation     $codeLocation
+     * @param  array            $suppressedIssues
      *
      * @return false|null
      */
     public static function checkMethodVisibility(
-        $method_id,
-        $calling_context,
+        $methodId,
+        $callingContext,
         StatementsSource $source,
-        CodeLocation $code_location,
-        array $suppressed_issues
+        CodeLocation $codeLocation,
+        array $suppressedIssues
     ) {
-        $project_checker = $source->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
-        $codebase_methods = $codebase->methods;
-        $codebase_classlikes = $codebase->classlikes;
+        $projectChecker = $source->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
+        $codebaseMethods = $codebase->methods;
+        $codebaseClasslikes = $codebase->classlikes;
 
-        $declaring_method_id = $codebase_methods->getDeclaringMethodId($method_id);
+        $declaringMethodId = $codebaseMethods->getDeclaringMethodId($methodId);
 
-        if (!$declaring_method_id) {
-            $method_name = explode('::', $method_id)[1];
+        if (!$declaringMethodId) {
+            $methodName = explode('::', $methodId)[1];
 
-            if ($method_name === '__construct' || $method_id === 'Closure::__invoke') {
+            if ($methodName === '__construct' || $methodId === 'Closure::__invoke') {
                 return null;
             }
 
-            throw new \UnexpectedValueException('$declaring_method_id not expected to be null here');
+            throw new \UnexpectedValueException('$declaringMethodId not expected to be null here');
         }
 
-        $appearing_method_id = $codebase_methods->getAppearingMethodId($method_id);
+        $appearingMethodId = $codebaseMethods->getAppearingMethodId($methodId);
 
-        $appearing_method_class = null;
+        $appearingMethodClass = null;
 
-        if ($appearing_method_id) {
-            list($appearing_method_class) = explode('::', $appearing_method_id);
+        if ($appearingMethodId) {
+            list($appearingMethodClass) = explode('::', $appearingMethodId);
 
             // if the calling class is the same, we know the method exists, so it must be visible
-            if ($appearing_method_class === $calling_context) {
+            if ($appearingMethodClass === $callingContext) {
                 return null;
             }
         }
 
-        list($declaring_method_class) = explode('::', $declaring_method_id);
+        list($declaringMethodClass) = explode('::', $declaringMethodId);
 
-        if ($source->getSource() instanceof TraitChecker && $declaring_method_class === $source->getFQCLN()) {
+        if ($source->getSource() instanceof TraitChecker && $declaringMethodClass === $source->getFQCLN()) {
             return null;
         }
 
-        $storage = $project_checker->codebase->methods->getStorage($declaring_method_id);
+        $storage = $projectChecker->codebase->methods->getStorage($declaringMethodId);
 
         switch ($storage->visibility) {
             case ClassLikeChecker::VISIBILITY_PUBLIC:
                 return null;
 
             case ClassLikeChecker::VISIBILITY_PRIVATE:
-                if (!$calling_context || $appearing_method_class !== $calling_context) {
+                if (!$callingContext || $appearingMethodClass !== $callingContext) {
                     if (IssueBuffer::accepts(
                         new InaccessibleMethod(
-                            'Cannot access private method ' . $codebase_methods->getCasedMethodId($method_id) .
-                                ' from context ' . $calling_context,
-                            $code_location
+                            'Cannot access private method ' . $codebaseMethods->getCasedMethodId($methodId) .
+                                ' from context ' . $callingContext,
+                            $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
@@ -245,13 +245,13 @@ class MethodChecker extends FunctionLikeChecker
                 return null;
 
             case ClassLikeChecker::VISIBILITY_PROTECTED:
-                if (!$calling_context) {
+                if (!$callingContext) {
                     if (IssueBuffer::accepts(
                         new InaccessibleMethod(
-                            'Cannot access protected method ' . $method_id,
-                            $code_location
+                            'Cannot access protected method ' . $methodId,
+                            $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
@@ -259,22 +259,22 @@ class MethodChecker extends FunctionLikeChecker
                     return null;
                 }
 
-                if ($appearing_method_class
-                    && $codebase_classlikes->classExtends($appearing_method_class, $calling_context)
+                if ($appearingMethodClass
+                    && $codebaseClasslikes->classExtends($appearingMethodClass, $callingContext)
                 ) {
                     return null;
                 }
 
-                if ($appearing_method_class
-                    && !$codebase_classlikes->classExtends($calling_context, $appearing_method_class)
+                if ($appearingMethodClass
+                    && !$codebaseClasslikes->classExtends($callingContext, $appearingMethodClass)
                 ) {
                     if (IssueBuffer::accepts(
                         new InaccessibleMethod(
-                            'Cannot access protected method ' . $codebase_methods->getCasedMethodId($method_id) .
-                                ' from context ' . $calling_context,
-                            $code_location
+                            'Cannot access protected method ' . $codebaseMethods->getCasedMethodId($methodId) .
+                                ' from context ' . $callingContext,
+                            $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
@@ -285,77 +285,77 @@ class MethodChecker extends FunctionLikeChecker
     }
 
     /**
-     * @param  string           $method_id
-     * @param  string|null      $calling_context
+     * @param  string           $methodId
+     * @param  string|null      $callingContext
      * @param  StatementsSource $source
      *
      * @return bool
      */
     public static function isMethodVisible(
-        $method_id,
-        $calling_context,
+        $methodId,
+        $callingContext,
         StatementsSource $source
     ) {
-        $project_checker = $source->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $source->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
-        $declaring_method_id = $codebase->methods->getDeclaringMethodId($method_id);
+        $declaringMethodId = $codebase->methods->getDeclaringMethodId($methodId);
 
-        if (!$declaring_method_id) {
-            $method_name = explode('::', $method_id)[1];
+        if (!$declaringMethodId) {
+            $methodName = explode('::', $methodId)[1];
 
-            if ($method_name === '__construct') {
+            if ($methodName === '__construct') {
                 return true;
             }
 
-            throw new \UnexpectedValueException('$declaring_method_id not expected to be null here');
+            throw new \UnexpectedValueException('$declaringMethodId not expected to be null here');
         }
 
-        $appearing_method_id = $codebase->methods->getAppearingMethodId($method_id);
+        $appearingMethodId = $codebase->methods->getAppearingMethodId($methodId);
 
-        $appearing_method_class = null;
+        $appearingMethodClass = null;
 
-        if ($appearing_method_id) {
-            list($appearing_method_class) = explode('::', $appearing_method_id);
+        if ($appearingMethodId) {
+            list($appearingMethodClass) = explode('::', $appearingMethodId);
 
             // if the calling class is the same, we know the method exists, so it must be visible
-            if ($appearing_method_class === $calling_context) {
+            if ($appearingMethodClass === $callingContext) {
                 return true;
             }
         }
 
-        list($declaring_method_class) = explode('::', $declaring_method_id);
+        list($declaringMethodClass) = explode('::', $declaringMethodId);
 
-        if ($source->getSource() instanceof TraitChecker && $declaring_method_class === $source->getFQCLN()) {
+        if ($source->getSource() instanceof TraitChecker && $declaringMethodClass === $source->getFQCLN()) {
             return true;
         }
 
-        $storage = $codebase->methods->getStorage($declaring_method_id);
+        $storage = $codebase->methods->getStorage($declaringMethodId);
 
         switch ($storage->visibility) {
             case ClassLikeChecker::VISIBILITY_PUBLIC:
                 return true;
 
             case ClassLikeChecker::VISIBILITY_PRIVATE:
-                if (!$calling_context || $appearing_method_class !== $calling_context) {
+                if (!$callingContext || $appearingMethodClass !== $callingContext) {
                     return false;
                 }
 
                 return true;
 
             case ClassLikeChecker::VISIBILITY_PROTECTED:
-                if (!$calling_context) {
+                if (!$callingContext) {
                     return false;
                 }
 
-                if ($appearing_method_class
-                    && $codebase->classExtends($appearing_method_class, $calling_context)
+                if ($appearingMethodClass
+                    && $codebase->classExtends($appearingMethodClass, $callingContext)
                 ) {
                     return true;
                 }
 
-                if ($appearing_method_class
-                    && !$codebase->classExtends($calling_context, $appearing_method_class)
+                if ($appearingMethodClass
+                    && !$codebase->classExtends($callingContext, $appearingMethodClass)
                 ) {
                     return false;
                 }
@@ -365,45 +365,45 @@ class MethodChecker extends FunctionLikeChecker
     }
 
     /**
-     * @param  ProjectChecker   $project_checker
-     * @param  ClassLikeStorage $implementer_classlike_storage
-     * @param  ClassLikeStorage $guide_classlike_storage
-     * @param  MethodStorage    $implementer_method_storage
-     * @param  MethodStorage    $guide_method_storage
-     * @param  CodeLocation     $code_location
-     * @param  array            $suppressed_issues
-     * @param  bool             $prevent_abstract_override
+     * @param  ProjectChecker   $projectChecker
+     * @param  ClassLikeStorage $implementerClasslikeStorage
+     * @param  ClassLikeStorage $guideClasslikeStorage
+     * @param  MethodStorage    $implementerMethodStorage
+     * @param  MethodStorage    $guideMethodStorage
+     * @param  CodeLocation     $codeLocation
+     * @param  array            $suppressedIssues
+     * @param  bool             $preventAbstractOverride
      *
      * @return false|null
      */
     public static function compareMethods(
-        ProjectChecker $project_checker,
-        ClassLikeStorage $implementer_classlike_storage,
-        ClassLikeStorage $guide_classlike_storage,
-        MethodStorage $implementer_method_storage,
-        MethodStorage $guide_method_storage,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        $prevent_abstract_override = true
+        ProjectChecker $projectChecker,
+        ClassLikeStorage $implementerClasslikeStorage,
+        ClassLikeStorage $guideClasslikeStorage,
+        MethodStorage $implementerMethodStorage,
+        MethodStorage $guideMethodStorage,
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        $preventAbstractOverride = true
     ) {
-        $codebase = $project_checker->codebase;
+        $codebase = $projectChecker->codebase;
 
-        $implementer_method_id = $implementer_classlike_storage->name . '::'
-            . strtolower($guide_method_storage->cased_name);
+        $implementerMethodId = $implementerClasslikeStorage->name . '::'
+            . strtolower($guideMethodStorage->casedName);
 
-        $implementer_declaring_method_id = $codebase->methods->getDeclaringMethodId($implementer_method_id);
+        $implementerDeclaringMethodId = $codebase->methods->getDeclaringMethodId($implementerMethodId);
 
-        $cased_implementer_method_id = $implementer_classlike_storage->name . '::'
-            . $implementer_method_storage->cased_name;
+        $casedImplementerMethodId = $implementerClasslikeStorage->name . '::'
+            . $implementerMethodStorage->casedName;
 
-        $cased_guide_method_id = $guide_classlike_storage->name . '::' . $guide_method_storage->cased_name;
+        $casedGuideMethodId = $guideClasslikeStorage->name . '::' . $guideMethodStorage->casedName;
 
-        if ($implementer_method_storage->visibility > $guide_method_storage->visibility) {
+        if ($implementerMethodStorage->visibility > $guideMethodStorage->visibility) {
             if (IssueBuffer::accepts(
                 new OverriddenMethodAccess(
-                    'Method ' . $cased_implementer_method_id . ' has different access level than '
-                        . $cased_guide_method_id,
-                    $code_location
+                    'Method ' . $casedImplementerMethodId . ' has different access level than '
+                        . $casedGuideMethodId,
+                    $codeLocation
                 )
             )) {
                 return false;
@@ -412,17 +412,17 @@ class MethodChecker extends FunctionLikeChecker
             return null;
         }
 
-        if ($prevent_abstract_override
-            && !$guide_method_storage->abstract
-            && $implementer_method_storage->abstract
-            && !$guide_classlike_storage->abstract
-            && !$guide_classlike_storage->is_interface
+        if ($preventAbstractOverride
+            && !$guideMethodStorage->abstract
+            && $implementerMethodStorage->abstract
+            && !$guideClasslikeStorage->abstract
+            && !$guideClasslikeStorage->isInterface
         ) {
             if (IssueBuffer::accepts(
                 new MethodSignatureMismatch(
-                    'Method ' . $cased_implementer_method_id . ' cannot be abstract when inherited method '
-                        . $cased_guide_method_id . ' is non-abstract',
-                    $code_location
+                    'Method ' . $casedImplementerMethodId . ' cannot be abstract when inherited method '
+                        . $casedGuideMethodId . ' is non-abstract',
+                    $codeLocation
                 )
             )) {
                 return false;
@@ -431,99 +431,99 @@ class MethodChecker extends FunctionLikeChecker
             return null;
         }
 
-        if ($guide_method_storage->signature_return_type) {
-            $guide_signature_return_type = ExpressionChecker::fleshOutType(
-                $project_checker,
-                $guide_method_storage->signature_return_type,
-                $guide_classlike_storage->name,
-                $guide_classlike_storage->name
+        if ($guideMethodStorage->signatureReturnType) {
+            $guideSignatureReturnType = ExpressionChecker::fleshOutType(
+                $projectChecker,
+                $guideMethodStorage->signatureReturnType,
+                $guideClasslikeStorage->name,
+                $guideClasslikeStorage->name
             );
 
-            $implementer_signature_return_type = $implementer_method_storage->signature_return_type
+            $implementerSignatureReturnType = $implementerMethodStorage->signatureReturnType
                 ? ExpressionChecker::fleshOutType(
-                    $project_checker,
-                    $implementer_method_storage->signature_return_type,
-                    $implementer_classlike_storage->name,
-                    $implementer_classlike_storage->name
+                    $projectChecker,
+                    $implementerMethodStorage->signatureReturnType,
+                    $implementerClasslikeStorage->name,
+                    $implementerClasslikeStorage->name
                 ) : null;
 
-            if (!TypeChecker::isContainedByInPhp($implementer_signature_return_type, $guide_signature_return_type)) {
+            if (!TypeChecker::isContainedByInPhp($implementerSignatureReturnType, $guideSignatureReturnType)) {
                 if (IssueBuffer::accepts(
                     new MethodSignatureMismatch(
-                        'Method ' . $cased_implementer_method_id . ' with return type \''
-                            . $implementer_signature_return_type . '\' is different to return type \''
-                            . $guide_signature_return_type . '\' of inherited method ' . $cased_guide_method_id,
-                        $code_location
+                        'Method ' . $casedImplementerMethodId . ' with return type \''
+                            . $implementerSignatureReturnType . '\' is different to return type \''
+                            . $guideSignatureReturnType . '\' of inherited method ' . $casedGuideMethodId,
+                        $codeLocation
                     ),
-                    $suppressed_issues
+                    $suppressedIssues
                 )) {
                     return false;
                 }
 
                 return null;
             }
-        } elseif ($guide_method_storage->return_type
-            && $implementer_method_storage->return_type
-            && $implementer_classlike_storage->user_defined
-            && !$guide_classlike_storage->stubbed
+        } elseif ($guideMethodStorage->returnType
+            && $implementerMethodStorage->returnType
+            && $implementerClasslikeStorage->userDefined
+            && !$guideClasslikeStorage->stubbed
         ) {
-            $implementer_method_storage_return_type = ExpressionChecker::fleshOutType(
-                $project_checker,
-                $implementer_method_storage->return_type,
-                $implementer_classlike_storage->name,
-                $implementer_classlike_storage->name
+            $implementerMethodStorageReturnType = ExpressionChecker::fleshOutType(
+                $projectChecker,
+                $implementerMethodStorage->returnType,
+                $implementerClasslikeStorage->name,
+                $implementerClasslikeStorage->name
             );
 
-            $guide_method_storage_return_type = ExpressionChecker::fleshOutType(
-                $project_checker,
-                $guide_method_storage->return_type,
-                $guide_classlike_storage->name,
-                $guide_classlike_storage->name
+            $guideMethodStorageReturnType = ExpressionChecker::fleshOutType(
+                $projectChecker,
+                $guideMethodStorage->returnType,
+                $guideClasslikeStorage->name,
+                $guideClasslikeStorage->name
             );
 
             // treat void as null when comparing against docblock implementer
-            if ($implementer_method_storage_return_type->isVoid()) {
-                $implementer_method_storage_return_type = Type::getNull();
+            if ($implementerMethodStorageReturnType->isVoid()) {
+                $implementerMethodStorageReturnType = Type::getNull();
             }
 
-            if ($guide_method_storage_return_type->isVoid()) {
-                $guide_method_storage_return_type = Type::getNull();
+            if ($guideMethodStorageReturnType->isVoid()) {
+                $guideMethodStorageReturnType = Type::getNull();
             }
 
             if (!TypeChecker::isContainedBy(
                 $codebase,
-                $implementer_method_storage_return_type,
-                $guide_method_storage_return_type,
+                $implementerMethodStorageReturnType,
+                $guideMethodStorageReturnType,
                 false,
                 false,
-                $has_scalar_match,
-                $type_coerced,
-                $type_coerced_from_mixed
+                $hasScalarMatch,
+                $typeCoerced,
+                $typeCoercedFromMixed
             )) {
                 // is the declared return type more specific than the inferred one?
-                if ($type_coerced) {
+                if ($typeCoerced) {
                     if (IssueBuffer::accepts(
                         new LessSpecificImplementedReturnType(
-                            'The return type \'' . $guide_method_storage->return_type
-                            . '\' for ' . $cased_guide_method_id . ' is more specific than the implemented '
-                            . 'return type for ' . $implementer_declaring_method_id . ' \''
-                            . $implementer_method_storage->return_type . '\'',
-                            $implementer_method_storage->return_type_location ?: $code_location
+                            'The return type \'' . $guideMethodStorage->returnType
+                            . '\' for ' . $casedGuideMethodId . ' is more specific than the implemented '
+                            . 'return type for ' . $implementerDeclaringMethodId . ' \''
+                            . $implementerMethodStorage->returnType . '\'',
+                            $implementerMethodStorage->returnTypeLocation ?: $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
                 } else {
                     if (IssueBuffer::accepts(
                         new ImplementedReturnTypeMismatch(
-                            'The return type \'' . $guide_method_storage->return_type
-                            . '\' for ' . $cased_guide_method_id . ' is different to the implemented '
-                            . 'return type for ' . $implementer_declaring_method_id . ' \''
-                            . $implementer_method_storage->return_type . '\'',
-                            $implementer_method_storage->return_type_location ?: $code_location
+                            'The return type \'' . $guideMethodStorage->returnType
+                            . '\' for ' . $casedGuideMethodId . ' is different to the implemented '
+                            . 'return type for ' . $implementerDeclaringMethodId . ' \''
+                            . $implementerMethodStorage->returnType . '\'',
+                            $implementerMethodStorage->returnTypeLocation ?: $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
@@ -531,17 +531,17 @@ class MethodChecker extends FunctionLikeChecker
             }
         }
 
-        foreach ($guide_method_storage->params as $i => $guide_param) {
-            if (!isset($implementer_method_storage->params[$i])) {
-                if (!$prevent_abstract_override && $i >= $guide_method_storage->required_param_count) {
+        foreach ($guideMethodStorage->params as $i => $guideParam) {
+            if (!isset($implementerMethodStorage->params[$i])) {
+                if (!$preventAbstractOverride && $i >= $guideMethodStorage->requiredParamCount) {
                     continue;
                 }
 
                 if (IssueBuffer::accepts(
                     new MethodSignatureMismatch(
-                        'Method ' . $cased_implementer_method_id . ' has fewer parameters than parent method ' .
-                            $cased_guide_method_id,
-                        $code_location
+                        'Method ' . $casedImplementerMethodId . ' has fewer parameters than parent method ' .
+                            $casedGuideMethodId,
+                        $codeLocation
                     )
                 )) {
                     return false;
@@ -550,20 +550,20 @@ class MethodChecker extends FunctionLikeChecker
                 return null;
             }
 
-            $implementer_param = $implementer_method_storage->params[$i];
+            $implementerParam = $implementerMethodStorage->params[$i];
 
-            if ($guide_classlike_storage->user_defined
-                && $implementer_param->signature_type
-                && !TypeChecker::isContainedByInPhp($guide_param->signature_type, $implementer_param->signature_type)
+            if ($guideClasslikeStorage->userDefined
+                && $implementerParam->signatureType
+                && !TypeChecker::isContainedByInPhp($guideParam->signatureType, $implementerParam->signatureType)
             ) {
                 if (IssueBuffer::accepts(
                     new MethodSignatureMismatch(
-                        'Argument ' . ($i + 1) . ' of ' . $cased_implementer_method_id . ' has wrong type \'' .
-                            $implementer_param->signature_type . '\', expecting \'' .
-                            $guide_param->signature_type . '\' as defined by ' .
-                            $cased_guide_method_id,
-                        $implementer_method_storage->params[$i]->location
-                            ?: $code_location
+                        'Argument ' . ($i + 1) . ' of ' . $casedImplementerMethodId . ' has wrong type \'' .
+                            $implementerParam->signatureType . '\', expecting \'' .
+                            $guideParam->signatureType . '\' as defined by ' .
+                            $casedGuideMethodId,
+                        $implementerMethodStorage->params[$i]->location
+                            ?: $codeLocation
                     )
                 )) {
                     return false;
@@ -572,42 +572,42 @@ class MethodChecker extends FunctionLikeChecker
                 return null;
             }
 
-            if ($guide_classlike_storage->user_defined
-                && $implementer_param->type
-                && $guide_param->type
-                && $implementer_param->type->getId() !== $guide_param->type->getId()
+            if ($guideClasslikeStorage->userDefined
+                && $implementerParam->type
+                && $guideParam->type
+                && $implementerParam->type->getId() !== $guideParam->type->getId()
             ) {
                 if (!TypeChecker::isContainedBy(
                     $codebase,
-                    $guide_param->type,
-                    $implementer_param->type,
+                    $guideParam->type,
+                    $implementerParam->type,
                     false,
                     false
                 )) {
                     if (IssueBuffer::accepts(
                         new MoreSpecificImplementedParamType(
-                            'Argument ' . ($i + 1) . ' of ' . $cased_implementer_method_id . ' has wrong type \'' .
-                                $implementer_param->type . '\', expecting \'' .
-                                $guide_param->type . '\' as defined by ' .
-                                $cased_guide_method_id,
-                            $implementer_method_storage->params[$i]->location
-                                ?: $code_location
+                            'Argument ' . ($i + 1) . ' of ' . $casedImplementerMethodId . ' has wrong type \'' .
+                                $implementerParam->type . '\', expecting \'' .
+                                $guideParam->type . '\' as defined by ' .
+                                $casedGuideMethodId,
+                            $implementerMethodStorage->params[$i]->location
+                                ?: $codeLocation
                         ),
-                        $suppressed_issues
+                        $suppressedIssues
                     )) {
                         return false;
                     }
                 }
             }
 
-            if ($guide_classlike_storage->user_defined && $implementer_param->by_ref !== $guide_param->by_ref) {
+            if ($guideClasslikeStorage->userDefined && $implementerParam->byRef !== $guideParam->byRef) {
                 if (IssueBuffer::accepts(
                     new MethodSignatureMismatch(
-                        'Argument ' . ($i + 1) . ' of ' . $cased_implementer_method_id . ' is' .
-                            ($implementer_param->by_ref ? '' : ' not') . ' passed by reference, but argument ' .
-                            ($i + 1) . ' of ' . $cased_guide_method_id . ' is' . ($guide_param->by_ref ? '' : ' not'),
-                        $implementer_method_storage->params[$i]->location
-                            ?: $code_location
+                        'Argument ' . ($i + 1) . ' of ' . $casedImplementerMethodId . ' is' .
+                            ($implementerParam->byRef ? '' : ' not') . ' passed by reference, but argument ' .
+                            ($i + 1) . ' of ' . $casedGuideMethodId . ' is' . ($guideParam->byRef ? '' : ' not'),
+                        $implementerMethodStorage->params[$i]->location
+                            ?: $codeLocation
                     )
                 )) {
                     return false;
@@ -616,39 +616,39 @@ class MethodChecker extends FunctionLikeChecker
                 return null;
             }
 
-            $implemeneter_param_type = $implementer_method_storage->params[$i]->type;
+            $implemeneterParamType = $implementerMethodStorage->params[$i]->type;
 
-            $or_null_guide_type = $guide_param->signature_type
-                ? clone $guide_param->signature_type
+            $orNullGuideType = $guideParam->signatureType
+                ? clone $guideParam->signatureType
                 : null;
 
-            if ($or_null_guide_type) {
-                $or_null_guide_type->addType(new Type\Atomic\TNull);
+            if ($orNullGuideType) {
+                $orNullGuideType->addType(new Type\Atomic\TNull);
             }
 
-            if (!$guide_classlike_storage->user_defined
-                && $guide_param->type
-                && !$guide_param->type->isMixed()
-                && !$guide_param->type->from_docblock
+            if (!$guideClasslikeStorage->userDefined
+                && $guideParam->type
+                && !$guideParam->type->isMixed()
+                && !$guideParam->type->fromDocblock
                 && (
-                    !$implemeneter_param_type
+                    !$implemeneterParamType
                     || (
-                        $implemeneter_param_type->getId() !== $guide_param->type->getId()
+                        $implemeneterParamType->getId() !== $guideParam->type->getId()
                         && (
-                            !$or_null_guide_type
-                            || $implemeneter_param_type->getId() !== $or_null_guide_type->getId()
+                            !$orNullGuideType
+                            || $implemeneterParamType->getId() !== $orNullGuideType->getId()
                         )
                     )
                 )
             ) {
                 if (IssueBuffer::accepts(
                     new MethodSignatureMismatch(
-                        'Argument ' . ($i + 1) . ' of ' . $cased_implementer_method_id . ' has wrong type \'' .
-                            $implementer_method_storage->params[$i]->type . '\', expecting \'' .
-                            $guide_param->type . '\' as defined by ' .
-                            $cased_guide_method_id,
-                        $implementer_method_storage->params[$i]->location
-                            ?: $code_location
+                        'Argument ' . ($i + 1) . ' of ' . $casedImplementerMethodId . ' has wrong type \'' .
+                            $implementerMethodStorage->params[$i]->type . '\', expecting \'' .
+                            $guideParam->type . '\' as defined by ' .
+                            $casedGuideMethodId,
+                        $implementerMethodStorage->params[$i]->location
+                            ?: $codeLocation
                     )
                 )) {
                     return false;
@@ -658,15 +658,15 @@ class MethodChecker extends FunctionLikeChecker
             }
         }
 
-        if ($guide_classlike_storage->user_defined
-            && $implementer_method_storage->cased_name !== '__construct'
-            && $implementer_method_storage->required_param_count > $guide_method_storage->required_param_count
+        if ($guideClasslikeStorage->userDefined
+            && $implementerMethodStorage->casedName !== '__construct'
+            && $implementerMethodStorage->requiredParamCount > $guideMethodStorage->requiredParamCount
         ) {
             if (IssueBuffer::accepts(
                 new MethodSignatureMismatch(
-                    'Method ' . $cased_implementer_method_id . ' has more required parameters than parent method ' .
-                        $cased_guide_method_id,
-                    $code_location
+                    'Method ' . $casedImplementerMethodId . ' has more required parameters than parent method ' .
+                        $casedGuideMethodId,
+                    $codeLocation
                 )
             )) {
                 return false;
@@ -680,25 +680,25 @@ class MethodChecker extends FunctionLikeChecker
      * Check that __clone, __construct, and __destruct do not have a return type
      * hint in their signature.
      *
-     * @param  MethodStorage $method_storage
-     * @param  CodeLocation  $code_location
+     * @param  MethodStorage $methodStorage
+     * @param  CodeLocation  $codeLocation
      * @return false|null
      */
     public static function checkMethodSignatureMustOmitReturnType(
-        MethodStorage $method_storage,
-        CodeLocation $code_location
+        MethodStorage $methodStorage,
+        CodeLocation $codeLocation
     ) {
-        if ($method_storage->signature_return_type === null) {
+        if ($methodStorage->signatureReturnType === null) {
             return null;
         }
 
-        $cased_method_name = $method_storage->cased_name;
+        $casedMethodName = $methodStorage->casedName;
         $methodsOfInterest = ['__clone', '__construct', '__destruct'];
-        if (in_array($cased_method_name, $methodsOfInterest)) {
+        if (in_array($casedMethodName, $methodsOfInterest)) {
             if (IssueBuffer::accepts(
                 new MethodSignatureMustOmitReturnType(
-                    'Method ' . $cased_method_name . ' must not declare a return type',
-                    $code_location
+                    'Method ' . $casedMethodName . ' must not declare a return type',
+                    $codeLocation
                 )
             )) {
                 return false;

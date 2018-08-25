@@ -23,7 +23,7 @@ class Codebase
      *
      * @var array<string, array<string, array<int, \Psalm\CodeLocation>>>
      */
-    public $use_referencing_locations = [];
+    public $useReferencingLocations = [];
 
     /**
      * A map of file names to the classes that they contain explicit references to
@@ -31,61 +31,61 @@ class Codebase
      *
      * @var array<string, array<string, bool>>
      */
-    public $use_referencing_files = [];
+    public $useReferencingFiles = [];
 
     /**
      * @var FileStorageProvider
      */
-    public $file_storage_provider;
+    public $fileStorageProvider;
 
     /**
      * @var ClassLikeStorageProvider
      */
-    public $classlike_storage_provider;
+    public $classlikeStorageProvider;
 
     /**
      * @var bool
      */
-    public $collect_references = false;
+    public $collectReferences = false;
 
     /**
      * @var FileProvider
      */
-    private $file_provider;
+    private $fileProvider;
 
     /**
      * @var StatementsProvider
      */
-    public $statements_provider;
+    public $statementsProvider;
 
     /**
      * @var bool
      */
-    private $debug_output = false;
+    private $debugOutput = false;
 
     /**
      * @var array<string, Type\Union>
      */
-    private static $stubbed_constants = [];
+    private static $stubbedConstants = [];
 
     /**
      * Whether to register autoloaded information
      *
      * @var bool
      */
-    public $register_autoload_files = false;
+    public $registerAutoloadFiles = false;
 
     /**
      * Whether to log functions just at the file level or globally (for stubs)
      *
      * @var bool
      */
-    public $register_stub_files = false;
+    public $registerStubFiles = false;
 
     /**
      * @var bool
      */
-    public $find_unused_code = false;
+    public $findUnusedCode = false;
 
     /**
      * @var Codebase\Reflection
@@ -128,56 +128,56 @@ class Codebase
     public $populator;
 
     /**
-     * @param bool $debug_output
+     * @param bool $debugOutput
      */
     public function __construct(
         Config $config,
-        FileStorageProvider $file_storage_provider,
-        ClassLikeStorageProvider $classlike_storage_provider,
-        FileProvider $file_provider,
-        StatementsProvider $statements_provider,
-        $debug_output = false
+        FileStorageProvider $fileStorageProvider,
+        ClassLikeStorageProvider $classlikeStorageProvider,
+        FileProvider $fileProvider,
+        StatementsProvider $statementsProvider,
+        $debugOutput = false
     ) {
         $this->config = $config;
-        $this->file_storage_provider = $file_storage_provider;
-        $this->classlike_storage_provider = $classlike_storage_provider;
-        $this->debug_output = $debug_output;
-        $this->file_provider = $file_provider;
-        $this->statements_provider = $statements_provider;
-        $this->debug_output = $debug_output;
+        $this->fileStorageProvider = $fileStorageProvider;
+        $this->classlikeStorageProvider = $classlikeStorageProvider;
+        $this->debugOutput = $debugOutput;
+        $this->fileProvider = $fileProvider;
+        $this->statementsProvider = $statementsProvider;
+        $this->debugOutput = $debugOutput;
 
-        self::$stubbed_constants = [];
+        self::$stubbedConstants = [];
 
-        $this->reflection = new Codebase\Reflection($classlike_storage_provider, $this);
+        $this->reflection = new Codebase\Reflection($classlikeStorageProvider, $this);
 
         $this->scanner = new Codebase\Scanner(
             $this,
             $config,
-            $file_storage_provider,
-            $file_provider,
+            $fileStorageProvider,
+            $fileProvider,
             $this->reflection,
-            $debug_output
+            $debugOutput
         );
 
-        $this->analyzer = new Codebase\Analyzer($config, $file_provider, $file_storage_provider, $debug_output);
+        $this->analyzer = new Codebase\Analyzer($config, $fileProvider, $fileStorageProvider, $debugOutput);
 
-        $this->functions = new Codebase\Functions($file_storage_provider, $this->reflection);
-        $this->methods = new Codebase\Methods($config, $classlike_storage_provider);
-        $this->properties = new Codebase\Properties($classlike_storage_provider);
+        $this->functions = new Codebase\Functions($fileStorageProvider, $this->reflection);
+        $this->methods = new Codebase\Methods($config, $classlikeStorageProvider);
+        $this->properties = new Codebase\Properties($classlikeStorageProvider);
         $this->classlikes = new Codebase\ClassLikes(
             $config,
             $this,
-            $classlike_storage_provider,
+            $classlikeStorageProvider,
             $this->scanner,
             $this->methods,
-            $debug_output
+            $debugOutput
         );
         $this->populator = new Codebase\Populator(
             $config,
-            $classlike_storage_provider,
-            $file_storage_provider,
+            $classlikeStorageProvider,
+            $fileStorageProvider,
             $this->classlikes,
-            $debug_output
+            $debugOutput
         );
     }
 
@@ -186,10 +186,10 @@ class Codebase
      */
     public function collectReferences()
     {
-        $this->collect_references = true;
-        $this->classlikes->collect_references = true;
-        $this->methods->collect_references = true;
-        $this->properties->collect_references = true;
+        $this->collectReferences = true;
+        $this->classlikes->collectReferences = true;
+        $this->methods->collectReferences = true;
+        $this->properties->collectReferences = true;
     }
 
     /**
@@ -198,18 +198,18 @@ class Codebase
     public function reportUnusedCode()
     {
         $this->collectReferences();
-        $this->find_unused_code = true;
+        $this->findUnusedCode = true;
     }
 
     /**
-     * @param array<string, string> $files_to_analyze
+     * @param array<string, string> $filesToAnalyze
      *
      * @return void
      */
-    public function addFilesToAnalyze(array $files_to_analyze)
+    public function addFilesToAnalyze(array $filesToAnalyze)
     {
-        $this->scanner->addFilesToDeepScan($files_to_analyze);
-        $this->analyzer->addFiles($files_to_analyze);
+        $this->scanner->addFilesToDeepScan($filesToAnalyze);
+        $this->analyzer->addFiles($filesToAnalyze);
     }
 
     /**
@@ -219,85 +219,85 @@ class Codebase
      */
     public function scanFiles()
     {
-        $has_changes = $this->scanner->scanFiles($this->classlikes);
+        $hasChanges = $this->scanner->scanFiles($this->classlikes);
 
-        if ($has_changes) {
+        if ($hasChanges) {
             $this->populator->populateCodebase($this);
         }
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return string
      */
-    public function getFileContents($file_path)
+    public function getFileContents($filePath)
     {
-        return $this->file_provider->getContents($file_path);
+        return $this->fileProvider->getContents($filePath);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return array<int, PhpParser\Node\Stmt>
      */
-    public function getStatementsForFile($file_path)
+    public function getStatementsForFile($filePath)
     {
-        return $this->statements_provider->getStatementsForFile(
-            $file_path,
-            $this->debug_output
+        return $this->statementsProvider->getStatementsForFile(
+            $filePath,
+            $this->debugOutput
         );
     }
 
     /**
-     * @param  string $fq_classlike_name
+     * @param  string $fqClasslikeName
      *
      * @return ClassLikeStorage
      */
-    public function createClassLikeStorage($fq_classlike_name)
+    public function createClassLikeStorage($fqClasslikeName)
     {
-        return $this->classlike_storage_provider->create($fq_classlike_name);
+        return $this->classlikeStorageProvider->create($fqClasslikeName);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return void
      */
-    public function cacheClassLikeStorage(ClassLikeStorage $classlike_storage, $file_path)
+    public function cacheClassLikeStorage(ClassLikeStorage $classlikeStorage, $filePath)
     {
-        $file_contents = $this->file_provider->getContents($file_path);
-        $this->classlike_storage_provider->cache->writeToCache($classlike_storage, $file_path, $file_contents);
+        $fileContents = $this->fileProvider->getContents($filePath);
+        $this->classlikeStorageProvider->cache->writeToCache($classlikeStorage, $filePath, $fileContents);
     }
 
     /**
-     * @param  string $fq_classlike_name
-     * @param  string $file_path
+     * @param  string $fqClasslikeName
+     * @param  string $filePath
      *
      * @return void
      */
-    public function exhumeClassLikeStorage($fq_classlike_name, $file_path)
+    public function exhumeClassLikeStorage($fqClasslikeName, $filePath)
     {
-        $file_contents = $this->file_provider->getContents($file_path);
-        $storage = $this->classlike_storage_provider->exhume($fq_classlike_name, $file_path, $file_contents);
+        $fileContents = $this->fileProvider->getContents($filePath);
+        $storage = $this->classlikeStorageProvider->exhume($fqClasslikeName, $filePath, $fileContents);
 
-        if ($storage->is_trait) {
-            $this->classlikes->addFullyQualifiedTraitName($fq_classlike_name, $file_path);
-        } elseif ($storage->is_interface) {
-            $this->classlikes->addFullyQualifiedInterfaceName($fq_classlike_name, $file_path);
+        if ($storage->isTrait) {
+            $this->classlikes->addFullyQualifiedTraitName($fqClasslikeName, $filePath);
+        } elseif ($storage->isInterface) {
+            $this->classlikes->addFullyQualifiedInterfaceName($fqClasslikeName, $filePath);
         } else {
-            $this->classlikes->addFullyQualifiedClassName($fq_classlike_name, $file_path);
+            $this->classlikes->addFullyQualifiedClassName($fqClasslikeName, $filePath);
         }
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return FileStorage
      */
-    public function createFileStorageForPath($file_path)
+    public function createFileStorageForPath($filePath)
     {
-        return $this->file_storage_provider->create($file_path);
+        return $this->fileStorageProvider->create($filePath);
     }
 
     /**
@@ -307,7 +307,7 @@ class Codebase
      */
     public function findReferencesToSymbol($symbol)
     {
-        if (!$this->collect_references) {
+        if (!$this->collectReferences) {
             throw new \UnexpectedValueException('Should not be checking references');
         }
 
@@ -319,355 +319,355 @@ class Codebase
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return array<string, \Psalm\CodeLocation[]>
      */
-    public function findReferencesToMethod($method_id)
+    public function findReferencesToMethod($methodId)
     {
-        list($fq_class_name, $method_name) = explode('::', $method_id);
+        list($fqClassName, $methodName) = explode('::', $methodId);
 
         try {
-            $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+            $classStorage = $this->classlikeStorageProvider->get($fqClassName);
         } catch (\InvalidArgumentException $e) {
-            die('Class ' . $fq_class_name . ' cannot be found' . PHP_EOL);
+            die('Class ' . $fqClassName . ' cannot be found' . PHP_EOL);
         }
 
-        $method_name_lc = strtolower($method_name);
+        $methodNameLc = strtolower($methodName);
 
-        if (!isset($class_storage->methods[$method_name_lc])) {
-            die('Method ' . $method_id . ' cannot be found' . PHP_EOL);
+        if (!isset($classStorage->methods[$methodNameLc])) {
+            die('Method ' . $methodId . ' cannot be found' . PHP_EOL);
         }
 
-        $method_storage = $class_storage->methods[$method_name_lc];
+        $methodStorage = $classStorage->methods[$methodNameLc];
 
-        if ($method_storage->referencing_locations === null) {
-            die('No references found for ' . $method_id . PHP_EOL);
+        if ($methodStorage->referencingLocations === null) {
+            die('No references found for ' . $methodId . PHP_EOL);
         }
 
-        return $method_storage->referencing_locations;
+        return $methodStorage->referencingLocations;
     }
 
     /**
-     * @param  string $fq_class_name
+     * @param  string $fqClassName
      *
      * @return array<string, \Psalm\CodeLocation[]>
      */
-    public function findReferencesToClassLike($fq_class_name)
+    public function findReferencesToClassLike($fqClassName)
     {
         try {
-            $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+            $classStorage = $this->classlikeStorageProvider->get($fqClassName);
         } catch (\InvalidArgumentException $e) {
-            die('Class ' . $fq_class_name . ' cannot be found' . PHP_EOL);
+            die('Class ' . $fqClassName . ' cannot be found' . PHP_EOL);
         }
 
-        if ($class_storage->referencing_locations === null) {
-            die('No references found for ' . $fq_class_name . PHP_EOL);
+        if ($classStorage->referencingLocations === null) {
+            die('No references found for ' . $fqClassName . PHP_EOL);
         }
 
-        $classlike_references_by_file = $class_storage->referencing_locations;
+        $classlikeReferencesByFile = $classStorage->referencingLocations;
 
-        $fq_class_name_lc = strtolower($fq_class_name);
+        $fqClassNameLc = strtolower($fqClassName);
 
-        if (isset($this->use_referencing_locations[$fq_class_name_lc])) {
-            foreach ($this->use_referencing_locations[$fq_class_name_lc] as $file_path => $locations) {
-                if (!isset($classlike_references_by_file[$file_path])) {
-                    $classlike_references_by_file[$file_path] = $locations;
+        if (isset($this->useReferencingLocations[$fqClassNameLc])) {
+            foreach ($this->useReferencingLocations[$fqClassNameLc] as $filePath => $locations) {
+                if (!isset($classlikeReferencesByFile[$filePath])) {
+                    $classlikeReferencesByFile[$filePath] = $locations;
                 } else {
-                    $classlike_references_by_file[$file_path] = array_merge(
+                    $classlikeReferencesByFile[$filePath] = array_merge(
                         $locations,
-                        $classlike_references_by_file[$file_path]
+                        $classlikeReferencesByFile[$filePath]
                     );
                 }
             }
         }
 
-        return $classlike_references_by_file;
+        return $classlikeReferencesByFile;
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $closure_id
+     * @param  string $filePath
+     * @param  string $closureId
      *
      * @return FunctionLikeStorage
      */
-    public function getClosureStorage($file_path, $closure_id)
+    public function getClosureStorage($filePath, $closureId)
     {
-        $file_storage = $this->file_storage_provider->get($file_path);
+        $fileStorage = $this->fileStorageProvider->get($filePath);
 
         // closures can be returned here
-        if (isset($file_storage->functions[$closure_id])) {
-            return $file_storage->functions[$closure_id];
+        if (isset($fileStorage->functions[$closureId])) {
+            return $fileStorage->functions[$closureId];
         }
 
         throw new \UnexpectedValueException(
-            'Expecting ' . $closure_id . ' to have storage in ' . $file_path
+            'Expecting ' . $closureId . ' to have storage in ' . $filePath
         );
     }
 
     /**
-     * @param  string $const_id
+     * @param  string $constId
      * @param  Type\Union $type
      *
      * @return  void
      */
-    public function addGlobalConstantType($const_id, Type\Union $type)
+    public function addGlobalConstantType($constId, Type\Union $type)
     {
-        self::$stubbed_constants[$const_id] = $type;
+        self::$stubbedConstants[$constId] = $type;
     }
 
     /**
-     * @param  string $const_id
+     * @param  string $constId
      *
      * @return Type\Union|null
      */
-    public function getStubbedConstantType($const_id)
+    public function getStubbedConstantType($constId)
     {
-        return isset(self::$stubbed_constants[$const_id]) ? self::$stubbed_constants[$const_id] : null;
+        return isset(self::$stubbedConstants[$constId]) ? self::$stubbedConstants[$constId] : null;
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return bool
      */
-    public function fileExists($file_path)
+    public function fileExists($filePath)
     {
-        return $this->file_provider->fileExists($file_path);
+        return $this->fileProvider->fileExists($filePath);
     }
 
     /**
      * Check whether a class/interface exists
      *
-     * @param  string          $fq_class_name
-     * @param  CodeLocation $code_location
+     * @param  string          $fqClassName
+     * @param  CodeLocation $codeLocation
      *
      * @return bool
      */
-    public function classOrInterfaceExists($fq_class_name, CodeLocation $code_location = null)
+    public function classOrInterfaceExists($fqClassName, CodeLocation $codeLocation = null)
     {
-        return $this->classlikes->classOrInterfaceExists($fq_class_name, $code_location);
+        return $this->classlikes->classOrInterfaceExists($fqClassName, $codeLocation);
     }
 
     /**
-     * @param  string       $fq_class_name
-     * @param  string       $possible_parent
+     * @param  string       $fqClassName
+     * @param  string       $possibleParent
      *
      * @return bool
      */
-    public function classExtendsOrImplements($fq_class_name, $possible_parent)
+    public function classExtendsOrImplements($fqClassName, $possibleParent)
     {
-        return $this->classlikes->classExtends($fq_class_name, $possible_parent)
-            || $this->classlikes->classImplements($fq_class_name, $possible_parent);
+        return $this->classlikes->classExtends($fqClassName, $possibleParent)
+            || $this->classlikes->classImplements($fqClassName, $possibleParent);
     }
 
     /**
      * Determine whether or not a given class exists
      *
-     * @param  string       $fq_class_name
+     * @param  string       $fqClassName
      *
      * @return bool
      */
-    public function classExists($fq_class_name)
+    public function classExists($fqClassName)
     {
-        return $this->classlikes->classExists($fq_class_name);
+        return $this->classlikes->classExists($fqClassName);
     }
 
     /**
      * Determine whether or not a class extends a parent
      *
-     * @param  string       $fq_class_name
-     * @param  string       $possible_parent
+     * @param  string       $fqClassName
+     * @param  string       $possibleParent
      *
      * @return bool
      */
-    public function classExtends($fq_class_name, $possible_parent)
+    public function classExtends($fqClassName, $possibleParent)
     {
-        return $this->classlikes->classExtends($fq_class_name, $possible_parent);
+        return $this->classlikes->classExtends($fqClassName, $possibleParent);
     }
 
     /**
      * Check whether a class implements an interface
      *
-     * @param  string       $fq_class_name
+     * @param  string       $fqClassName
      * @param  string       $interface
      *
      * @return bool
      */
-    public function classImplements($fq_class_name, $interface)
+    public function classImplements($fqClassName, $interface)
     {
-        return $this->classlikes->classImplements($fq_class_name, $interface);
+        return $this->classlikes->classImplements($fqClassName, $interface);
     }
 
     /**
-     * @param  string         $fq_interface_name
+     * @param  string         $fqInterfaceName
      *
      * @return bool
      */
-    public function interfaceExists($fq_interface_name)
+    public function interfaceExists($fqInterfaceName)
     {
-        return $this->classlikes->interfaceExists($fq_interface_name);
+        return $this->classlikes->interfaceExists($fqInterfaceName);
     }
 
     /**
-     * @param  string         $interface_name
-     * @param  string         $possible_parent
+     * @param  string         $interfaceName
+     * @param  string         $possibleParent
      *
      * @return bool
      */
-    public function interfaceExtends($interface_name, $possible_parent)
+    public function interfaceExtends($interfaceName, $possibleParent)
     {
-        return $this->classlikes->interfaceExtends($interface_name, $possible_parent);
+        return $this->classlikes->interfaceExtends($interfaceName, $possibleParent);
     }
 
     /**
-     * @param  string         $fq_interface_name
+     * @param  string         $fqInterfaceName
      *
-     * @return array<string>   all interfaces extended by $interface_name
+     * @return array<string>   all interfaces extended by $interfaceName
      */
-    public function getParentInterfaces($fq_interface_name)
+    public function getParentInterfaces($fqInterfaceName)
     {
-        return $this->classlikes->getParentInterfaces($fq_interface_name);
+        return $this->classlikes->getParentInterfaces($fqInterfaceName);
     }
 
     /**
      * Determine whether or not a class has the correct casing
      *
-     * @param  string $fq_class_name
+     * @param  string $fqClassName
      *
      * @return bool
      */
-    public function classHasCorrectCasing($fq_class_name)
+    public function classHasCorrectCasing($fqClassName)
     {
-        return $this->classlikes->classHasCorrectCasing($fq_class_name);
+        return $this->classlikes->classHasCorrectCasing($fqClassName);
     }
 
     /**
-     * @param  string $fq_interface_name
+     * @param  string $fqInterfaceName
      *
      * @return bool
      */
-    public function interfaceHasCorrectCasing($fq_interface_name)
+    public function interfaceHasCorrectCasing($fqInterfaceName)
     {
-        return $this->classlikes->interfaceHasCorrectCasing($fq_interface_name);
+        return $this->classlikes->interfaceHasCorrectCasing($fqInterfaceName);
     }
 
     /**
-     * @param  string $fq_trait_name
+     * @param  string $fqTraitName
      *
      * @return bool
      */
-    public function traitHasCorrectCase($fq_trait_name)
+    public function traitHasCorrectCase($fqTraitName)
     {
-        return $this->classlikes->traitHasCorrectCase($fq_trait_name);
+        return $this->classlikes->traitHasCorrectCase($fqTraitName);
     }
 
     /**
      * Whether or not a given method exists
      *
-     * @param  string       $method_id
-     * @param  CodeLocation|null $code_location
+     * @param  string       $methodId
+     * @param  CodeLocation|null $codeLocation
      *
      * @return bool
      */
-    public function methodExists($method_id, CodeLocation $code_location = null)
+    public function methodExists($methodId, CodeLocation $codeLocation = null)
     {
-        return $this->methods->methodExists($method_id, $code_location);
+        return $this->methods->methodExists($methodId, $codeLocation);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return array<int, \Psalm\Storage\FunctionLikeParameter>
      */
-    public function getMethodParams($method_id)
+    public function getMethodParams($methodId)
     {
-        return $this->methods->getMethodParams($method_id);
+        return $this->methods->getMethodParams($methodId);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return bool
      */
-    public function isVariadic($method_id)
+    public function isVariadic($methodId)
     {
-        return $this->methods->isVariadic($method_id);
+        return $this->methods->isVariadic($methodId);
     }
 
     /**
-     * @param  string $method_id
-     * @param  string $self_class
+     * @param  string $methodId
+     * @param  string $selfClass
      *
      * @return Type\Union|null
      */
-    public function getMethodReturnType($method_id, &$self_class)
+    public function getMethodReturnType($methodId, &$selfClass)
     {
-        return $this->methods->getMethodReturnType($method_id, $self_class);
+        return $this->methods->getMethodReturnType($methodId, $selfClass);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return bool
      */
-    public function getMethodReturnsByRef($method_id)
+    public function getMethodReturnsByRef($methodId)
     {
-        return $this->methods->getMethodReturnsByRef($method_id);
+        return $this->methods->getMethodReturnsByRef($methodId);
     }
 
     /**
-     * @param  string               $method_id
-     * @param  CodeLocation|null    $defined_location
+     * @param  string               $methodId
+     * @param  CodeLocation|null    $definedLocation
      *
      * @return CodeLocation|null
      */
     public function getMethodReturnTypeLocation(
-        $method_id,
-        CodeLocation &$defined_location = null
+        $methodId,
+        CodeLocation &$definedLocation = null
     ) {
-        return $this->methods->getMethodReturnTypeLocation($method_id, $defined_location);
+        return $this->methods->getMethodReturnTypeLocation($methodId, $definedLocation);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return string|null
      */
-    public function getDeclaringMethodId($method_id)
+    public function getDeclaringMethodId($methodId)
     {
-        return $this->methods->getDeclaringMethodId($method_id);
+        return $this->methods->getDeclaringMethodId($methodId);
     }
 
     /**
      * Get the class this method appears in (vs is declared in, which could give a trait)
      *
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return string|null
      */
-    public function getAppearingMethodId($method_id)
+    public function getAppearingMethodId($methodId)
     {
-        return $this->methods->getAppearingMethodId($method_id);
+        return $this->methods->getAppearingMethodId($methodId);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return array<string>
      */
-    public function getOverriddenMethodIds($method_id)
+    public function getOverriddenMethodIds($methodId)
     {
-        return $this->methods->getOverriddenMethodIds($method_id);
+        return $this->methods->getOverriddenMethodIds($methodId);
     }
 
     /**
-     * @param  string $method_id
+     * @param  string $methodId
      *
      * @return string
      */
-    public function getCasedMethodId($method_id)
+    public function getCasedMethodId($methodId)
     {
-        return $this->methods->getCasedMethodId($method_id);
+        return $this->methods->getCasedMethodId($methodId);
     }
 }

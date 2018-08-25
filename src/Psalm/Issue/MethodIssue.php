@@ -6,19 +6,19 @@ abstract class MethodIssue extends CodeIssue
     /**
      * @var string
      */
-    public $method_id;
+    public $methodId;
 
     /**
      * @param string        $message
-     * @param \Psalm\CodeLocation  $code_location
-     * @param string        $method_id
+     * @param \Psalm\CodeLocation  $codeLocation
+     * @param string        $methodId
      */
     public function __construct(
         $message,
-        \Psalm\CodeLocation $code_location,
-        $method_id
+        \Psalm\CodeLocation $codeLocation,
+        $methodId
     ) {
-        parent::__construct($message, $code_location);
-        $this->method_id = strtolower($method_id);
+        parent::__construct($message, $codeLocation);
+        $this->methodId = strtolower($methodId);
     }
 }

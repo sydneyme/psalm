@@ -17,60 +17,60 @@ trait FileCheckerValidCodeParseTestTrait
      *
      * @param string $code
      * @param array<string, string> $assertions
-     * @param array<string|int, string> $error_levels
-     * @param array<string, Union> $scope_vars
+     * @param array<string|int, string> $errorLevels
+     * @param array<string, Union> $scopeVars
      *
      * @small
      *
      * @return void
      */
-    public function testValidCode($code, $assertions = [], $error_levels = [], $scope_vars = [])
+    public function testValidCode($code, $assertions = [], $errorLevels = [], $scopeVars = [])
     {
-        $test_name = $this->getTestName();
-        if (strpos($test_name, 'PHP7-') !== false) {
+        $testName = $this->getTestName();
+        if (strpos($testName, 'PHP7-') !== false) {
             if (version_compare(PHP_VERSION, '7.0.0dev', '<')) {
                 $this->markTestSkipped('Test case requires PHP 7.');
 
                 return;
             }
-        } elseif (strpos($test_name, 'PHP71-') !== false) {
+        } elseif (strpos($testName, 'PHP71-') !== false) {
             if (version_compare(PHP_VERSION, '7.1.0', '<')) {
                 $this->markTestSkipped('Test case requires PHP 7.1.');
 
                 return;
             }
-        } elseif (strpos($test_name, 'SKIPPED-') !== false) {
+        } elseif (strpos($testName, 'SKIPPED-') !== false) {
             $this->markTestSkipped('Skipped due to a bug.');
         }
 
-        foreach ($error_levels as $error_level_key => $error_level) {
-            if (is_int($error_level_key)) {
-                $issue_name = $error_level;
-                $error_level = Config::REPORT_SUPPRESS;
+        foreach ($errorLevels as $errorLevelKey => $errorLevel) {
+            if (is_int($errorLevelKey)) {
+                $issueName = $errorLevel;
+                $errorLevel = Config::REPORT_SUPPRESS;
             } else {
-                $issue_name = $error_level_key;
+                $issueName = $errorLevelKey;
             }
 
-            Config::getInstance()->setCustomErrorLevel($issue_name, $error_level);
+            Config::getInstance()->setCustomErrorLevel($issueName, $errorLevel);
         }
 
         $context = new Context();
-        foreach ($scope_vars as $var => $value) {
-            $context->vars_in_scope[$var] = $value;
+        foreach ($scopeVars as $var => $value) {
+            $context->varsInScope[$var] = $value;
         }
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
-        $this->addFile($file_path, $code);
-        $this->analyzeFile($file_path, $context);
+        $this->addFile($filePath, $code);
+        $this->analyzeFile($filePath, $context);
 
-        $actual_vars = [];
+        $actualVars = [];
         foreach ($assertions as $var => $_) {
-            if (isset($context->vars_in_scope[$var])) {
-                $actual_vars[$var] = (string)$context->vars_in_scope[$var];
+            if (isset($context->varsInScope[$var])) {
+                $actualVars[$var] = (string)$context->varsInScope[$var];
             }
         }
 
-        $this->assertSame($assertions, $actual_vars);
+        $this->assertSame($assertions, $actualVars);
     }
 }

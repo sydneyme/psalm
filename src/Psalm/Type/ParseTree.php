@@ -18,7 +18,7 @@ class ParseTree
     /**
      * @var bool
      */
-    public $possibly_undefined = false;
+    public $possiblyUndefined = false;
 
     /**
      * @param ParseTree|null $parent
@@ -31,427 +31,427 @@ class ParseTree
     /**
      * Create a parse tree from a tokenised type
      *
-     * @param  array<int, string>  $type_tokens
+     * @param  array<int, string>  $typeTokens
      *
      * @return self
      */
-    public static function createFromTokens(array $type_tokens)
+    public static function createFromTokens(array $typeTokens)
     {
         // We construct a parse tree corresponding to the type
-        $parse_tree = new ParseTree\Root();
+        $parseTree = new ParseTree\Root();
 
-        $current_leaf = $parse_tree;
+        $currentLeaf = $parseTree;
 
-        for ($i = 0, $c = count($type_tokens); $i < $c; ++$i) {
-            $last_token = $i > 0 ? $type_tokens[$i - 1] : null;
-            $type_token = $type_tokens[$i];
-            $next_token = $i + 1 < $c ? $type_tokens[$i + 1] : null;
+        for ($i = 0, $c = count($typeTokens); $i < $c; ++$i) {
+            $lastToken = $i > 0 ? $typeTokens[$i - 1] : null;
+            $typeToken = $typeTokens[$i];
+            $nextToken = $i + 1 < $c ? $typeTokens[$i + 1] : null;
 
-            switch ($type_token) {
+            switch ($typeToken) {
                 case '<':
                 case '{':
                 case ']':
-                    throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    throw new TypeParseTreeException('Unexpected token ' . $typeToken);
 
                 case '[':
-                    if ($current_leaf instanceof ParseTree\Root) {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if ($currentLeaf instanceof ParseTree\Root) {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    if ($next_token !== ']') {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if ($nextToken !== ']') {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    $new_parent_leaf = new ParseTree\GenericTree('array', $current_parent);
-                    $current_leaf->parent = $new_parent_leaf;
-                    $new_parent_leaf->children = [$current_leaf];
+                    $newParentLeaf = new ParseTree\GenericTree('array', $currentParent);
+                    $currentLeaf->parent = $newParentLeaf;
+                    $newParentLeaf->children = [$currentLeaf];
 
-                    if ($current_parent) {
-                        array_pop($current_parent->children);
-                        $current_parent->children[] = $new_parent_leaf;
+                    if ($currentParent) {
+                        array_pop($currentParent->children);
+                        $currentParent->children[] = $newParentLeaf;
                     } else {
-                        $parse_tree = $new_parent_leaf;
+                        $parseTree = $newParentLeaf;
                     }
 
-                    $current_leaf = $new_parent_leaf;
+                    $currentLeaf = $newParentLeaf;
                     ++$i;
                     break;
 
                 case '(':
-                    if ($current_leaf instanceof ParseTree\Value) {
+                    if ($currentLeaf instanceof ParseTree\Value) {
                         throw new TypeParseTreeException('Unrecognised token (');
                     }
 
-                    $new_parent = !$current_leaf instanceof ParseTree\Root ? $current_leaf : null;
+                    $newParent = !$currentLeaf instanceof ParseTree\Root ? $currentLeaf : null;
 
-                    $new_leaf = new ParseTree\EncapsulationTree(
-                        $new_parent
+                    $newLeaf = new ParseTree\EncapsulationTree(
+                        $newParent
                     );
 
-                    if ($current_leaf instanceof ParseTree\Root) {
-                        $current_leaf = $parse_tree = $new_leaf;
+                    if ($currentLeaf instanceof ParseTree\Root) {
+                        $currentLeaf = $parseTree = $newLeaf;
                         break;
                     }
 
-                    if ($new_leaf->parent) {
-                        $new_leaf->parent->children[] = $new_leaf;
+                    if ($newLeaf->parent) {
+                        $newLeaf->parent->children[] = $newLeaf;
                     }
 
-                    $current_leaf = $new_leaf;
+                    $currentLeaf = $newLeaf;
                     break;
 
                 case ')':
-                    if ($last_token === '(' && $current_leaf instanceof ParseTree\CallableTree) {
+                    if ($lastToken === '(' && $currentLeaf instanceof ParseTree\CallableTree) {
                         break;
                     }
 
                     do {
-                        if ($current_leaf->parent === null
-                            || $current_leaf->parent instanceof ParseTree\CallableWithReturnTypeTree
-                            || $current_leaf->parent instanceof ParseTree\MethodWithReturnTypeTree
+                        if ($currentLeaf->parent === null
+                            || $currentLeaf->parent instanceof ParseTree\CallableWithReturnTypeTree
+                            || $currentLeaf->parent instanceof ParseTree\MethodWithReturnTypeTree
                         ) {
                             break;
                         }
 
-                        $current_leaf = $current_leaf->parent;
-                    } while (!$current_leaf instanceof ParseTree\EncapsulationTree
-                        && !$current_leaf instanceof ParseTree\CallableTree
-                        && !$current_leaf instanceof ParseTree\MethodTree);
+                        $currentLeaf = $currentLeaf->parent;
+                    } while (!$currentLeaf instanceof ParseTree\EncapsulationTree
+                        && !$currentLeaf instanceof ParseTree\CallableTree
+                        && !$currentLeaf instanceof ParseTree\MethodTree);
 
                     break;
 
                 case '>':
                     do {
-                        if ($current_leaf->parent === null) {
+                        if ($currentLeaf->parent === null) {
                             throw new TypeParseTreeException('Cannot parse generic type');
                         }
 
-                        $current_leaf = $current_leaf->parent;
-                    } while (!$current_leaf instanceof ParseTree\GenericTree);
+                        $currentLeaf = $currentLeaf->parent;
+                    } while (!$currentLeaf instanceof ParseTree\GenericTree);
 
                     break;
 
                 case '}':
                     do {
-                        if ($current_leaf->parent === null) {
+                        if ($currentLeaf->parent === null) {
                             throw new TypeParseTreeException('Cannot parse array type');
                         }
 
-                        $current_leaf = $current_leaf->parent;
-                    } while (!$current_leaf instanceof ParseTree\ObjectLikeTree);
+                        $currentLeaf = $currentLeaf->parent;
+                    } while (!$currentLeaf instanceof ParseTree\ObjectLikeTree);
 
                     break;
 
                 case ',':
-                    if ($current_leaf instanceof ParseTree\Root) {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if ($currentLeaf instanceof ParseTree\Root) {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    if (!$current_leaf->parent) {
+                    if (!$currentLeaf->parent) {
                         throw new TypeParseTreeException('Cannot parse comma without a parent node');
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    $context_node = $current_leaf;
+                    $contextNode = $currentLeaf;
 
-                    if ($context_node instanceof ParseTree\GenericTree
-                        || $context_node instanceof ParseTree\ObjectLikeTree
-                        || $context_node instanceof ParseTree\CallableTree
-                        || $context_node instanceof ParseTree\MethodTree
+                    if ($contextNode instanceof ParseTree\GenericTree
+                        || $contextNode instanceof ParseTree\ObjectLikeTree
+                        || $contextNode instanceof ParseTree\CallableTree
+                        || $contextNode instanceof ParseTree\MethodTree
                     ) {
-                        $context_node = $context_node->parent;
+                        $contextNode = $contextNode->parent;
                     }
 
-                    while ($context_node
-                        && !$context_node instanceof ParseTree\GenericTree
-                        && !$context_node instanceof ParseTree\ObjectLikeTree
-                        && !$context_node instanceof ParseTree\CallableTree
-                        && !$context_node instanceof ParseTree\MethodTree
+                    while ($contextNode
+                        && !$contextNode instanceof ParseTree\GenericTree
+                        && !$contextNode instanceof ParseTree\ObjectLikeTree
+                        && !$contextNode instanceof ParseTree\CallableTree
+                        && !$contextNode instanceof ParseTree\MethodTree
                     ) {
-                        $context_node = $context_node->parent;
+                        $contextNode = $contextNode->parent;
                     }
 
-                    if (!$context_node) {
+                    if (!$contextNode) {
                         throw new TypeParseTreeException('Cannot parse comma in non-generic/array type');
                     }
 
-                    $current_leaf = $context_node;
+                    $currentLeaf = $contextNode;
 
                     break;
 
                 case '...':
                 case '=':
-                    if ($last_token === '...' || $last_token === '=') {
+                    if ($lastToken === '...' || $lastToken === '=') {
                         throw new TypeParseTreeException('Cannot have duplicate tokens');
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    if ($current_leaf instanceof ParseTree\MethodTree && $type_token === '...') {
-                        self::createMethodParam($current_leaf, $current_leaf, $type_tokens, $type_token, $i);
+                    if ($currentLeaf instanceof ParseTree\MethodTree && $typeToken === '...') {
+                        self::createMethodParam($currentLeaf, $currentLeaf, $typeTokens, $typeToken, $i);
                         break;
                     }
 
-                    while ($current_parent
-                        && !$current_parent instanceof ParseTree\CallableTree
-                        && !$current_parent instanceof ParseTree\CallableParamTree
+                    while ($currentParent
+                        && !$currentParent instanceof ParseTree\CallableTree
+                        && !$currentParent instanceof ParseTree\CallableParamTree
                     ) {
-                        $current_leaf = $current_parent;
-                        $current_parent = $current_parent->parent;
+                        $currentLeaf = $currentParent;
+                        $currentParent = $currentParent->parent;
                     }
 
-                    if (!$current_parent || !$current_leaf) {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if (!$currentParent || !$currentLeaf) {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    if ($current_parent instanceof ParseTree\CallableParamTree) {
+                    if ($currentParent instanceof ParseTree\CallableParamTree) {
                         throw new TypeParseTreeException('Cannot have variadic param with a default');
                     }
 
-                    $new_leaf = new ParseTree\CallableParamTree($current_parent);
-                    $new_leaf->has_default = $type_token === '=';
-                    $new_leaf->variadic = $type_token === '...';
-                    $new_leaf->children = [$current_leaf];
+                    $newLeaf = new ParseTree\CallableParamTree($currentParent);
+                    $newLeaf->hasDefault = $typeToken === '=';
+                    $newLeaf->variadic = $typeToken === '...';
+                    $newLeaf->children = [$currentLeaf];
 
-                    $current_leaf->parent = $new_leaf;
+                    $currentLeaf->parent = $newLeaf;
 
-                    array_pop($current_parent->children);
-                    $current_parent->children[] = $new_leaf;
+                    array_pop($currentParent->children);
+                    $currentParent->children[] = $newLeaf;
 
-                    $current_leaf = $new_leaf;
+                    $currentLeaf = $newLeaf;
 
                     break;
 
                 case ':':
-                    if ($current_leaf instanceof ParseTree\Root) {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if ($currentLeaf instanceof ParseTree\Root) {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    if ($current_leaf instanceof ParseTree\CallableTree) {
-                        $new_parent_leaf = new ParseTree\CallableWithReturnTypeTree($current_parent);
-                        $current_leaf->parent = $new_parent_leaf;
-                        $new_parent_leaf->children = [$current_leaf];
+                    if ($currentLeaf instanceof ParseTree\CallableTree) {
+                        $newParentLeaf = new ParseTree\CallableWithReturnTypeTree($currentParent);
+                        $currentLeaf->parent = $newParentLeaf;
+                        $newParentLeaf->children = [$currentLeaf];
 
-                        if ($current_parent) {
-                            array_pop($current_parent->children);
-                            $current_parent->children[] = $new_parent_leaf;
+                        if ($currentParent) {
+                            array_pop($currentParent->children);
+                            $currentParent->children[] = $newParentLeaf;
                         } else {
-                            $parse_tree = $new_parent_leaf;
+                            $parseTree = $newParentLeaf;
                         }
 
-                        $current_leaf = $new_parent_leaf;
+                        $currentLeaf = $newParentLeaf;
                         break;
                     }
 
-                    if ($current_leaf instanceof ParseTree\MethodTree) {
-                        $new_parent_leaf = new ParseTree\MethodWithReturnTypeTree($current_parent);
-                        $current_leaf->parent = $new_parent_leaf;
-                        $new_parent_leaf->children = [$current_leaf];
+                    if ($currentLeaf instanceof ParseTree\MethodTree) {
+                        $newParentLeaf = new ParseTree\MethodWithReturnTypeTree($currentParent);
+                        $currentLeaf->parent = $newParentLeaf;
+                        $newParentLeaf->children = [$currentLeaf];
 
-                        if ($current_parent) {
-                            array_pop($current_parent->children);
-                            $current_parent->children[] = $new_parent_leaf;
+                        if ($currentParent) {
+                            array_pop($currentParent->children);
+                            $currentParent->children[] = $newParentLeaf;
                         } else {
-                            $parse_tree = $new_parent_leaf;
+                            $parseTree = $newParentLeaf;
                         }
 
-                        $current_leaf = $new_parent_leaf;
+                        $currentLeaf = $newParentLeaf;
                         break;
                     }
 
-                    if ($current_parent && $current_parent instanceof ParseTree\ObjectLikePropertyTree) {
+                    if ($currentParent && $currentParent instanceof ParseTree\ObjectLikePropertyTree) {
                         break;
                     }
 
-                    if (!$current_parent) {
+                    if (!$currentParent) {
                         throw new TypeParseTreeException('Cannot process colon without parent');
                     }
 
-                    if (!$current_leaf instanceof ParseTree\Value) {
+                    if (!$currentLeaf instanceof ParseTree\Value) {
                         throw new TypeParseTreeException('Unexpected LHS of property');
                     }
 
-                    if (!$current_parent instanceof ParseTree\ObjectLikeTree) {
+                    if (!$currentParent instanceof ParseTree\ObjectLikeTree) {
                         throw new TypeParseTreeException('Saw : outside of object-like array');
                     }
 
-                    $new_parent_leaf = new ParseTree\ObjectLikePropertyTree($current_leaf->value, $current_parent);
-                    $new_parent_leaf->possibly_undefined = $last_token === '?';
-                    $current_leaf->parent = $new_parent_leaf;
+                    $newParentLeaf = new ParseTree\ObjectLikePropertyTree($currentLeaf->value, $currentParent);
+                    $newParentLeaf->possiblyUndefined = $lastToken === '?';
+                    $currentLeaf->parent = $newParentLeaf;
 
-                    array_pop($current_parent->children);
-                    $current_parent->children[] = $new_parent_leaf;
+                    array_pop($currentParent->children);
+                    $currentParent->children[] = $newParentLeaf;
 
-                    $current_leaf = $new_parent_leaf;
+                    $currentLeaf = $newParentLeaf;
 
                     break;
 
                 case ' ':
-                    if ($current_leaf instanceof ParseTree\Root) {
+                    if ($currentLeaf instanceof ParseTree\Root) {
                         throw new TypeParseTreeException('Unexpected space');
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    while ($current_parent && !$current_parent instanceof ParseTree\MethodTree) {
-                        $current_leaf = $current_parent;
-                        $current_parent = $current_parent->parent;
+                    while ($currentParent && !$currentParent instanceof ParseTree\MethodTree) {
+                        $currentLeaf = $currentParent;
+                        $currentParent = $currentParent->parent;
                     }
 
-                    if (!$current_parent instanceof ParseTree\MethodTree || !$next_token) {
+                    if (!$currentParent instanceof ParseTree\MethodTree || !$nextToken) {
                         throw new TypeParseTreeException('Unexpected space');
                     }
 
                     ++$i;
 
-                    self::createMethodParam($current_leaf, $current_parent, $type_tokens, $next_token, $i);
+                    self::createMethodParam($currentLeaf, $currentParent, $typeTokens, $nextToken, $i);
 
                     break;
 
                 case '?':
-                    if ($next_token !== ':') {
-                        $new_parent = !$current_leaf instanceof ParseTree\Root ? $current_leaf : null;
+                    if ($nextToken !== ':') {
+                        $newParent = !$currentLeaf instanceof ParseTree\Root ? $currentLeaf : null;
 
-                        $new_leaf = new ParseTree\NullableTree(
-                            $new_parent
+                        $newLeaf = new ParseTree\NullableTree(
+                            $newParent
                         );
 
-                        if ($current_leaf instanceof ParseTree\Root) {
-                            $current_leaf = $parse_tree = $new_leaf;
+                        if ($currentLeaf instanceof ParseTree\Root) {
+                            $currentLeaf = $parseTree = $newLeaf;
                             break;
                         }
 
-                        if ($new_leaf->parent) {
-                            $new_leaf->parent->children[] = $new_leaf;
+                        if ($newLeaf->parent) {
+                            $newLeaf->parent->children[] = $newLeaf;
                         }
 
-                        $current_leaf = $new_leaf;
+                        $currentLeaf = $newLeaf;
                     }
 
                     break;
 
                 case '|':
-                    if ($current_leaf instanceof ParseTree\Root) {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if ($currentLeaf instanceof ParseTree\Root) {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    if ($current_parent instanceof ParseTree\CallableWithReturnTypeTree) {
-                        $current_leaf = $current_parent;
-                        $current_parent = $current_parent->parent;
+                    if ($currentParent instanceof ParseTree\CallableWithReturnTypeTree) {
+                        $currentLeaf = $currentParent;
+                        $currentParent = $currentParent->parent;
                     }
 
-                    if ($current_parent instanceof ParseTree\NullableTree) {
-                        $current_leaf = $current_parent;
-                        $current_parent = $current_parent->parent;
+                    if ($currentParent instanceof ParseTree\NullableTree) {
+                        $currentLeaf = $currentParent;
+                        $currentParent = $currentParent->parent;
                     }
 
-                    if ($current_leaf instanceof ParseTree\UnionTree) {
-                        throw new TypeParseTreeException('Unexpected token ' . $type_token);
+                    if ($currentLeaf instanceof ParseTree\UnionTree) {
+                        throw new TypeParseTreeException('Unexpected token ' . $typeToken);
                     }
 
-                    if ($current_parent && $current_parent instanceof ParseTree\UnionTree) {
-                        $current_leaf = $current_parent;
+                    if ($currentParent && $currentParent instanceof ParseTree\UnionTree) {
+                        $currentLeaf = $currentParent;
                         break;
                     }
 
-                    if ($current_parent && $current_parent instanceof ParseTree\IntersectionTree) {
-                        $current_leaf = $current_parent;
-                        $current_parent = $current_leaf->parent;
+                    if ($currentParent && $currentParent instanceof ParseTree\IntersectionTree) {
+                        $currentLeaf = $currentParent;
+                        $currentParent = $currentLeaf->parent;
                     }
 
-                    $new_parent_leaf = new ParseTree\UnionTree($current_parent);
-                    $new_parent_leaf->children = [$current_leaf];
-                    $current_leaf->parent = $new_parent_leaf;
+                    $newParentLeaf = new ParseTree\UnionTree($currentParent);
+                    $newParentLeaf->children = [$currentLeaf];
+                    $currentLeaf->parent = $newParentLeaf;
 
-                    if ($current_parent) {
-                        array_pop($current_parent->children);
-                        $current_parent->children[] = $new_parent_leaf;
+                    if ($currentParent) {
+                        array_pop($currentParent->children);
+                        $currentParent->children[] = $newParentLeaf;
                     } else {
-                        $parse_tree = $new_parent_leaf;
+                        $parseTree = $newParentLeaf;
                     }
 
-                    $current_leaf = $new_parent_leaf;
+                    $currentLeaf = $newParentLeaf;
 
                     break;
 
                 case '&':
-                    if ($current_leaf instanceof ParseTree\Root) {
+                    if ($currentLeaf instanceof ParseTree\Root) {
                         throw new TypeParseTreeException(
                             'Unexpected &'
                         );
                     }
 
-                    $current_parent = $current_leaf->parent;
+                    $currentParent = $currentLeaf->parent;
 
-                    if ($current_leaf instanceof ParseTree\MethodTree) {
-                        self::createMethodParam($current_leaf, $current_leaf, $type_tokens, $type_token, $i);
+                    if ($currentLeaf instanceof ParseTree\MethodTree) {
+                        self::createMethodParam($currentLeaf, $currentLeaf, $typeTokens, $typeToken, $i);
                         break;
                     }
 
-                    if ($current_parent && $current_parent instanceof ParseTree\IntersectionTree) {
+                    if ($currentParent && $currentParent instanceof ParseTree\IntersectionTree) {
                         break;
                     }
 
-                    $new_parent_leaf = new ParseTree\IntersectionTree($current_parent);
-                    $new_parent_leaf->children = [$current_leaf];
-                    $current_leaf->parent = $new_parent_leaf;
+                    $newParentLeaf = new ParseTree\IntersectionTree($currentParent);
+                    $newParentLeaf->children = [$currentLeaf];
+                    $currentLeaf->parent = $newParentLeaf;
 
-                    if ($current_parent) {
-                        array_pop($current_parent->children);
-                        $current_parent->children[] = $new_parent_leaf;
+                    if ($currentParent) {
+                        array_pop($currentParent->children);
+                        $currentParent->children[] = $newParentLeaf;
                     } else {
-                        $parse_tree = $new_parent_leaf;
+                        $parseTree = $newParentLeaf;
                     }
 
-                    $current_leaf = $new_parent_leaf;
+                    $currentLeaf = $newParentLeaf;
 
                     break;
 
                 default:
-                    $new_parent = !$current_leaf instanceof ParseTree\Root ? $current_leaf : null;
+                    $newParent = !$currentLeaf instanceof ParseTree\Root ? $currentLeaf : null;
 
-                    if ($current_leaf instanceof ParseTree\MethodTree && $type_token[0] === '$') {
-                        self::createMethodParam($current_leaf, $current_leaf, $type_tokens, $type_token, $i);
+                    if ($currentLeaf instanceof ParseTree\MethodTree && $typeToken[0] === '$') {
+                        self::createMethodParam($currentLeaf, $currentLeaf, $typeTokens, $typeToken, $i);
                         break;
                     }
 
-                    switch ($next_token) {
+                    switch ($nextToken) {
                         case '<':
-                            $new_leaf = new ParseTree\GenericTree(
-                                $type_token,
-                                $new_parent
+                            $newLeaf = new ParseTree\GenericTree(
+                                $typeToken,
+                                $newParent
                             );
                             ++$i;
                             break;
 
                         case '{':
-                            $new_leaf = new ParseTree\ObjectLikeTree(
-                                $type_token,
-                                $new_parent
+                            $newLeaf = new ParseTree\ObjectLikeTree(
+                                $typeToken,
+                                $newParent
                             );
                             ++$i;
                             break;
 
                         case '(':
-                            if (in_array(strtolower($type_token), ['closure', 'callable', '\closure'])) {
-                                $new_leaf = new ParseTree\CallableTree(
-                                    $type_token,
-                                    $new_parent
+                            if (in_array(strtolower($typeToken), ['closure', 'callable', '\closure'])) {
+                                $newLeaf = new ParseTree\CallableTree(
+                                    $typeToken,
+                                    $newParent
                                 );
-                            } elseif ($type_token !== 'array'
-                                && $type_token[0] !== '\\'
-                                && $current_leaf instanceof ParseTree\Root
+                            } elseif ($typeToken !== 'array'
+                                && $typeToken[0] !== '\\'
+                                && $currentLeaf instanceof ParseTree\Root
                             ) {
-                                $new_leaf = new ParseTree\MethodTree(
-                                    $type_token,
-                                    $new_parent
+                                $newLeaf = new ParseTree\MethodTree(
+                                    $typeToken,
+                                    $newParent
                                 );
                             } else {
                                 throw new TypeParseTreeException(
@@ -463,20 +463,20 @@ class ParseTree
                             break;
 
                         case '::':
-                            $nexter_token = $i + 2 < $c ? $type_tokens[$i + 2] : null;
+                            $nexterToken = $i + 2 < $c ? $typeTokens[$i + 2] : null;
 
-                            if (!$nexter_token
-                                || (!preg_match('/^[A-Z_][A-Z_0-9]*$/', $nexter_token)
-                                    && strtolower($nexter_token) !== 'class')
+                            if (!$nexterToken
+                                || (!preg_match('/^[A-Z_][A-Z_0-9]*$/', $nexterToken)
+                                    && strtolower($nexterToken) !== 'class')
                             ) {
                                 throw new TypeParseTreeException(
-                                    'Invalid class constant ' . $nexter_token
+                                    'Invalid class constant ' . $nexterToken
                                 );
                             }
 
-                            $new_leaf = new ParseTree\Value(
-                                $type_token . '::' . $nexter_token,
-                                $new_parent
+                            $newLeaf = new ParseTree\Value(
+                                $typeToken . '::' . $nexterToken,
+                                $newParent
                             );
 
                             $i += 2;
@@ -484,95 +484,95 @@ class ParseTree
                             break;
 
                         default:
-                            if ($type_token === '$this') {
-                                $type_token = 'static';
+                            if ($typeToken === '$this') {
+                                $typeToken = 'static';
                             }
 
-                            $new_leaf = new ParseTree\Value(
-                                $type_token,
-                                $new_parent
+                            $newLeaf = new ParseTree\Value(
+                                $typeToken,
+                                $newParent
                             );
                             break;
                     }
 
-                    if ($current_leaf instanceof ParseTree\Root) {
-                        $current_leaf = $parse_tree = $new_leaf;
+                    if ($currentLeaf instanceof ParseTree\Root) {
+                        $currentLeaf = $parseTree = $newLeaf;
                         break;
                     }
 
-                    if ($new_leaf->parent) {
-                        $new_leaf->parent->children[] = $new_leaf;
+                    if ($newLeaf->parent) {
+                        $newLeaf->parent->children[] = $newLeaf;
                     }
 
-                    $current_leaf = $new_leaf;
+                    $currentLeaf = $newLeaf;
                     break;
             }
         }
 
-        return $parse_tree;
+        return $parseTree;
     }
 
     /**
-     * @param  ParseTree          &$current_leaf
-     * @param  ParseTree          $current_parent
-     * @param  array<int, string> $type_tokens
-     * @param  string             $current_token
+     * @param  ParseTree          &$currentLeaf
+     * @param  ParseTree          $currentParent
+     * @param  array<int, string> $typeTokens
+     * @param  string             $currentToken
      * @param  int                &$i
      *
      * @return void
      */
     private static function createMethodParam(
-        ParseTree &$current_leaf,
-        ParseTree $current_parent,
-        array $type_tokens,
-        $current_token,
+        ParseTree &$currentLeaf,
+        ParseTree $currentParent,
+        array $typeTokens,
+        $currentToken,
         &$i
     ) {
         $byref = false;
         $variadic = false;
-        $has_default = false;
+        $hasDefault = false;
         $default = '';
 
-        $c = count($type_tokens);
+        $c = count($typeTokens);
 
-        if ($current_token === '&') {
+        if ($currentToken === '&') {
             throw new TypeParseTreeException('Magic args cannot be passed by reference');
         }
 
-        if ($current_token === '...') {
+        if ($currentToken === '...') {
             $variadic = true;
 
             ++$i;
-            $current_token = $i < $c ? $type_tokens[$i] : null;
+            $currentToken = $i < $c ? $typeTokens[$i] : null;
         }
 
-        if (!$current_token || $current_token[0] !== '$') {
-            throw new TypeParseTreeException('Unexpected token after space ' . $current_token);
+        if (!$currentToken || $currentToken[0] !== '$') {
+            throw new TypeParseTreeException('Unexpected token after space ' . $currentToken);
         }
 
-        $new_parent_leaf = new ParseTree\MethodParamTree(
-            $current_token,
+        $newParentLeaf = new ParseTree\MethodParamTree(
+            $currentToken,
             $byref,
             $variadic,
-            $current_parent
+            $currentParent
         );
 
         for ($j = $i + 1; $j < $c; ++$j) {
-            $ahead_type_token = $type_tokens[$j];
+            $aheadTypeToken = $typeTokens[$j];
 
-            if ($ahead_type_token === ','
-                || ($ahead_type_token === ')' && $type_tokens[$j - 1] !== '(')
+            if ($aheadTypeToken === ','
+                || ($aheadTypeToken === ')' && $typeTokens[$j - 1] !== '(')
             ) {
                 $i = $j - 1;
                 break;
             }
 
-            if ($has_default) {
-                $default .= $ahead_type_token;
+            if ($hasDefault) {
+                $default .= $aheadTypeToken;
             }
 
-            if ($ahead_type_token === '=') {
-                $has_default = true;
+            if ($aheadTypeToken === '=') {
+                $hasDefault = true;
                 continue;
             }
 
@@ -581,16 +581,16 @@ class ParseTree
             }
         }
 
-        $new_parent_leaf->default = $default;
+        $newParentLeaf->default = $default;
 
-        if ($current_leaf !== $current_parent) {
-            $new_parent_leaf->children = [$current_leaf];
-            $current_leaf->parent = $new_parent_leaf;
-            array_pop($current_parent->children);
+        if ($currentLeaf !== $currentParent) {
+            $newParentLeaf->children = [$currentLeaf];
+            $currentLeaf->parent = $newParentLeaf;
+            array_pop($currentParent->children);
         }
 
-        $current_parent->children[] = $new_parent_leaf;
+        $currentParent->children[] = $newParentLeaf;
 
-        $current_leaf = $new_parent_leaf;
+        $currentLeaf = $newParentLeaf;
     }
 }

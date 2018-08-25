@@ -11,7 +11,7 @@ abstract class CodeIssue
     /**
      * @var CodeLocation
      */
-    protected $code_location;
+    protected $codeLocation;
 
     /**
      * @var string
@@ -20,13 +20,13 @@ abstract class CodeIssue
 
     /**
      * @param string        $message
-     * @param CodeLocation  $code_location
+     * @param CodeLocation  $codeLocation
      */
     public function __construct(
         $message,
-        CodeLocation $code_location
+        CodeLocation $codeLocation
     ) {
-        $this->code_location = $code_location;
+        $this->codeLocation = $codeLocation;
         $this->message = $message;
     }
 
@@ -35,7 +35,7 @@ abstract class CodeIssue
      */
     public function getLocation()
     {
-        return $this->code_location;
+        return $this->codeLocation;
     }
 
     /**
@@ -43,14 +43,14 @@ abstract class CodeIssue
      */
     public function getShortLocation()
     {
-        $previous_text = '';
+        $previousText = '';
 
-        if ($this->code_location->previous_location) {
-            $previous_location = $this->code_location->previous_location;
-            $previous_text = ' from ' . $previous_location->file_name . ':' . $previous_location->getLineNumber();
+        if ($this->codeLocation->previousLocation) {
+            $previousLocation = $this->codeLocation->previousLocation;
+            $previousText = ' from ' . $previousLocation->fileName . ':' . $previousLocation->getLineNumber();
         }
 
-        return $this->code_location->file_name . ':' . $this->code_location->getLineNumber() . $previous_text;
+        return $this->codeLocation->fileName . ':' . $this->codeLocation->getLineNumber() . $previousText;
     }
 
     /**
@@ -58,7 +58,7 @@ abstract class CodeIssue
      */
     public function getFilePath()
     {
-        return $this->code_location->file_path;
+        return $this->codeLocation->filePath;
     }
 
     /**
@@ -68,7 +68,7 @@ abstract class CodeIssue
      */
     public function getFileName()
     {
-        return $this->code_location->file_name;
+        return $this->codeLocation->fileName;
     }
 
     /**
@@ -89,26 +89,26 @@ abstract class CodeIssue
     public function toArray($severity = Config::REPORT_ERROR)
     {
         $location = $this->getLocation();
-        $selection_bounds = $location->getSelectionBounds();
-        $snippet_bounds = $location->getSnippetBounds();
+        $selectionBounds = $location->getSelectionBounds();
+        $snippetBounds = $location->getSnippetBounds();
 
-        $fqcn_parts = explode('\\', get_called_class());
-        $issue_type = array_pop($fqcn_parts);
+        $fqcnParts = explode('\\', get_called_class());
+        $issueType = array_pop($fqcnParts);
 
         return [
             'severity' => $severity,
             'line_from' => $location->getLineNumber(),
             'line_to' => $location->getEndLineNumber(),
-            'type' => $issue_type,
+            'type' => $issueType,
             'message' => $this->getMessage(),
-            'file_name' => $location->file_name,
-            'file_path' => $location->file_path,
+            'file_name' => $location->fileName,
+            'file_path' => $location->filePath,
             'snippet' => $location->getSnippet(),
             'selected_text' => $location->getSelectedText(),
-            'from' => $selection_bounds[0],
-            'to' => $selection_bounds[1],
-            'snippet_from' => $snippet_bounds[0],
-            'snippet_to' => $snippet_bounds[1],
+            'from' => $selectionBounds[0],
+            'to' => $selectionBounds[1],
+            'snippet_from' => $snippetBounds[0],
+            'snippet_to' => $snippetBounds[1],
             'column_from' => $location->getColumn(),
             'column_to' => $location->getEndColumn(),
         ];

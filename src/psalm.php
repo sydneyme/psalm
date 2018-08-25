@@ -8,7 +8,7 @@ use Psalm\IssueBuffer;
 // show all errors
 error_reporting(-1);
 
-$valid_short_options = [
+$validShortOptions = [
     'f:',
     'm',
     'h',
@@ -18,7 +18,7 @@ $valid_short_options = [
     'r:',
 ];
 
-$valid_long_options = [
+$validLongOptions = [
     'clear-cache',
     'config:',
     'debug',
@@ -51,20 +51,20 @@ array_map(
      *
      * @return void
      */
-    function ($arg) use ($valid_long_options, $valid_short_options) {
+    function ($arg) use ($validLongOptions, $validShortOptions) {
         if (substr($arg, 0, 2) === '--' && $arg !== '--') {
-            $arg_name = preg_replace('/=.*$/', '', substr($arg, 2));
+            $argName = preg_replace('/=.*$/', '', substr($arg, 2));
 
-            if (!in_array($arg_name, $valid_long_options) && !in_array($arg_name . ':', $valid_long_options)) {
-                echo 'Unrecognised argument "--' . $arg_name . '"' . PHP_EOL
+            if (!in_array($argName, $validLongOptions) && !in_array($argName . ':', $validLongOptions)) {
+                echo 'Unrecognised argument "--' . $argName . '"' . PHP_EOL
                     . 'Type --help to see a list of supported arguments'. PHP_EOL;
                 exit(1);
             }
         } elseif (substr($arg, 0, 2) === '-' && $arg !== '-' && $arg !== '--') {
-            $arg_name = preg_replace('/=.*$/', '', substr($arg, 1));
+            $argName = preg_replace('/=.*$/', '', substr($arg, 1));
 
-            if (!in_array($arg_name, $valid_short_options) && !in_array($arg_name . ':', $valid_short_options)) {
-                echo 'Unrecognised argument "-' . $arg_name . '"' . PHP_EOL
+            if (!in_array($argName, $validShortOptions) && !in_array($argName . ':', $validShortOptions)) {
+                echo 'Unrecognised argument "-' . $argName . '"' . PHP_EOL
                     . 'Type --help to see a list of supported arguments'. PHP_EOL;
                 exit(1);
             }
@@ -74,7 +74,7 @@ array_map(
 );
 
 // get options from command line
-$options = getopt(implode('', $valid_short_options), $valid_long_options);
+$options = getopt(implode('', $validShortOptions), $validLongOptions);
 
 if (!array_key_exists('use-ini-defaults', $options)) {
     ini_set('display_errors', 1);
@@ -196,22 +196,22 @@ if (isset($options['root'])) {
     $options['r'] = $options['root'];
 }
 
-$current_dir = (string)getcwd() . DIRECTORY_SEPARATOR;
+$currentDir = (string)getcwd() . DIRECTORY_SEPARATOR;
 
 if (isset($options['r']) && is_string($options['r'])) {
-    $root_path = realpath($options['r']);
+    $rootPath = realpath($options['r']);
 
-    if (!$root_path) {
-        echo 'Could not locate root directory ' . $current_dir . DIRECTORY_SEPARATOR . $options['r'] . PHP_EOL;
+    if (!$rootPath) {
+        echo 'Could not locate root directory ' . $currentDir . DIRECTORY_SEPARATOR . $options['r'] . PHP_EOL;
         exit(1);
     }
 
-    $current_dir = $root_path . DIRECTORY_SEPARATOR;
+    $currentDir = $rootPath . DIRECTORY_SEPARATOR;
 }
 
-$vendor_dir = getVendorDir($current_dir);
+$vendorDir = getVendorDir($currentDir);
 
-$first_autoloader = requireAutoloaders($current_dir, isset($options['r']), $vendor_dir);
+$firstAutoloader = requireAutoloaders($currentDir, isset($options['r']), $vendorDir);
 
 if (array_key_exists('v', $options)) {
     echo 'Psalm ' . PSALM_VERSION . PHP_EOL;
@@ -220,32 +220,32 @@ if (array_key_exists('v', $options)) {
 
 $threads = isset($options['threads']) ? (int)$options['threads'] : 1;
 
-$ini_handler = new \Psalm\Fork\PsalmRestarter('PSALM');
+$iniHandler = new \Psalm\Fork\PsalmRestarter('PSALM');
 
 if (isset($options['disable-extension'])) {
     if (is_array($options['disable-extension'])) {
         /** @psalm-suppress MixedAssignment */
         foreach ($options['disable-extension'] as $extension) {
             if (is_string($extension)) {
-                $ini_handler->disableExtension($extension);
+                $iniHandler->disableExtension($extension);
             }
         }
     } elseif (is_string($options['disable-extension'])) {
-        $ini_handler->disableExtension($options['disable-extension']);
+        $iniHandler->disableExtension($options['disable-extension']);
     }
 }
 
 if ($threads > 1) {
-    $ini_handler->disableExtension('grpc');
+    $iniHandler->disableExtension('grpc');
 }
 
 // If XDebug is enabled, restart without it
-$ini_handler->check();
+$iniHandler->check();
 
 setlocale(LC_CTYPE, 'C');
 
 if (isset($options['i'])) {
-    if (file_exists($current_dir . 'psalm.xml')) {
+    if (file_exists($currentDir . 'psalm.xml')) {
         die('A config file already exists in the current directory' . PHP_EOL);
     }
 
@@ -267,7 +267,7 @@ if (isset($options['i'])) {
     ));
 
     $level = 3;
-    $source_dir = 'src';
+    $sourceDir = 'src';
 
     if (count($args)) {
         if (count($args) > 2) {
@@ -282,30 +282,30 @@ if (isset($options['i'])) {
             $level = (int)$args[1];
         }
 
-        $source_dir = $args[0];
+        $sourceDir = $args[0];
     }
 
-    if (!is_dir($source_dir)) {
-        $bad_dir_path = getcwd() . DIRECTORY_SEPARATOR . $source_dir;
+    if (!is_dir($sourceDir)) {
+        $badDirPath = getcwd() . DIRECTORY_SEPARATOR . $sourceDir;
 
         if (!isset($args[0])) {
             die('Please specify a directory - the default, "src", was not found in this project.' . PHP_EOL);
         }
 
-        die('The given path "' . $bad_dir_path . '" does not appear to be a directory' . PHP_EOL);
+        die('The given path "' . $badDirPath . '" does not appear to be a directory' . PHP_EOL);
     }
 
-    $template_file_name = dirname(__DIR__) . '/assets/config_levels/' . $level . '.xml';
+    $templateFileName = dirname(__DIR__) . '/assets/config_levels/' . $level . '.xml';
 
-    if (!file_exists($template_file_name)) {
-        die('Could not open config template ' . $template_file_name . PHP_EOL);
+    if (!file_exists($templateFileName)) {
+        die('Could not open config template ' . $templateFileName . PHP_EOL);
     }
 
-    $template = (string)file_get_contents($template_file_name);
+    $template = (string)file_get_contents($templateFileName);
 
     $template = str_replace(
         '<directory name="src" />',
-        '<directory name="' . $source_dir . '" />',
+        '<directory name="' . $sourceDir . '" />',
         $template
     );
 
@@ -317,18 +317,18 @@ if (isset($options['i'])) {
         );
     }
 
-    if (!file_put_contents($current_dir . 'psalm.xml', $template)) {
+    if (!file_put_contents($currentDir . 'psalm.xml', $template)) {
         die('Could not write to psalm.xml' . PHP_EOL);
     }
 
     exit('Config file created successfully. Please re-run psalm.' . PHP_EOL);
 }
 
-$output_format = isset($options['output-format']) && is_string($options['output-format'])
+$outputFormat = isset($options['output-format']) && is_string($options['output-format'])
     ? $options['output-format']
     : ProjectChecker::TYPE_CONSOLE;
 
-$paths_to_check = getPathsToCheck(isset($options['f']) ? $options['f'] : null);
+$pathsToCheck = getPathsToCheck(isset($options['f']) ? $options['f'] : null);
 
 $plugins = [];
 
@@ -340,118 +340,118 @@ if (isset($options['plugin'])) {
     }
 }
 
-$path_to_config = isset($options['c']) && is_string($options['c']) ? realpath($options['c']) : null;
+$pathToConfig = isset($options['c']) && is_string($options['c']) ? realpath($options['c']) : null;
 
-if ($path_to_config === false) {
+if ($pathToConfig === false) {
     /** @psalm-suppress InvalidCast */
     echo 'Could not resolve path to config ' . (string)$options['c'] . PHP_EOL;
     exit(1);
 }
 
-$show_info = isset($options['show-info'])
+$showInfo = isset($options['show-info'])
     ? $options['show-info'] !== 'false' && $options['show-info'] !== '0'
     : true;
 
-$is_diff = isset($options['diff']);
+$isDiff = isset($options['diff']);
 
-$find_dead_code = isset($options['find-dead-code']);
+$findDeadCode = isset($options['find-dead-code']);
 
-$find_references_to = isset($options['find-references-to']) && is_string($options['find-references-to'])
+$findReferencesTo = isset($options['find-references-to']) && is_string($options['find-references-to'])
     ? $options['find-references-to']
     : null;
 
-$cache_provider = isset($options['no-cache'])
+$cacheProvider = isset($options['no-cache'])
     ? new Psalm\Provider\NoCache\NoParserCacheProvider()
     : new Psalm\Provider\ParserCacheProvider();
 
 // initialise custom config, if passed
 try {
-    if ($path_to_config) {
-        $config = Config::loadFromXMLFile($path_to_config, $current_dir);
+    if ($pathToConfig) {
+        $config = Config::loadFromXMLFile($pathToConfig, $currentDir);
     } else {
-        $config = Config::getConfigForPath($current_dir, $current_dir, $output_format);
+        $config = Config::getConfigForPath($currentDir, $currentDir, $outputFormat);
     }
 } catch (Psalm\Exception\ConfigException $e) {
     echo $e->getMessage();
     exit(1);
 }
 
-$config->setComposerClassLoader($first_autoloader);
+$config->setComposerClassLoader($firstAutoloader);
 
-$file_storage_cache_provider = isset($options['no-cache'])
+$fileStorageCacheProvider = isset($options['no-cache'])
     ? new Psalm\Provider\NoCache\NoFileStorageCacheProvider()
     : new Psalm\Provider\FileStorageCacheProvider($config);
 
-$classlike_storage_cache_provider = isset($options['no-cache'])
+$classlikeStorageCacheProvider = isset($options['no-cache'])
     ? new Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider()
     : new Psalm\Provider\ClassLikeStorageCacheProvider($config);
 
 if (isset($options['clear-cache'])) {
-    $cache_directory = $config->getCacheDirectory();
+    $cacheDirectory = $config->getCacheDirectory();
 
-    Config::removeCacheDirectory($cache_directory);
+    Config::removeCacheDirectory($cacheDirectory);
     echo 'Cache directory deleted' . PHP_EOL;
     exit;
 }
 
 $debug = array_key_exists('debug', $options) || array_key_exists('debug-by-line', $options);
 
-$project_checker = new ProjectChecker(
+$projectChecker = new ProjectChecker(
     $config,
     new Psalm\Provider\FileProvider(),
-    $cache_provider,
-    $file_storage_cache_provider,
-    $classlike_storage_cache_provider,
+    $cacheProvider,
+    $fileStorageCacheProvider,
+    $classlikeStorageCacheProvider,
     !array_key_exists('m', $options),
-    $show_info,
-    $output_format,
+    $showInfo,
+    $outputFormat,
     $threads,
     $debug,
     isset($options['report']) && is_string($options['report']) ? $options['report'] : null,
     !isset($options['show-snippet']) || $options['show-snippet'] !== "false"
 );
 
-$config->visitComposerAutoloadFiles($project_checker, $debug);
+$config->visitComposerAutoloadFiles($projectChecker, $debug);
 
 if (array_key_exists('debug-by-line', $options)) {
-    $project_checker->debug_lines = true;
+    $projectChecker->debugLines = true;
 }
 
-if ($find_dead_code || $find_references_to !== null) {
-    $project_checker->getCodebase()->collectReferences();
+if ($findDeadCode || $findReferencesTo !== null) {
+    $projectChecker->getCodebase()->collectReferences();
 
-    if ($find_references_to) {
-        $project_checker->show_issues = false;
+    if ($findReferencesTo) {
+        $projectChecker->showIssues = false;
     }
 }
 
-if ($find_dead_code) {
-    $project_checker->getCodebase()->reportUnusedCode();
+if ($findDeadCode) {
+    $projectChecker->getCodebase()->reportUnusedCode();
 }
 
-/** @var string $plugin_path */
-foreach ($plugins as $plugin_path) {
-    Config::getInstance()->addPluginPath($current_dir . DIRECTORY_SEPARATOR . $plugin_path);
+/** @var string $pluginPath */
+foreach ($plugins as $pluginPath) {
+    Config::getInstance()->addPluginPath($currentDir . DIRECTORY_SEPARATOR . $pluginPath);
 }
 
-$start_time = (float) microtime(true);
+$startTime = (float) microtime(true);
 
-if ($paths_to_check === null) {
-    $project_checker->check($current_dir, $is_diff);
-} elseif ($paths_to_check) {
-    $project_checker->checkPaths($paths_to_check);
+if ($pathsToCheck === null) {
+    $projectChecker->check($currentDir, $isDiff);
+} elseif ($pathsToCheck) {
+    $projectChecker->checkPaths($pathsToCheck);
 }
 
-if ($find_references_to) {
-    $project_checker->findReferencesTo($find_references_to);
-} elseif ($find_dead_code && !$paths_to_check && !$is_diff) {
+if ($findReferencesTo) {
+    $projectChecker->findReferencesTo($findReferencesTo);
+} elseif ($findDeadCode && !$pathsToCheck && !$isDiff) {
     if ($threads > 1) {
-        if ($output_format === ProjectChecker::TYPE_CONSOLE) {
+        if ($outputFormat === ProjectChecker::TYPE_CONSOLE) {
             echo 'Unused classes and methods cannot currently be found in multithreaded mode' . PHP_EOL;
         }
     } else {
-        $project_checker->checkClassReferences();
+        $projectChecker->checkClassReferences();
     }
 }
 
-IssueBuffer::finish($project_checker, !$paths_to_check, $start_time, isset($options['stats']));
+IssueBuffer::finish($projectChecker, !$pathsToCheck, $startTime, isset($options['stats']));

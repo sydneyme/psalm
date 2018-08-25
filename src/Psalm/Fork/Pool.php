@@ -16,38 +16,38 @@ class Pool
     const EXIT_FAILURE = 0;
 
     /** @var int[] */
-    private $child_pid_list = [];
+    private $childPidList = [];
 
     /** @var resource[] */
-    private $read_streams = [];
+    private $readStreams = [];
 
     /** @var bool */
-    private $did_have_error = false;
+    private $didHaveError = false;
 
     /**
-     * @param array[] $process_task_data_iterator
+     * @param array[] $processTaskDataIterator
      * An array of task data items to be divided up among the
      * workers. The size of this is the number of forked processes.
-     * @param \Closure $startup_closure
+     * @param \Closure $startupClosure
      * A closure to execute upon starting a child
-     * @param \Closure $task_closure
+     * @param \Closure $taskClosure
      * A method to execute on each task data.
      * This closure must return an array (to be gathered).
-     * @param \Closure $shutdown_closure
+     * @param \Closure $shutdownClosure
      * A closure to execute upon shutting down a child
      *
      * @psalm-suppress MixedAssignment
      */
     public function __construct(
-        array $process_task_data_iterator,
-        \Closure $startup_closure,
-        \Closure $task_closure,
-        \Closure $shutdown_closure
+        array $processTaskDataIterator,
+        \Closure $startupClosure,
+        \Closure $taskClosure,
+        \Closure $shutdownClosure
     ) {
-        $pool_size = count($process_task_data_iterator);
+        $poolSize = count($processTaskDataIterator);
 
         \assert(
-            $pool_size > 1,
+            $poolSize > 1,
             'The pool size must be >= 2 to use the fork pool.'
         );
 
@@ -58,13 +58,13 @@ class Pool
 
         // We'll keep track of if this is the parent process
         // so that we can tell who will be doing the waiting
-        $is_parent = false;
+        $isParent = false;
 
         $sockets = [];
 
         // Fork as many times as requested to get the given
         // pool size
-        for ($proc_id = 0; $proc_id < $pool_size; ++$proc_id) {
+        for ($procId = 0; $procId < $poolSize; ++$procId) {
             // Create an IPC socket pair.
             $sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
             if (!$sockets) {
@@ -80,45 +80,45 @@ class Pool
 
             // Parent
             if ($pid > 0) {
-                $is_parent = true;
-                $this->child_pid_list[] = $pid;
-                $this->read_streams[] = self::streamForParent($sockets);
+                $isParent = true;
+                $this->childPidList[] = $pid;
+                $this->readStreams[] = self::streamForParent($sockets);
                 continue;
             }
 
             // Child
             if ($pid === 0) {
-                $is_parent = false;
+                $isParent = false;
                 break;
             }
         }
 
         // If we're the parent, return
-        if ($is_parent) {
+        if ($isParent) {
             return;
         }
 
         // Get the write stream for the child.
-        $write_stream = self::streamForChild($sockets);
+        $writeStream = self::streamForChild($sockets);
 
         // Execute anything the children wanted to execute upon
         // starting up
-        $startup_closure();
+        $startupClosure();
 
         // Get the work for this process
-        $task_data_iterator = array_values($process_task_data_iterator)[$proc_id];
-        foreach ($task_data_iterator as $i => $task_data) {
-            $task_closure($i, $task_data);
+        $taskDataIterator = array_values($processTaskDataIterator)[$procId];
+        foreach ($taskDataIterator as $i => $taskData) {
+            $taskClosure($i, $taskData);
         }
 
         // Execute each child's shutdown closure before
         // exiting the process
-        $results = $shutdown_closure();
+        $results = $shutdownClosure();
 
         // Serialize this child's produced results and send them to the parent.
-        fwrite($write_stream, serialize($results ?: []));
+        fwrite($writeStream, serialize($results ?: []));
 
-        fclose($write_stream);
+        fclose($writeStream);
 
         // Children exit after completing their work
         exit(self::EXIT_SUCCESS);
@@ -134,20 +134,20 @@ class Pool
      */
     private static function streamForParent(array $sockets)
     {
-        list($for_read, $for_write) = $sockets;
+        list($forRead, $forWrite) = $sockets;
 
         // The parent will not use the write channel, so it
         // must be closed to prevent deadlock.
-        fclose($for_write);
+        fclose($forWrite);
 
         // stream_select will be used to read multiple streams, so these
         // must be set to non-blocking mode.
-        if (!stream_set_blocking($for_read, false)) {
+        if (!stream_set_blocking($forRead, false)) {
             error_log('unable to set read stream to non-blocking');
             exit(self::EXIT_FAILURE);
         }
 
-        return $for_read;
+        return $forRead;
     }
 
     /**
@@ -160,13 +160,13 @@ class Pool
      */
     private static function streamForChild(array $sockets)
     {
-        list($for_read, $for_write) = $sockets;
+        list($forRead, $forWrite) = $sockets;
 
         // The while will not use the read channel, so it must
         // be closed to prevent deadlock.
-        fclose($for_read);
+        fclose($forRead);
 
-        return $for_write;
+        return $forWrite;
     }
 
     /**
@@ -184,7 +184,7 @@ class Pool
         // Create an array of all active streams, indexed by
         // resource id.
         $streams = [];
-        foreach ($this->read_streams as $stream) {
+        foreach ($this->readStreams as $stream) {
             $streams[intval($stream)] = $stream;
         }
 
@@ -194,19 +194,19 @@ class Pool
 
         // Read the data off of all the stream.
         while (count($streams) > 0) {
-            $needs_read = array_values($streams);
-            $needs_write = null;
-            $needs_except = null;
+            $needsRead = array_values($streams);
+            $needsWrite = null;
+            $needsExcept = null;
 
             // Wait for data on at least one stream.
-            $num = stream_select($needs_read, $needs_write, $needs_except, null /* no timeout */);
+            $num = stream_select($needsRead, $needsWrite, $needsExcept, null /* no timeout */);
             if ($num === false) {
                 error_log('unable to select on read stream');
                 exit(self::EXIT_FAILURE);
             }
 
             // For each stream that was ready, read the content.
-            foreach ($needs_read as $file) {
+            foreach ($needsRead as $file) {
                 $buffer = fread($file, 1024);
                 if ($buffer) {
                     $content[intval($file)] .= $buffer;
@@ -236,7 +236,7 @@ class Pool
                         error_log(
                             'Child terminated without returning a serialized array - response type=' . gettype($result)
                         );
-                        $this->did_have_error = true;
+                        $this->didHaveError = true;
                     }
 
                     return $result;
@@ -258,18 +258,18 @@ class Pool
         $content = $this->readResultsFromChildren();
 
         // Wait for all children to return
-        foreach ($this->child_pid_list as $child_pid) {
-            if (pcntl_waitpid($child_pid, $status) < 0) {
+        foreach ($this->childPidList as $childPid) {
+            if (pcntl_waitpid($childPid, $status) < 0) {
                 error_log(posix_strerror(posix_get_last_error()));
             }
 
             // Check to see if the child died a graceful death
             $status = 0;
             if (pcntl_wifsignaled($status)) {
-                $return_code = pcntl_wexitstatus($status);
-                $term_sig = pcntl_wtermsig($status);
-                $this->did_have_error = true;
-                error_log("Child terminated with return code $return_code and signal $term_sig");
+                $returnCode = pcntl_wexitstatus($status);
+                $termSig = pcntl_wtermsig($status);
+                $this->didHaveError = true;
+                error_log("Child terminated with return code $returnCode and signal $termSig");
             }
         }
 
@@ -285,6 +285,6 @@ class Pool
      */
     public function didHaveError()
     {
-        return $this->did_have_error;
+        return $this->didHaveError;
     }
 }

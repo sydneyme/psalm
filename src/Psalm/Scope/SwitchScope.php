@@ -8,5 +8,5 @@ class SwitchScope
     /**
      * @var array<string, array<string, CodeLocation>>
      */
-    public $unreferenced_vars = [];
+    public $unreferencedVars = [];
 }

@@ -34,62 +34,62 @@ class ClassLikes
     /**
      * @var ClassLikeStorageProvider
      */
-    private $classlike_storage_provider;
+    private $classlikeStorageProvider;
 
     /**
      * @var array<string, bool>
      */
-    private $existing_classlikes_lc = [];
+    private $existingClasslikesLc = [];
 
     /**
      * @var array<string, bool>
      */
-    private $existing_classes_lc = [];
+    private $existingClassesLc = [];
 
     /**
      * @var array<string, bool>
      */
-    private $existing_classes = [];
+    private $existingClasses = [];
 
     /**
      * @var array<string, bool>
      */
-    private $existing_interfaces_lc = [];
+    private $existingInterfacesLc = [];
 
     /**
      * @var array<string, bool>
      */
-    private $existing_interfaces = [];
+    private $existingInterfaces = [];
 
     /**
      * @var array<string, bool>
      */
-    private $existing_traits_lc = [];
+    private $existingTraitsLc = [];
 
     /**
      * @var array<string, bool>
      */
-    private $existing_traits = [];
+    private $existingTraits = [];
 
     /**
      * @var array<string, PhpParser\Node\Stmt\Trait_>
      */
-    private $trait_nodes = [];
+    private $traitNodes = [];
 
     /**
      * @var array<string, Aliases>
      */
-    private $trait_aliases = [];
+    private $traitAliases = [];
 
     /**
      * @var array<string, int>
      */
-    private $classlike_references = [];
+    private $classlikeReferences = [];
 
     /**
      * @var bool
      */
-    public $collect_references = false;
+    public $collectReferences = false;
 
     /**
      * @var Config
@@ -109,23 +109,23 @@ class ClassLikes
     /**
      * @var bool
      */
-    private $debug_output;
+    private $debugOutput;
 
     /**
-     * @param bool $debug_output
+     * @param bool $debugOutput
      */
     public function __construct(
         Config $config,
         Codebase $codebase,
-        ClassLikeStorageProvider $storage_provider,
+        ClassLikeStorageProvider $storageProvider,
         Scanner $scanner,
         Methods $methods,
-        $debug_output
+        $debugOutput
     ) {
         $this->config = $config;
-        $this->classlike_storage_provider = $storage_provider;
+        $this->classlikeStorageProvider = $storageProvider;
         $this->scanner = $scanner;
-        $this->debug_output = $debug_output;
+        $this->debugOutput = $debugOutput;
         $this->methods = $methods;
         $this->codebase = $codebase;
 
@@ -138,227 +138,227 @@ class ClassLikes
     private function collectPredefinedClassLikes()
     {
         /** @var array<int, string> */
-        $predefined_classes = get_declared_classes();
+        $predefinedClasses = get_declared_classes();
 
-        foreach ($predefined_classes as $predefined_class) {
-            $reflection_class = new \ReflectionClass($predefined_class);
+        foreach ($predefinedClasses as $predefinedClass) {
+            $reflectionClass = new \ReflectionClass($predefinedClass);
 
-            if (!$reflection_class->isUserDefined()) {
-                $predefined_class_lc = strtolower($predefined_class);
-                $this->existing_classlikes_lc[$predefined_class_lc] = true;
-                $this->existing_classes_lc[$predefined_class_lc] = true;
+            if (!$reflectionClass->isUserDefined()) {
+                $predefinedClassLc = strtolower($predefinedClass);
+                $this->existingClasslikesLc[$predefinedClassLc] = true;
+                $this->existingClassesLc[$predefinedClassLc] = true;
             }
         }
 
         /** @var array<int, string> */
-        $predefined_interfaces = get_declared_interfaces();
+        $predefinedInterfaces = get_declared_interfaces();
 
-        foreach ($predefined_interfaces as $predefined_interface) {
-            $reflection_class = new \ReflectionClass($predefined_interface);
+        foreach ($predefinedInterfaces as $predefinedInterface) {
+            $reflectionClass = new \ReflectionClass($predefinedInterface);
 
-            if (!$reflection_class->isUserDefined()) {
-                $predefined_interface_lc = strtolower($predefined_interface);
-                $this->existing_classlikes_lc[$predefined_interface_lc] = true;
-                $this->existing_interfaces_lc[$predefined_interface_lc] = true;
+            if (!$reflectionClass->isUserDefined()) {
+                $predefinedInterfaceLc = strtolower($predefinedInterface);
+                $this->existingClasslikesLc[$predefinedInterfaceLc] = true;
+                $this->existingInterfacesLc[$predefinedInterfaceLc] = true;
             }
         }
     }
 
     /**
-     * @param string        $fq_class_name
-     * @param string|null   $file_path
+     * @param string        $fqClassName
+     * @param string|null   $filePath
      *
      * @return void
      */
-    public function addFullyQualifiedClassName($fq_class_name, $file_path = null)
+    public function addFullyQualifiedClassName($fqClassName, $filePath = null)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
-        $this->existing_classlikes_lc[$fq_class_name_lc] = true;
-        $this->existing_classes_lc[$fq_class_name_lc] = true;
-        $this->existing_traits_lc[$fq_class_name_lc] = false;
-        $this->existing_interfaces_lc[$fq_class_name_lc] = false;
-        $this->existing_classes[$fq_class_name] = true;
+        $fqClassNameLc = strtolower($fqClassName);
+        $this->existingClasslikesLc[$fqClassNameLc] = true;
+        $this->existingClassesLc[$fqClassNameLc] = true;
+        $this->existingTraitsLc[$fqClassNameLc] = false;
+        $this->existingInterfacesLc[$fqClassNameLc] = false;
+        $this->existingClasses[$fqClassName] = true;
 
-        if ($file_path) {
-            $this->scanner->setClassLikeFilePath($fq_class_name_lc, $file_path);
+        if ($filePath) {
+            $this->scanner->setClassLikeFilePath($fqClassNameLc, $filePath);
         }
     }
 
     /**
-     * @param string        $fq_class_name
-     * @param string|null   $file_path
+     * @param string        $fqClassName
+     * @param string|null   $filePath
      *
      * @return void
      */
-    public function addFullyQualifiedInterfaceName($fq_class_name, $file_path = null)
+    public function addFullyQualifiedInterfaceName($fqClassName, $filePath = null)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
-        $this->existing_classlikes_lc[$fq_class_name_lc] = true;
-        $this->existing_interfaces_lc[$fq_class_name_lc] = true;
-        $this->existing_classes_lc[$fq_class_name_lc] = false;
-        $this->existing_traits_lc[$fq_class_name_lc] = false;
-        $this->existing_interfaces[$fq_class_name] = true;
+        $fqClassNameLc = strtolower($fqClassName);
+        $this->existingClasslikesLc[$fqClassNameLc] = true;
+        $this->existingInterfacesLc[$fqClassNameLc] = true;
+        $this->existingClassesLc[$fqClassNameLc] = false;
+        $this->existingTraitsLc[$fqClassNameLc] = false;
+        $this->existingInterfaces[$fqClassName] = true;
 
-        if ($file_path) {
-            $this->scanner->setClassLikeFilePath($fq_class_name_lc, $file_path);
+        if ($filePath) {
+            $this->scanner->setClassLikeFilePath($fqClassNameLc, $filePath);
         }
     }
 
     /**
-     * @param string        $fq_class_name
-     * @param string|null   $file_path
+     * @param string        $fqClassName
+     * @param string|null   $filePath
      *
      * @return void
      */
-    public function addFullyQualifiedTraitName($fq_class_name, $file_path = null)
+    public function addFullyQualifiedTraitName($fqClassName, $filePath = null)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
-        $this->existing_classlikes_lc[$fq_class_name_lc] = true;
-        $this->existing_traits_lc[$fq_class_name_lc] = true;
-        $this->existing_classes_lc[$fq_class_name_lc] = false;
-        $this->existing_interfaces_lc[$fq_class_name_lc] = false;
-        $this->existing_traits[$fq_class_name] = true;
+        $fqClassNameLc = strtolower($fqClassName);
+        $this->existingClasslikesLc[$fqClassNameLc] = true;
+        $this->existingTraitsLc[$fqClassNameLc] = true;
+        $this->existingClassesLc[$fqClassNameLc] = false;
+        $this->existingInterfacesLc[$fqClassNameLc] = false;
+        $this->existingTraits[$fqClassName] = true;
 
-        if ($file_path) {
-            $this->scanner->setClassLikeFilePath($fq_class_name_lc, $file_path);
+        if ($filePath) {
+            $this->scanner->setClassLikeFilePath($fqClassNameLc, $filePath);
         }
     }
 
     /**
-     * @param string        $fq_class_name_lc
-     * @param string|null   $file_path
+     * @param string        $fqClassNameLc
+     * @param string|null   $filePath
      *
      * @return void
      */
-    public function addFullyQualifiedClassLikeName($fq_class_name_lc, $file_path = null)
+    public function addFullyQualifiedClassLikeName($fqClassNameLc, $filePath = null)
     {
-        $this->existing_classlikes_lc[$fq_class_name_lc] = true;
+        $this->existingClasslikesLc[$fqClassNameLc] = true;
 
-        if ($file_path) {
-            $this->scanner->setClassLikeFilePath($fq_class_name_lc, $file_path);
+        if ($filePath) {
+            $this->scanner->setClassLikeFilePath($fqClassNameLc, $filePath);
         }
     }
 
     /**
-     * @param string $fq_class_name
+     * @param string $fqClassName
      *
      * @return bool
      */
-    public function hasFullyQualifiedClassName($fq_class_name)
+    public function hasFullyQualifiedClassName($fqClassName)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
+        $fqClassNameLc = strtolower($fqClassName);
 
-        if (!isset($this->existing_classes_lc[$fq_class_name_lc])
-            || !$this->existing_classes_lc[$fq_class_name_lc]
-            || !$this->classlike_storage_provider->has($fq_class_name_lc)
+        if (!isset($this->existingClassesLc[$fqClassNameLc])
+            || !$this->existingClassesLc[$fqClassNameLc]
+            || !$this->classlikeStorageProvider->has($fqClassNameLc)
         ) {
             if ((
-                !isset($this->existing_classes_lc[$fq_class_name_lc])
-                    || $this->existing_classes_lc[$fq_class_name_lc] === true
+                !isset($this->existingClassesLc[$fqClassNameLc])
+                    || $this->existingClassesLc[$fqClassNameLc] === true
                 )
-                && !$this->classlike_storage_provider->has($fq_class_name_lc)
+                && !$this->classlikeStorageProvider->has($fqClassNameLc)
             ) {
-                if ($this->debug_output) {
-                    echo 'Last-chance attempt to hydrate ' . $fq_class_name . "\n";
+                if ($this->debugOutput) {
+                    echo 'Last-chance attempt to hydrate ' . $fqClassName . "\n";
                 }
                 // attempt to load in the class
-                $this->scanner->queueClassLikeForScanning($fq_class_name);
+                $this->scanner->queueClassLikeForScanning($fqClassName);
                 $this->codebase->scanFiles();
 
-                if (!isset($this->existing_classes_lc[$fq_class_name_lc])) {
-                    $this->existing_classes_lc[$fq_class_name_lc] = false;
+                if (!isset($this->existingClassesLc[$fqClassNameLc])) {
+                    $this->existingClassesLc[$fqClassNameLc] = false;
 
                     return false;
                 }
 
-                return $this->existing_classes_lc[$fq_class_name_lc];
+                return $this->existingClassesLc[$fqClassNameLc];
             }
 
             return false;
         }
 
-        if ($this->collect_references) {
-            if (!isset($this->classlike_references[$fq_class_name_lc])) {
-                $this->classlike_references[$fq_class_name_lc] = 0;
+        if ($this->collectReferences) {
+            if (!isset($this->classlikeReferences[$fqClassNameLc])) {
+                $this->classlikeReferences[$fqClassNameLc] = 0;
             }
 
-            ++$this->classlike_references[$fq_class_name_lc];
+            ++$this->classlikeReferences[$fqClassNameLc];
         }
 
         return true;
     }
 
     /**
-     * @param string $fq_class_name
+     * @param string $fqClassName
      *
      * @return bool
      */
-    public function hasFullyQualifiedInterfaceName($fq_class_name)
+    public function hasFullyQualifiedInterfaceName($fqClassName)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
+        $fqClassNameLc = strtolower($fqClassName);
 
-        if (!isset($this->existing_interfaces_lc[$fq_class_name_lc])
-            || !$this->existing_interfaces_lc[$fq_class_name_lc]
-            || !$this->classlike_storage_provider->has($fq_class_name_lc)
+        if (!isset($this->existingInterfacesLc[$fqClassNameLc])
+            || !$this->existingInterfacesLc[$fqClassNameLc]
+            || !$this->classlikeStorageProvider->has($fqClassNameLc)
         ) {
             if ((
-                !isset($this->existing_classes_lc[$fq_class_name_lc])
-                    || $this->existing_classes_lc[$fq_class_name_lc] === true
+                !isset($this->existingClassesLc[$fqClassNameLc])
+                    || $this->existingClassesLc[$fqClassNameLc] === true
                 )
-                && !$this->classlike_storage_provider->has($fq_class_name_lc)
+                && !$this->classlikeStorageProvider->has($fqClassNameLc)
             ) {
-                if ($this->debug_output) {
-                    echo 'Last-chance attempt to hydrate ' . $fq_class_name . "\n";
+                if ($this->debugOutput) {
+                    echo 'Last-chance attempt to hydrate ' . $fqClassName . "\n";
                 }
 
                 // attempt to load in the class
-                $this->scanner->queueClassLikeForScanning($fq_class_name);
+                $this->scanner->queueClassLikeForScanning($fqClassName);
                 $this->scanner->scanFiles($this);
 
-                if (!isset($this->existing_interfaces_lc[$fq_class_name_lc])) {
-                    $this->existing_interfaces_lc[$fq_class_name_lc] = false;
+                if (!isset($this->existingInterfacesLc[$fqClassNameLc])) {
+                    $this->existingInterfacesLc[$fqClassNameLc] = false;
 
                     return false;
                 }
 
-                return $this->existing_interfaces_lc[$fq_class_name_lc];
+                return $this->existingInterfacesLc[$fqClassNameLc];
             }
 
             return false;
         }
 
-        if ($this->collect_references) {
-            if (!isset($this->classlike_references[$fq_class_name_lc])) {
-                $this->classlike_references[$fq_class_name_lc] = 0;
+        if ($this->collectReferences) {
+            if (!isset($this->classlikeReferences[$fqClassNameLc])) {
+                $this->classlikeReferences[$fqClassNameLc] = 0;
             }
 
-            ++$this->classlike_references[$fq_class_name_lc];
+            ++$this->classlikeReferences[$fqClassNameLc];
         }
 
         return true;
     }
 
     /**
-     * @param string $fq_class_name
+     * @param string $fqClassName
      *
      * @return bool
      */
-    public function hasFullyQualifiedTraitName($fq_class_name)
+    public function hasFullyQualifiedTraitName($fqClassName)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
+        $fqClassNameLc = strtolower($fqClassName);
 
-        if (!isset($this->existing_traits_lc[$fq_class_name_lc]) ||
-            !$this->existing_traits_lc[$fq_class_name_lc]
+        if (!isset($this->existingTraitsLc[$fqClassNameLc]) ||
+            !$this->existingTraitsLc[$fqClassNameLc]
         ) {
             return false;
         }
 
-        if ($this->collect_references) {
-            if (!isset($this->classlike_references[$fq_class_name_lc])) {
-                $this->classlike_references[$fq_class_name_lc] = 0;
+        if ($this->collectReferences) {
+            if (!isset($this->classlikeReferences[$fqClassNameLc])) {
+                $this->classlikeReferences[$fqClassNameLc] = 0;
             }
 
-            ++$this->classlike_references[$fq_class_name_lc];
+            ++$this->classlikeReferences[$fqClassNameLc];
         }
 
         return true;
@@ -367,25 +367,25 @@ class ClassLikes
     /**
      * Check whether a class/interface exists
      *
-     * @param  string          $fq_class_name
-     * @param  CodeLocation $code_location
+     * @param  string          $fqClassName
+     * @param  CodeLocation $codeLocation
      *
      * @return bool
      */
     public function classOrInterfaceExists(
-        $fq_class_name,
-        CodeLocation $code_location = null
+        $fqClassName,
+        CodeLocation $codeLocation = null
     ) {
-        if (!$this->classExists($fq_class_name) && !$this->interfaceExists($fq_class_name)) {
+        if (!$this->classExists($fqClassName) && !$this->interfaceExists($fqClassName)) {
             return false;
         }
 
-        if ($this->collect_references && $code_location) {
-            $class_storage = $this->classlike_storage_provider->get($fq_class_name);
-            if ($class_storage->referencing_locations === null) {
-                $class_storage->referencing_locations = [];
+        if ($this->collectReferences && $codeLocation) {
+            $classStorage = $this->classlikeStorageProvider->get($fqClassName);
+            if ($classStorage->referencingLocations === null) {
+                $classStorage->referencingLocations = [];
             }
-            $class_storage->referencing_locations[$code_location->file_path][] = $code_location;
+            $classStorage->referencingLocations[$codeLocation->filePath][] = $codeLocation;
         }
 
         return true;
@@ -394,225 +394,225 @@ class ClassLikes
     /**
      * Determine whether or not a given class exists
      *
-     * @param  string       $fq_class_name
+     * @param  string       $fqClassName
      *
      * @return bool
      */
-    public function classExists($fq_class_name)
+    public function classExists($fqClassName)
     {
-        if (isset(ClassLikeChecker::$SPECIAL_TYPES[$fq_class_name])) {
+        if (isset(ClassLikeChecker::$SPECIALTYPES[$fqClassName])) {
             return false;
         }
 
-        if ($fq_class_name === 'Generator') {
+        if ($fqClassName === 'Generator') {
             return true;
         }
 
-        return $this->hasFullyQualifiedClassName($fq_class_name);
+        return $this->hasFullyQualifiedClassName($fqClassName);
     }
 
     /**
      * Determine whether or not a class extends a parent
      *
-     * @param  string       $fq_class_name
-     * @param  string       $possible_parent
+     * @param  string       $fqClassName
+     * @param  string       $possibleParent
      *
      * @return bool
      */
-    public function classExtends($fq_class_name, $possible_parent)
+    public function classExtends($fqClassName, $possibleParent)
     {
-        $fq_class_name = strtolower($fq_class_name);
+        $fqClassName = strtolower($fqClassName);
 
-        if ($fq_class_name === 'generator') {
+        if ($fqClassName === 'generator') {
             return false;
         }
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        return isset($class_storage->parent_classes[strtolower($possible_parent)]);
+        return isset($classStorage->parentClasses[strtolower($possibleParent)]);
     }
 
     /**
      * Check whether a class implements an interface
      *
-     * @param  string       $fq_class_name
+     * @param  string       $fqClassName
      * @param  string       $interface
      *
      * @return bool
      */
-    public function classImplements($fq_class_name, $interface)
+    public function classImplements($fqClassName, $interface)
     {
-        $interface_id = strtolower($interface);
+        $interfaceId = strtolower($interface);
 
-        $fq_class_name = strtolower($fq_class_name);
+        $fqClassName = strtolower($fqClassName);
 
-        if ($interface_id === 'callable' && $fq_class_name === 'closure') {
+        if ($interfaceId === 'callable' && $fqClassName === 'closure') {
             return true;
         }
 
-        if ($interface_id === 'traversable' && $fq_class_name === 'generator') {
+        if ($interfaceId === 'traversable' && $fqClassName === 'generator') {
             return true;
         }
 
-        if ($interface_id === 'arrayaccess' && $fq_class_name === 'domnodelist') {
+        if ($interfaceId === 'arrayaccess' && $fqClassName === 'domnodelist') {
             return true;
         }
 
-        if (isset(ClassLikeChecker::$SPECIAL_TYPES[$interface_id])
-            || isset(ClassLikeChecker::$SPECIAL_TYPES[$fq_class_name])
+        if (isset(ClassLikeChecker::$SPECIALTYPES[$interfaceId])
+            || isset(ClassLikeChecker::$SPECIALTYPES[$fqClassName])
         ) {
             return false;
         }
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        return isset($class_storage->class_implements[$interface_id]);
+        return isset($classStorage->classImplements[$interfaceId]);
     }
 
     /**
-     * @param  string         $fq_interface_name
+     * @param  string         $fqInterfaceName
      *
      * @return bool
      */
-    public function interfaceExists($fq_interface_name)
+    public function interfaceExists($fqInterfaceName)
     {
-        if (isset(ClassLikeChecker::$SPECIAL_TYPES[strtolower($fq_interface_name)])) {
+        if (isset(ClassLikeChecker::$SPECIALTYPES[strtolower($fqInterfaceName)])) {
             return false;
         }
 
-        return $this->hasFullyQualifiedInterfaceName($fq_interface_name);
+        return $this->hasFullyQualifiedInterfaceName($fqInterfaceName);
     }
 
     /**
-     * @param  string         $interface_name
-     * @param  string         $possible_parent
+     * @param  string         $interfaceName
+     * @param  string         $possibleParent
      *
      * @return bool
      */
-    public function interfaceExtends($interface_name, $possible_parent)
+    public function interfaceExtends($interfaceName, $possibleParent)
     {
-        if (strtolower($interface_name) === 'iterable' && strtolower($possible_parent) === 'traversable') {
+        if (strtolower($interfaceName) === 'iterable' && strtolower($possibleParent) === 'traversable') {
             return true;
         }
 
-        return isset($this->getParentInterfaces($interface_name)[strtolower($possible_parent)]);
+        return isset($this->getParentInterfaces($interfaceName)[strtolower($possibleParent)]);
     }
 
     /**
-     * @param  string         $fq_interface_name
+     * @param  string         $fqInterfaceName
      *
-     * @return array<string, string>   all interfaces extended by $interface_name
+     * @return array<string, string>   all interfaces extended by $interfaceName
      */
-    public function getParentInterfaces($fq_interface_name)
+    public function getParentInterfaces($fqInterfaceName)
     {
-        $fq_interface_name = strtolower($fq_interface_name);
+        $fqInterfaceName = strtolower($fqInterfaceName);
 
-        $storage = $this->classlike_storage_provider->get($fq_interface_name);
+        $storage = $this->classlikeStorageProvider->get($fqInterfaceName);
 
-        return $storage->parent_interfaces;
+        return $storage->parentInterfaces;
     }
 
     /**
-     * @param  string         $fq_trait_name
+     * @param  string         $fqTraitName
      *
      * @return bool
      */
-    public function traitExists($fq_trait_name)
+    public function traitExists($fqTraitName)
     {
-        return $this->hasFullyQualifiedTraitName($fq_trait_name);
+        return $this->hasFullyQualifiedTraitName($fqTraitName);
     }
 
     /**
      * Determine whether or not a class has the correct casing
      *
-     * @param  string $fq_class_name
+     * @param  string $fqClassName
      *
      * @return bool
      */
-    public function classHasCorrectCasing($fq_class_name)
+    public function classHasCorrectCasing($fqClassName)
     {
-        if ($fq_class_name === 'Generator') {
+        if ($fqClassName === 'Generator') {
             return true;
         }
 
-        return isset($this->existing_classes[$fq_class_name]);
+        return isset($this->existingClasses[$fqClassName]);
     }
 
     /**
-     * @param  string $fq_interface_name
+     * @param  string $fqInterfaceName
      *
      * @return bool
      */
-    public function interfaceHasCorrectCasing($fq_interface_name)
+    public function interfaceHasCorrectCasing($fqInterfaceName)
     {
-        return isset($this->existing_interfaces[$fq_interface_name]);
+        return isset($this->existingInterfaces[$fqInterfaceName]);
     }
 
     /**
-     * @param  string $fq_trait_name
+     * @param  string $fqTraitName
      *
      * @return bool
      */
-    public function traitHasCorrectCase($fq_trait_name)
+    public function traitHasCorrectCase($fqTraitName)
     {
-        return isset($this->existing_traits[$fq_trait_name]);
+        return isset($this->existingTraits[$fqTraitName]);
     }
 
     /**
-     * @param  string  $fq_class_name
+     * @param  string  $fqClassName
      *
      * @return bool
      */
-    public function isUserDefined($fq_class_name)
+    public function isUserDefined($fqClassName)
     {
-        return $this->classlike_storage_provider->get($fq_class_name)->user_defined;
+        return $this->classlikeStorageProvider->get($fqClassName)->userDefined;
     }
 
     /**
-     * @param  string $fq_trait_name
+     * @param  string $fqTraitName
      *
      * @return void
      */
-    public function addTraitNode($fq_trait_name, PhpParser\Node\Stmt\Trait_ $node, Aliases $aliases)
+    public function addTraitNode($fqTraitName, PhpParser\Node\Stmt\Trait_ $node, Aliases $aliases)
     {
-        $fq_trait_name_lc = strtolower($fq_trait_name);
-        $this->trait_nodes[$fq_trait_name_lc] = $node;
-        $this->trait_aliases[$fq_trait_name_lc] = $aliases;
+        $fqTraitNameLc = strtolower($fqTraitName);
+        $this->traitNodes[$fqTraitNameLc] = $node;
+        $this->traitAliases[$fqTraitNameLc] = $aliases;
     }
 
     /**
-     * @param  string $fq_trait_name
+     * @param  string $fqTraitName
      *
      * @return PhpParser\Node\Stmt\Trait_
      */
-    public function getTraitNode($fq_trait_name)
+    public function getTraitNode($fqTraitName)
     {
-        $fq_trait_name_lc = strtolower($fq_trait_name);
+        $fqTraitNameLc = strtolower($fqTraitName);
 
-        if (isset($this->trait_nodes[$fq_trait_name_lc])) {
-            return $this->trait_nodes[$fq_trait_name_lc];
+        if (isset($this->traitNodes[$fqTraitNameLc])) {
+            return $this->traitNodes[$fqTraitNameLc];
         }
 
         throw new \UnexpectedValueException(
-            'Expecting trait statements to exist for ' . $fq_trait_name
+            'Expecting trait statements to exist for ' . $fqTraitName
         );
     }
 
     /**
-     * @param  string $fq_trait_name
+     * @param  string $fqTraitName
      *
      * @return Aliases
      */
-    public function getTraitAliases($fq_trait_name)
+    public function getTraitAliases($fqTraitName)
     {
-        $fq_trait_name_lc = strtolower($fq_trait_name);
+        $fqTraitNameLc = strtolower($fqTraitName);
 
-        if (isset($this->trait_aliases[$fq_trait_name_lc])) {
-            return $this->trait_aliases[$fq_trait_name_lc];
+        if (isset($this->traitAliases[$fqTraitNameLc])) {
+            return $this->traitAliases[$fqTraitNameLc];
         }
 
         throw new \UnexpectedValueException(
-            'Expecting trait aliases to exist for ' . $fq_trait_name
+            'Expecting trait aliases to exist for ' . $fqTraitName
         );
     }
 
@@ -621,61 +621,61 @@ class ClassLikes
      */
     public function checkClassReferences()
     {
-        foreach ($this->existing_classlikes_lc as $fq_class_name_lc => $_) {
+        foreach ($this->existingClasslikesLc as $fqClassNameLc => $_) {
             try {
-                $classlike_storage = $this->classlike_storage_provider->get($fq_class_name_lc);
+                $classlikeStorage = $this->classlikeStorageProvider->get($fqClassNameLc);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            if ($classlike_storage->location
-                && $this->config->isInProjectDirs($classlike_storage->location->file_path)
-                && !$classlike_storage->is_trait
+            if ($classlikeStorage->location
+                && $this->config->isInProjectDirs($classlikeStorage->location->filePath)
+                && !$classlikeStorage->isTrait
             ) {
-                if (!isset($this->classlike_references[$fq_class_name_lc])) {
+                if (!isset($this->classlikeReferences[$fqClassNameLc])) {
                     if (IssueBuffer::accepts(
                         new UnusedClass(
-                            'Class ' . $classlike_storage->name . ' is never used',
-                            $classlike_storage->location
+                            'Class ' . $classlikeStorage->name . ' is never used',
+                            $classlikeStorage->location
                         )
                     )) {
                         // fall through
                     }
                 } else {
-                    $this->checkMethodReferences($classlike_storage);
+                    $this->checkMethodReferences($classlikeStorage);
                 }
             }
         }
     }
 
     /**
-     * @param  string $class_name
+     * @param  string $className
      * @param  mixed  $visibility
      *
      * @return array<string,Type\Union>
      */
-    public function getConstantsForClass($class_name, $visibility)
+    public function getConstantsForClass($className, $visibility)
     {
-        $class_name = strtolower($class_name);
+        $className = strtolower($className);
 
-        $storage = $this->classlike_storage_provider->get($class_name);
+        $storage = $this->classlikeStorageProvider->get($className);
 
         if ($visibility === ReflectionProperty::IS_PUBLIC) {
-            return $storage->public_class_constants;
+            return $storage->publicClassConstants;
         }
 
         if ($visibility === ReflectionProperty::IS_PROTECTED) {
             return array_merge(
-                $storage->public_class_constants,
-                $storage->protected_class_constants
+                $storage->publicClassConstants,
+                $storage->protectedClassConstants
             );
         }
 
         if ($visibility === ReflectionProperty::IS_PRIVATE) {
             return array_merge(
-                $storage->public_class_constants,
-                $storage->protected_class_constants,
-                $storage->private_class_constants
+                $storage->publicClassConstants,
+                $storage->protectedClassConstants,
+                $storage->privateClassConstants
             );
         }
 
@@ -683,145 +683,145 @@ class ClassLikes
     }
 
     /**
-     * @param   string      $class_name
-     * @param   string      $const_name
+     * @param   string      $className
+     * @param   string      $constName
      * @param   Type\Union  $type
      * @param   int         $visibility
      *
      * @return  void
      */
     public function setConstantType(
-        $class_name,
-        $const_name,
+        $className,
+        $constName,
         Type\Union $type,
         $visibility
     ) {
-        $storage = $this->classlike_storage_provider->get($class_name);
+        $storage = $this->classlikeStorageProvider->get($className);
 
         if ($visibility === ReflectionProperty::IS_PUBLIC) {
-            $storage->public_class_constants[$const_name] = $type;
+            $storage->publicClassConstants[$constName] = $type;
         } elseif ($visibility === ReflectionProperty::IS_PROTECTED) {
-            $storage->protected_class_constants[$const_name] = $type;
+            $storage->protectedClassConstants[$constName] = $type;
         } elseif ($visibility === ReflectionProperty::IS_PRIVATE) {
-            $storage->private_class_constants[$const_name] = $type;
+            $storage->privateClassConstants[$constName] = $type;
         }
     }
 
     /**
      * @return void
      */
-    private function checkMethodReferences(ClassLikeStorage $classlike_storage)
+    private function checkMethodReferences(ClassLikeStorage $classlikeStorage)
     {
-        foreach ($classlike_storage->appearing_method_ids as $method_name => $appearing_method_id) {
-            list($appearing_fq_classlike_name) = explode('::', $appearing_method_id);
+        foreach ($classlikeStorage->appearingMethodIds as $methodName => $appearingMethodId) {
+            list($appearingFqClasslikeName) = explode('::', $appearingMethodId);
 
-            if ($appearing_fq_classlike_name !== $classlike_storage->name) {
+            if ($appearingFqClasslikeName !== $classlikeStorage->name) {
                 continue;
             }
 
-            if (isset($classlike_storage->methods[$method_name])) {
-                $method_storage = $classlike_storage->methods[$method_name];
+            if (isset($classlikeStorage->methods[$methodName])) {
+                $methodStorage = $classlikeStorage->methods[$methodName];
             } else {
-                $declaring_method_id = $classlike_storage->declaring_method_ids[$method_name];
+                $declaringMethodId = $classlikeStorage->declaringMethodIds[$methodName];
 
-                list($declaring_fq_classlike_name) = explode('::', $declaring_method_id);
+                list($declaringFqClasslikeName) = explode('::', $declaringMethodId);
 
                 try {
-                    $declaring_classlike_storage = $this->classlike_storage_provider->get($declaring_fq_classlike_name);
+                    $declaringClasslikeStorage = $this->classlikeStorageProvider->get($declaringFqClasslikeName);
                 } catch (\InvalidArgumentException $e) {
                     continue;
                 }
 
-                $method_storage = $declaring_classlike_storage->methods[$method_name];
+                $methodStorage = $declaringClasslikeStorage->methods[$methodName];
             }
 
-            if (($method_storage->referencing_locations === null
-                    || count($method_storage->referencing_locations) === 0)
-                && (substr($method_name, 0, 2) !== '__' || $method_name === '__construct')
-                && $method_storage->location
+            if (($methodStorage->referencingLocations === null
+                    || count($methodStorage->referencingLocations) === 0)
+                && (substr($methodName, 0, 2) !== '__' || $methodName === '__construct')
+                && $methodStorage->location
             ) {
-                $method_location = $method_storage->location;
+                $methodLocation = $methodStorage->location;
 
-                $method_id = $classlike_storage->name . '::' . $method_storage->cased_name;
+                $methodId = $classlikeStorage->name . '::' . $methodStorage->casedName;
 
-                if ($method_storage->visibility === ClassLikeChecker::VISIBILITY_PUBLIC) {
-                    $method_name_lc = strtolower($method_name);
+                if ($methodStorage->visibility === ClassLikeChecker::VISIBILITY_PUBLIC) {
+                    $methodNameLc = strtolower($methodName);
 
-                    $has_parent_references = false;
+                    $hasParentReferences = false;
 
-                    if (isset($classlike_storage->overridden_method_ids[$method_name_lc])) {
-                        foreach ($classlike_storage->overridden_method_ids[$method_name_lc] as $parent_method_id) {
-                            $parent_method_storage = $this->methods->getStorage($parent_method_id);
+                    if (isset($classlikeStorage->overriddenMethodIds[$methodNameLc])) {
+                        foreach ($classlikeStorage->overriddenMethodIds[$methodNameLc] as $parentMethodId) {
+                            $parentMethodStorage = $this->methods->getStorage($parentMethodId);
 
-                            if (!$parent_method_storage->abstract || $parent_method_storage->referencing_locations) {
-                                $has_parent_references = true;
+                            if (!$parentMethodStorage->abstract || $parentMethodStorage->referencingLocations) {
+                                $hasParentReferences = true;
                                 break;
                             }
                         }
                     }
 
-                    foreach ($classlike_storage->class_implements as $fq_interface_name) {
-                        $interface_storage = $this->classlike_storage_provider->get($fq_interface_name);
-                        if (isset($interface_storage->methods[$method_name])) {
-                            $interface_method_storage = $interface_storage->methods[$method_name];
+                    foreach ($classlikeStorage->classImplements as $fqInterfaceName) {
+                        $interfaceStorage = $this->classlikeStorageProvider->get($fqInterfaceName);
+                        if (isset($interfaceStorage->methods[$methodName])) {
+                            $interfaceMethodStorage = $interfaceStorage->methods[$methodName];
 
-                            if ($interface_method_storage->referencing_locations) {
-                                $has_parent_references = true;
+                            if ($interfaceMethodStorage->referencingLocations) {
+                                $hasParentReferences = true;
                                 break;
                             }
                         }
                     }
 
-                    if (!$has_parent_references) {
+                    if (!$hasParentReferences) {
                         if (IssueBuffer::accepts(
                             new PossiblyUnusedMethod(
-                                'Cannot find public calls to method ' . $method_id,
-                                $method_storage->location,
-                                $method_id
+                                'Cannot find public calls to method ' . $methodId,
+                                $methodStorage->location,
+                                $methodId
                             ),
-                            $method_storage->suppressed_issues
+                            $methodStorage->suppressedIssues
                         )) {
                             // fall through
                         }
                     }
-                } elseif (!isset($classlike_storage->declaring_method_ids['__call'])) {
+                } elseif (!isset($classlikeStorage->declaringMethodIds['__call'])) {
                     if (IssueBuffer::accepts(
                         new UnusedMethod(
-                            'Method ' . $method_id . ' is never used',
-                            $method_location,
-                            $method_id
+                            'Method ' . $methodId . ' is never used',
+                            $methodLocation,
+                            $methodId
                         ),
-                        $method_storage->suppressed_issues
+                        $methodStorage->suppressedIssues
                     )) {
                         // fall through
                     }
                 }
             } else {
-                foreach ($method_storage->unused_params as $offset => $code_location) {
-                    $has_parent_references = false;
+                foreach ($methodStorage->unusedParams as $offset => $codeLocation) {
+                    $hasParentReferences = false;
 
-                    $method_name_lc = strtolower($method_name);
+                    $methodNameLc = strtolower($methodName);
 
-                    if (isset($classlike_storage->overridden_method_ids[$method_name_lc])) {
-                        foreach ($classlike_storage->overridden_method_ids[$method_name_lc] as $parent_method_id) {
-                            $parent_method_storage = $this->methods->getStorage($parent_method_id);
+                    if (isset($classlikeStorage->overriddenMethodIds[$methodNameLc])) {
+                        foreach ($classlikeStorage->overriddenMethodIds[$methodNameLc] as $parentMethodId) {
+                            $parentMethodStorage = $this->methods->getStorage($parentMethodId);
 
-                            if (!$parent_method_storage->abstract
-                                && isset($parent_method_storage->used_params[$offset])
+                            if (!$parentMethodStorage->abstract
+                                && isset($parentMethodStorage->usedParams[$offset])
                             ) {
-                                $has_parent_references = true;
+                                $hasParentReferences = true;
                                 break;
                             }
                         }
                     }
 
-                    if (!$has_parent_references && !isset($method_storage->used_params[$offset])) {
+                    if (!$hasParentReferences && !isset($methodStorage->usedParams[$offset])) {
                         if (IssueBuffer::accepts(
                             new PossiblyUnusedParam(
                                 'Param #' . $offset . ' is never referenced in this method',
-                                $code_location
+                                $codeLocation
                             ),
-                            $method_storage->suppressed_issues
+                            $methodStorage->suppressedIssues
                         )) {
                             // fall through
                         }
@@ -830,29 +830,29 @@ class ClassLikes
             }
         }
 
-        foreach ($classlike_storage->properties as $property_name => $property_storage) {
-            if (($property_storage->referencing_locations === null
-                    || count($property_storage->referencing_locations) === 0)
-                && (substr($property_name, 0, 2) !== '__' || $property_name === '__construct')
-                && $property_storage->location
+        foreach ($classlikeStorage->properties as $propertyName => $propertyStorage) {
+            if (($propertyStorage->referencingLocations === null
+                    || count($propertyStorage->referencingLocations) === 0)
+                && (substr($propertyName, 0, 2) !== '__' || $propertyName === '__construct')
+                && $propertyStorage->location
             ) {
-                $property_id = $classlike_storage->name . '::$' . $property_name;
+                $propertyId = $classlikeStorage->name . '::$' . $propertyName;
 
-                if ($property_storage->visibility === ClassLikeChecker::VISIBILITY_PUBLIC) {
+                if ($propertyStorage->visibility === ClassLikeChecker::VISIBILITY_PUBLIC) {
                     if (IssueBuffer::accepts(
                         new PossiblyUnusedProperty(
-                            'Cannot find uses of public property ' . $property_id,
-                            $property_storage->location
+                            'Cannot find uses of public property ' . $propertyId,
+                            $propertyStorage->location
                         ),
-                        $classlike_storage->suppressed_issues
+                        $classlikeStorage->suppressedIssues
                     )) {
                         // fall through
                     }
-                } elseif (!isset($classlike_storage->declaring_method_ids['__get'])) {
+                } elseif (!isset($classlikeStorage->declaringMethodIds['__get'])) {
                     if (IssueBuffer::accepts(
                         new UnusedProperty(
-                            'Property ' . $property_id . ' is never used',
-                            $property_storage->location
+                            'Property ' . $propertyId . ' is never used',
+                            $propertyStorage->location
                         )
                     )) {
                         // fall through
@@ -863,34 +863,34 @@ class ClassLikes
     }
 
     /**
-     * @param  string $fq_classlike_name_lc
+     * @param  string $fqClasslikeNameLc
      *
      * @return void
      */
-    public function registerMissingClassLike($fq_classlike_name_lc)
+    public function registerMissingClassLike($fqClasslikeNameLc)
     {
-        $this->existing_classlikes_lc[$fq_classlike_name_lc] = false;
+        $this->existingClasslikesLc[$fqClasslikeNameLc] = false;
     }
 
     /**
-     * @param  string $fq_classlike_name_lc
+     * @param  string $fqClasslikeNameLc
      *
      * @return bool
      */
-    public function isMissingClassLike($fq_classlike_name_lc)
+    public function isMissingClassLike($fqClasslikeNameLc)
     {
-        return isset($this->existing_classlikes_lc[$fq_classlike_name_lc])
-            && $this->existing_classlikes_lc[$fq_classlike_name_lc] === false;
+        return isset($this->existingClasslikesLc[$fqClasslikeNameLc])
+            && $this->existingClasslikesLc[$fqClasslikeNameLc] === false;
     }
 
     /**
-     * @param  string $fq_classlike_name_lc
+     * @param  string $fqClasslikeNameLc
      *
      * @return bool
      */
-    public function doesClassLikeExist($fq_classlike_name_lc)
+    public function doesClassLikeExist($fqClasslikeNameLc)
     {
-        return isset($this->existing_classlikes_lc[$fq_classlike_name_lc])
-            && $this->existing_classlikes_lc[$fq_classlike_name_lc];
+        return isset($this->existingClasslikesLc[$fqClasslikeNameLc])
+            && $this->existingClasslikesLc[$fqClasslikeNameLc];
     }
 }

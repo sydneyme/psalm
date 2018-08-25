@@ -6,30 +6,30 @@ class FileStorage
     /**
      * @var array<string, string>
      */
-    public $classlikes_in_file = [];
+    public $classlikesInFile = [];
 
     /**
      * @var array<string>
      */
-    public $referenced_classlikes = [];
+    public $referencedClasslikes = [];
 
     /**
      * @var array<string>
      */
-    public $required_classes = [];
+    public $requiredClasses = [];
 
     /**
      * @var array<string>
      */
-    public $required_interfaces = [];
+    public $requiredInterfaces = [];
 
     /**
      * @var bool
      */
-    public $has_trait = false;
+    public $hasTrait = false;
 
     /** @var string */
-    public $file_path;
+    public $filePath;
 
     /**
      * @var array<string, FunctionLikeStorage>
@@ -37,7 +37,7 @@ class FileStorage
     public $functions = [];
 
     /** @var array<string, string> */
-    public $declaring_function_ids = [];
+    public $declaringFunctionIds = [];
 
     /**
      * @var array<string, \Psalm\Type\Union>
@@ -45,22 +45,22 @@ class FileStorage
     public $constants = [];
 
     /** @var array<string, string> */
-    public $declaring_constants = [];
+    public $declaringConstants = [];
 
     /** @var array<string, string> */
-    public $required_file_paths = [];
+    public $requiredFilePaths = [];
 
     /** @var array<string, string> */
-    public $required_by_file_paths = [];
+    public $requiredByFilePaths = [];
 
     /** @var bool */
     public $populated = false;
 
     /** @var bool */
-    public $deep_scan = false;
+    public $deepScan = false;
 
     /** @var bool */
-    public $has_extra_statements = false;
+    public $hasExtraStatements = false;
 
     /**
      * @var string
@@ -70,13 +70,13 @@ class FileStorage
     /**
      * @var bool
      */
-    public $has_visitor_issues = false;
+    public $hasVisitorIssues = false;
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      */
-    public function __construct($file_path)
+    public function __construct($filePath)
     {
-        $this->file_path = $file_path;
+        $this->filePath = $filePath;
     }
 }

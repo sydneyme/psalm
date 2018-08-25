@@ -38,62 +38,62 @@ class ProjectChecker
     public $codebase;
 
     /** @var FileProvider */
-    private $file_provider;
+    private $fileProvider;
 
     /** @var FileStorageProvider */
-    public $file_storage_provider;
+    public $fileStorageProvider;
 
     /** @var ClassLikeStorageProvider */
-    public $classlike_storage_provider;
+    public $classlikeStorageProvider;
 
     /** @var ParserCacheProvider */
-    public $cache_provider;
+    public $cacheProvider;
 
     /**
      * Whether or not to use colors in error output
      *
      * @var bool
      */
-    public $use_color;
+    public $useColor;
 
     /**
      * Whether or not to show snippets in error output
      *
      * @var bool
      */
-    public $show_snippet;
+    public $showSnippet;
 
     /**
      * Whether or not to show informational messages
      *
      * @var bool
      */
-    public $show_info;
+    public $showInfo;
 
     /**
      * @var string
      */
-    public $output_format;
+    public $outputFormat;
 
     /**
      * @var bool
      */
-    public $debug_output = false;
+    public $debugOutput = false;
 
     /**
      * @var bool
      */
-    public $debug_lines = false;
+    public $debugLines = false;
 
     /**
      * @var bool
      */
-    public $alter_code = false;
+    public $alterCode = false;
 
     /**
      * @var bool
      */
-    public $show_issues = true;
+    public $showIssues = true;
 
     /** @var int */
     public $threads;
@@ -103,7 +103,7 @@ class ProjectChecker
      *
      * @var bool
      */
-    public $infer_types_from_usage = false;
+    public $inferTypesFromUsage = false;
 
     /**
      * @var array<string,string>
@@ -113,27 +113,27 @@ class ProjectChecker
     /**
      * @var array<string, bool>
      */
-    private $issues_to_fix = [];
+    private $issuesToFix = [];
 
     /**
      * @var int
      */
-    public $php_major_version = PHP_MAJOR_VERSION;
+    public $phpMajorVersion = PHP_MAJOR_VERSION;
 
     /**
      * @var int
      */
-    public $php_minor_version = PHP_MINOR_VERSION;
+    public $phpMinorVersion = PHP_MINOR_VERSION;
 
     /**
      * @var bool
      */
-    public $dry_run = false;
+    public $dryRun = false;
 
     /**
      * @var bool
      */
-    public $only_replace_php_types_with_non_docblock_types = false;
+    public $onlyReplacePhpTypesWithNonDocblockTypes = false;
 
     const TYPE_CONSOLE = 'console';
     const TYPE_PYLINT = 'pylint';
@@ -150,59 +150,59 @@ class ProjectChecker
     ];
 
     /**
-     * @param FileProvider  $file_provider
-     * @param ParserCacheProvider $cache_provider
-     * @param bool          $use_color
-     * @param bool          $show_info
-     * @param string        $output_format
+     * @param FileProvider  $fileProvider
+     * @param ParserCacheProvider $cacheProvider
+     * @param bool          $useColor
+     * @param bool          $showInfo
+     * @param string        $outputFormat
      * @param int           $threads
-     * @param bool          $debug_output
+     * @param bool          $debugOutput
      * @param string        $reports
-     * @param bool          $show_snippet
+     * @param bool          $showSnippet
      */
     public function __construct(
         Config $config,
-        FileProvider $file_provider,
-        ParserCacheProvider $cache_provider,
-        FileStorageCacheProvider $file_storage_cache_provider,
-        ClassLikeStorageCacheProvider $classlike_storage_cache_provider,
-        $use_color = true,
-        $show_info = true,
-        $output_format = self::TYPE_CONSOLE,
+        FileProvider $fileProvider,
+        ParserCacheProvider $cacheProvider,
+        FileStorageCacheProvider $fileStorageCacheProvider,
+        ClassLikeStorageCacheProvider $classlikeStorageCacheProvider,
+        $useColor = true,
+        $showInfo = true,
+        $outputFormat = self::TYPE_CONSOLE,
         $threads = 1,
-        $debug_output = false,
+        $debugOutput = false,
         $reports = null,
-        $show_snippet = true
+        $showSnippet = true
     ) {
-        $this->file_provider = $file_provider;
-        $this->cache_provider = $cache_provider;
-        $this->use_color = $use_color;
-        $this->show_info = $show_info;
-        $this->debug_output = $debug_output;
+        $this->fileProvider = $fileProvider;
+        $this->cacheProvider = $cacheProvider;
+        $this->useColor = $useColor;
+        $this->showInfo = $showInfo;
+        $this->debugOutput = $debugOutput;
         $this->threads = $threads;
         $this->config = $config;
-        $this->show_snippet = $show_snippet;
+        $this->showSnippet = $showSnippet;
 
-        $this->file_storage_provider = new FileStorageProvider($file_storage_cache_provider);
-        $this->classlike_storage_provider = new ClassLikeStorageProvider($classlike_storage_cache_provider);
+        $this->fileStorageProvider = new FileStorageProvider($fileStorageCacheProvider);
+        $this->classlikeStorageProvider = new ClassLikeStorageProvider($classlikeStorageCacheProvider);
 
-        $statements_provider = new StatementsProvider(
-            $file_provider,
-            $cache_provider,
-            $file_storage_cache_provider
+        $statementsProvider = new StatementsProvider(
+            $fileProvider,
+            $cacheProvider,
+            $fileStorageCacheProvider
         );
 
         $this->codebase = new Codebase(
             $config,
-            $this->file_storage_provider,
-            $this->classlike_storage_provider,
-            $file_provider,
-            $statements_provider,
-            $debug_output
+            $this->fileStorageProvider,
+            $this->classlikeStorageProvider,
+            $fileProvider,
+            $statementsProvider,
+            $debugOutput
         );
 
-        if (!in_array($output_format, self::SUPPORTED_OUTPUT_TYPES, true)) {
-            throw new \UnexpectedValueException('Unrecognised output format ' . $output_format);
+        if (!in_array($outputFormat, self::SUPPORTED_OUTPUT_TYPES, true)) {
+            throw new \UnexpectedValueException('Unrecognised output format ' . $outputFormat);
         }
 
         if ($reports) {
@@ -227,10 +227,10 @@ class ProjectChecker
             }
         }
 
-        $this->output_format = $output_format;
+        $this->outputFormat = $outputFormat;
         self::$instance = $this;
 
-        $this->cache_provider->use_igbinary = $config->use_igbinary;
+        $this->cacheProvider->useIgbinary = $config->useIgbinary;
     }
 
     /**
@@ -242,59 +242,59 @@ class ProjectChecker
     }
 
     /**
-     * @param  string  $base_dir
-     * @param  bool $is_diff
+     * @param  string  $baseDir
+     * @param  bool $isDiff
      *
      * @return void
      */
-    public function check($base_dir, $is_diff = false)
+    public function check($baseDir, $isDiff = false)
     {
-        $start_checks = (int)microtime(true);
+        $startChecks = (int)microtime(true);
 
-        if (!$base_dir) {
+        if (!$baseDir) {
             throw new \InvalidArgumentException('Cannot work with empty base_dir');
         }
 
-        $diff_files = null;
-        $deleted_files = null;
+        $diffFiles = null;
+        $deletedFiles = null;
 
-        if ($is_diff && FileReferenceProvider::loadReferenceCache() && $this->cache_provider->canDiffFiles()) {
-            $deleted_files = FileReferenceProvider::getDeletedReferencedFiles();
-            $diff_files = $deleted_files;
+        if ($isDiff && FileReferenceProvider::loadReferenceCache() && $this->cacheProvider->canDiffFiles()) {
+            $deletedFiles = FileReferenceProvider::getDeletedReferencedFiles();
+            $diffFiles = $deletedFiles;
 
-            foreach ($this->config->getProjectDirectories() as $dir_name) {
-                $diff_files = array_merge($diff_files, $this->getDiffFilesInDir($dir_name, $this->config));
+            foreach ($this->config->getProjectDirectories() as $dirName) {
+                $diffFiles = array_merge($diffFiles, $this->getDiffFilesInDir($dirName, $this->config));
             }
         }
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Scanning files...' . "\n";
         }
 
-        if ($diff_files === null || $deleted_files === null || count($diff_files) > 200) {
-            foreach ($this->config->getProjectDirectories() as $dir_name) {
-                $this->checkDirWithConfig($dir_name, $this->config);
+        if ($diffFiles === null || $deletedFiles === null || count($diffFiles) > 200) {
+            foreach ($this->config->getProjectDirectories() as $dirName) {
+                $this->checkDirWithConfig($dirName, $this->config);
             }
 
-            foreach ($this->config->getProjectFiles() as $file_path) {
-                $this->codebase->addFilesToAnalyze([$file_path => $file_path]);
+            foreach ($this->config->getProjectFiles() as $filePath) {
+                $this->codebase->addFilesToAnalyze([$filePath => $filePath]);
             }
 
             $this->config->initializePlugins($this);
 
             $this->codebase->scanFiles();
         } else {
-            if ($this->debug_output) {
-                echo count($diff_files) . ' changed files' . "\n";
+            if ($this->debugOutput) {
+                echo count($diffFiles) . ' changed files' . "\n";
             }
 
-            if ($diff_files) {
-                $file_list = self::getReferencedFilesFromDiff($diff_files);
+            if ($diffFiles) {
+                $fileList = self::getReferencedFilesFromDiff($diffFiles);
 
                 // strip out deleted files
-                $file_list = array_diff($file_list, $deleted_files);
+                $fileList = array_diff($fileList, $deletedFiles);
 
-                $this->checkDiffFilesWithConfig($this->config, $file_list);
+                $this->checkDiffFilesWithConfig($this->config, $fileList);
 
                 $this->config->initializePlugins($this);
 
@@ -302,24 +302,24 @@ class ProjectChecker
             }
         }
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Analyzing files...' . "\n";
         }
 
-        $this->config->visitStubFiles($this->codebase, $this->debug_output);
+        $this->config->visitStubFiles($this->codebase, $this->debugOutput);
 
-        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alter_code);
+        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alterCode);
 
-        $removed_parser_files = $this->cache_provider->deleteOldParserCaches(
-            $is_diff ? $this->cache_provider->getLastGoodRun() : $start_checks
+        $removedParserFiles = $this->cacheProvider->deleteOldParserCaches(
+            $isDiff ? $this->cacheProvider->getLastGoodRun() : $startChecks
         );
 
-        if ($this->debug_output && $removed_parser_files) {
-            echo 'Removed ' . $removed_parser_files . ' old parser caches' . "\n";
+        if ($this->debugOutput && $removedParserFiles) {
+            echo 'Removed ' . $removedParserFiles . ' old parser caches' . "\n";
         }
 
-        if ($is_diff) {
-            $this->cache_provider->touchParserCaches($this->getAllFiles($this->config), $start_checks);
+        if ($isDiff) {
+            $this->cacheProvider->touchParserCaches($this->getAllFiles($this->config), $startChecks);
         }
     }
 
@@ -328,7 +328,7 @@ class ProjectChecker
      */
     public function checkClassReferences()
     {
-        if (!$this->codebase->collect_references) {
+        if (!$this->codebase->collectReferences) {
             throw new \UnexpectedValueException('Should not be checking references');
         }
 
@@ -342,32 +342,32 @@ class ProjectChecker
      */
     public function findReferencesTo($symbol)
     {
-        $locations_by_files = $this->codebase->findReferencesToSymbol($symbol);
+        $locationsByFiles = $this->codebase->findReferencesToSymbol($symbol);
 
-        foreach ($locations_by_files as $locations) {
-            $bounds_starts = [];
+        foreach ($locationsByFiles as $locations) {
+            $boundsStarts = [];
 
             foreach ($locations as $location) {
                 $snippet = $location->getSnippet();
 
-                $snippet_bounds = $location->getSnippetBounds();
-                $selection_bounds = $location->getSelectionBounds();
+                $snippetBounds = $location->getSnippetBounds();
+                $selectionBounds = $location->getSelectionBounds();
 
-                if (isset($bounds_starts[$selection_bounds[0]])) {
+                if (isset($boundsStarts[$selectionBounds[0]])) {
                     continue;
                 }
 
-                $bounds_starts[$selection_bounds[0]] = true;
+                $boundsStarts[$selectionBounds[0]] = true;
 
-                $selection_start = $selection_bounds[0] - $snippet_bounds[0];
-                $selection_length = $selection_bounds[1] - $selection_bounds[0];
+                $selectionStart = $selectionBounds[0] - $snippetBounds[0];
+                $selectionLength = $selectionBounds[1] - $selectionBounds[0];
 
-                echo $location->file_name . ':' . $location->getLineNumber() . "\n" .
+                echo $location->fileName . ':' . $location->getLineNumber() . "\n" .
                     (
-                        $this->use_color
-                        ? substr($snippet, 0, $selection_start) .
-                        "\e[97;42m" . substr($snippet, $selection_start, $selection_length) .
-                        "\e[0m" . substr($snippet, $selection_length + $selection_start)
+                        $this->useColor
+                        ? substr($snippet, 0, $selectionStart) .
+                        "\e[97;42m" . substr($snippet, $selectionStart, $selectionLength) .
+                        "\e[0m" . substr($snippet, $selectionLength + $selectionStart)
                         : $snippet
                     ) . "\n" . "\n";
             }
@@ -375,17 +375,17 @@ class ProjectChecker
     }
 
     /**
-     * @param  string  $dir_name
+     * @param  string  $dirName
      *
      * @return void
      */
-    public function checkDir($dir_name)
+    public function checkDir($dirName)
     {
         FileReferenceProvider::loadReferenceCache();
 
-        $this->checkDirWithConfig($dir_name, $this->config, true);
+        $this->checkDirWithConfig($dirName, $this->config, true);
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Scanning files...' . "\n";
         }
 
@@ -393,40 +393,40 @@ class ProjectChecker
 
         $this->codebase->scanFiles();
 
-        $this->config->visitStubFiles($this->codebase, $this->debug_output);
+        $this->config->visitStubFiles($this->codebase, $this->debugOutput);
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Analyzing files...' . "\n";
         }
 
-        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alter_code);
+        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alterCode);
     }
 
     /**
-     * @param  string $dir_name
+     * @param  string $dirName
      * @param  Config $config
-     * @param  bool   $allow_non_project_files
+     * @param  bool   $allowNonProjectFiles
      *
      * @return void
      */
-    private function checkDirWithConfig($dir_name, Config $config, $allow_non_project_files = false)
+    private function checkDirWithConfig($dirName, Config $config, $allowNonProjectFiles = false)
     {
-        $file_extensions = $config->getFileExtensions();
+        $fileExtensions = $config->getFileExtensions();
 
         /** @var RecursiveDirectoryIterator */
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir_name));
+        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dirName));
         $iterator->rewind();
 
-        $files_to_scan = [];
+        $filesToScan = [];
 
         while ($iterator->valid()) {
             if (!$iterator->isDot()) {
                 $extension = $iterator->getExtension();
-                if (in_array($extension, $file_extensions, true)) {
-                    $file_path = (string)$iterator->getRealPath();
+                if (in_array($extension, $fileExtensions, true)) {
+                    $filePath = (string)$iterator->getRealPath();
 
-                    if ($allow_non_project_files || $config->isInProjectDirs($file_path)) {
-                        $files_to_scan[$file_path] = $file_path;
+                    if ($allowNonProjectFiles || $config->isInProjectDirs($filePath)) {
+                        $filesToScan[$filePath] = $filePath;
                     }
                 }
             }
@@ -434,7 +434,7 @@ class ProjectChecker
             $iterator->next();
         }
 
-        $this->codebase->addFilesToAnalyze($files_to_scan);
+        $this->codebase->addFilesToAnalyze($filesToScan);
     }
 
     /**
@@ -444,19 +444,19 @@ class ProjectChecker
      */
     private function getAllFiles(Config $config)
     {
-        $file_extensions = $config->getFileExtensions();
-        $file_names = [];
+        $fileExtensions = $config->getFileExtensions();
+        $fileNames = [];
 
-        foreach ($config->getProjectDirectories() as $dir_name) {
+        foreach ($config->getProjectDirectories() as $dirName) {
             /** @var RecursiveDirectoryIterator */
-            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir_name));
+            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dirName));
             $iterator->rewind();
 
             while ($iterator->valid()) {
                 if (!$iterator->isDot()) {
                     $extension = $iterator->getExtension();
-                    if (in_array($extension, $file_extensions, true)) {
-                        $file_names[] = (string)$iterator->getRealPath();
+                    if (in_array($extension, $fileExtensions, true)) {
+                        $fileNames[] = (string)$iterator->getRealPath();
                     }
                 }
 
@@ -464,35 +464,35 @@ class ProjectChecker
             }
         }
 
-        return $file_names;
+        return $fileNames;
     }
 
     /**
-     * @param  string $dir_name
+     * @param  string $dirName
      * @param  Config $config
      *
      * @return array<string>
      */
-    protected function getDiffFilesInDir($dir_name, Config $config)
+    protected function getDiffFilesInDir($dirName, Config $config)
     {
-        $file_extensions = $config->getFileExtensions();
+        $fileExtensions = $config->getFileExtensions();
 
         /** @var RecursiveDirectoryIterator */
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir_name));
+        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dirName));
         $iterator->rewind();
 
-        $diff_files = [];
+        $diffFiles = [];
 
         while ($iterator->valid()) {
             if (!$iterator->isDot()) {
                 $extension = $iterator->getExtension();
-                if (in_array($extension, $file_extensions, true)) {
-                    $file_path = (string)$iterator->getRealPath();
+                if (in_array($extension, $fileExtensions, true)) {
+                    $filePath = (string)$iterator->getRealPath();
 
-                    if ($config->isInProjectDirs($file_path)) {
-                        if ($this->file_provider->getModifiedTime($file_path) > $this->cache_provider->getLastGoodRun()
+                    if ($config->isInProjectDirs($filePath)) {
+                        if ($this->fileProvider->getModifiedTime($filePath) > $this->cacheProvider->getLastGoodRun()
                         ) {
-                            $diff_files[] = $file_path;
+                            $diffFiles[] = $filePath;
                         }
                     }
                 }
@@ -501,56 +501,56 @@ class ProjectChecker
             $iterator->next();
         }
 
-        return $diff_files;
+        return $diffFiles;
     }
 
     /**
      * @param  Config           $config
-     * @param  array<string>    $file_list
+     * @param  array<string>    $fileList
      *
      * @return void
      */
-    private function checkDiffFilesWithConfig(Config $config, array $file_list = [])
+    private function checkDiffFilesWithConfig(Config $config, array $fileList = [])
     {
-        $files_to_scan = [];
+        $filesToScan = [];
 
-        foreach ($file_list as $file_path) {
-            if (!file_exists($file_path)) {
+        foreach ($fileList as $filePath) {
+            if (!file_exists($filePath)) {
                 continue;
             }
 
-            if (!$config->isInProjectDirs($file_path)) {
-                if ($this->debug_output) {
-                    echo 'skipping ' . $file_path . "\n";
+            if (!$config->isInProjectDirs($filePath)) {
+                if ($this->debugOutput) {
+                    echo 'skipping ' . $filePath . "\n";
                 }
 
                 continue;
             }
 
-            $files_to_scan[$file_path] = $file_path;
+            $filesToScan[$filePath] = $filePath;
         }
 
-        $this->codebase->addFilesToAnalyze($files_to_scan);
+        $this->codebase->addFilesToAnalyze($filesToScan);
     }
 
     /**
-     * @param  string  $file_path
+     * @param  string  $filePath
      *
      * @return void
      */
-    public function checkFile($file_path)
+    public function checkFile($filePath)
     {
-        if ($this->debug_output) {
-            echo 'Checking ' . $file_path . "\n";
+        if ($this->debugOutput) {
+            echo 'Checking ' . $filePath . "\n";
         }
 
-        $this->config->hide_external_errors = $this->config->isInProjectDirs($file_path);
+        $this->config->hideExternalErrors = $this->config->isInProjectDirs($filePath);
 
-        $this->codebase->addFilesToAnalyze([$file_path => $file_path]);
+        $this->codebase->addFilesToAnalyze([$filePath => $filePath]);
 
         FileReferenceProvider::loadReferenceCache();
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Scanning files...' . "\n";
         }
 
@@ -558,23 +558,23 @@ class ProjectChecker
 
         $this->codebase->scanFiles();
 
-        $this->config->visitStubFiles($this->codebase, $this->debug_output);
+        $this->config->visitStubFiles($this->codebase, $this->debugOutput);
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Analyzing files...' . "\n";
         }
 
-        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alter_code);
+        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alterCode);
     }
 
     /**
-     * @param string[] $paths_to_check
+     * @param string[] $pathsToCheck
      * @return void
      */
-    public function checkPaths(array $paths_to_check)
+    public function checkPaths(array $pathsToCheck)
     {
-        foreach ($paths_to_check as $path) {
-            if ($this->debug_output) {
+        foreach ($pathsToCheck as $path) {
+            if ($this->debugOutput) {
                 echo 'Checking ' . $path . "\n";
             }
 
@@ -582,13 +582,13 @@ class ProjectChecker
                 $this->checkDirWithConfig($path, $this->config, true);
             } elseif (is_file($path)) {
                 $this->codebase->addFilesToAnalyze([$path => $path]);
-                $this->config->hide_external_errors = $this->config->isInProjectDirs($path);
+                $this->config->hideExternalErrors = $this->config->isInProjectDirs($path);
             }
         }
 
         FileReferenceProvider::loadReferenceCache();
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Scanning files...' . "\n";
         }
 
@@ -596,13 +596,13 @@ class ProjectChecker
 
         $this->codebase->scanFiles();
 
-        $this->config->visitStubFiles($this->codebase, $this->debug_output);
+        $this->config->visitStubFiles($this->codebase, $this->debugOutput);
 
-        if ($this->output_format === self::TYPE_CONSOLE) {
+        if ($this->outputFormat === self::TYPE_CONSOLE) {
             echo 'Analyzing files...' . "\n";
         }
 
-        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alter_code);
+        $this->codebase->analyzer->analyzeFiles($this, $this->threads, $this->alterCode);
     }
 
     /**
@@ -614,64 +614,64 @@ class ProjectChecker
     }
 
     /**
-     * @param  array<string>  $diff_files
+     * @param  array<string>  $diffFiles
      *
      * @return array<string>
      */
-    public static function getReferencedFilesFromDiff(array $diff_files)
+    public static function getReferencedFilesFromDiff(array $diffFiles)
     {
-        $all_inherited_files_to_check = $diff_files;
+        $allInheritedFilesToCheck = $diffFiles;
 
-        while ($diff_files) {
-            $diff_file = array_shift($diff_files);
+        while ($diffFiles) {
+            $diffFile = array_shift($diffFiles);
 
-            $dependent_files = FileReferenceProvider::getFilesInheritingFromFile($diff_file);
-            $new_dependent_files = array_diff($dependent_files, $all_inherited_files_to_check);
+            $dependentFiles = FileReferenceProvider::getFilesInheritingFromFile($diffFile);
+            $newDependentFiles = array_diff($dependentFiles, $allInheritedFilesToCheck);
 
-            $all_inherited_files_to_check += $new_dependent_files;
-            $diff_files += $new_dependent_files;
+            $allInheritedFilesToCheck += $newDependentFiles;
+            $diffFiles += $newDependentFiles;
         }
 
-        $all_files_to_check = $all_inherited_files_to_check;
+        $allFilesToCheck = $allInheritedFilesToCheck;
 
-        foreach ($all_inherited_files_to_check as $file_name) {
-            $dependent_files = FileReferenceProvider::getFilesReferencingFile($file_name);
-            $all_files_to_check = array_merge($dependent_files, $all_files_to_check);
+        foreach ($allInheritedFilesToCheck as $fileName) {
+            $dependentFiles = FileReferenceProvider::getFilesReferencingFile($fileName);
+            $allFilesToCheck = array_merge($dependentFiles, $allFilesToCheck);
         }
 
-        return array_unique($all_files_to_check);
+        return array_unique($allFilesToCheck);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return bool
      */
-    public function fileExists($file_path)
+    public function fileExists($filePath)
     {
-        return $this->file_provider->fileExists($file_path);
+        return $this->fileProvider->fileExists($filePath);
     }
 
     /**
-     * @param int $php_major_version
-     * @param int $php_minor_version
-     * @param bool $dry_run
-     * @param bool $safe_types
+     * @param int $phpMajorVersion
+     * @param int $phpMinorVersion
+     * @param bool $dryRun
+     * @param bool $safeTypes
      *
      * @return void
      */
     public function alterCodeAfterCompletion(
-        $php_major_version,
-        $php_minor_version,
-        $dry_run = false,
-        $safe_types = false
+        $phpMajorVersion,
+        $phpMinorVersion,
+        $dryRun = false,
+        $safeTypes = false
     ) {
-        $this->alter_code = true;
-        $this->show_issues = false;
-        $this->php_major_version = $php_major_version;
-        $this->php_minor_version = $php_minor_version;
-        $this->dry_run = $dry_run;
-        $this->only_replace_php_types_with_non_docblock_types = $safe_types;
+        $this->alterCode = true;
+        $this->showIssues = false;
+        $this->phpMajorVersion = $phpMajorVersion;
+        $this->phpMinorVersion = $phpMinorVersion;
+        $this->dryRun = $dryRun;
+        $this->onlyReplacePhpTypesWithNonDocblockTypes = $safeTypes;
     }
 
     /**
@@ -681,7 +681,7 @@ class ProjectChecker
      */
     public function setIssuesToFix(array $issues)
     {
-        $this->issues_to_fix = $issues;
+        $this->issuesToFix = $issues;
     }
 
     /**
@@ -691,7 +691,7 @@ class ProjectChecker
      */
     public function getIssuesToFix()
     {
-        return $this->issues_to_fix;
+        return $this->issuesToFix;
     }
 
     /**
@@ -703,65 +703,65 @@ class ProjectChecker
     }
 
     /**
-     * @param  string $fq_class_name
+     * @param  string $fqClassName
      *
      * @return FileChecker
      */
-    public function getFileCheckerForClassLike($fq_class_name)
+    public function getFileCheckerForClassLike($fqClassName)
     {
-        $fq_class_name_lc = strtolower($fq_class_name);
+        $fqClassNameLc = strtolower($fqClassName);
 
-        $file_path = $this->codebase->scanner->getClassLikeFilePath($fq_class_name_lc);
+        $filePath = $this->codebase->scanner->getClassLikeFilePath($fqClassNameLc);
 
-        $file_checker = new FileChecker(
+        $fileChecker = new FileChecker(
             $this,
-            $file_path,
-            $this->config->shortenFileName($file_path)
+            $filePath,
+            $this->config->shortenFileName($filePath)
         );
 
-        return $file_checker;
+        return $fileChecker;
     }
 
     /**
-     * @param  string   $original_method_id
-     * @param  Context  $this_context
+     * @param  string   $originalMethodId
+     * @param  Context  $thisContext
      *
      * @return void
      */
-    public function getMethodMutations($original_method_id, Context $this_context)
+    public function getMethodMutations($originalMethodId, Context $thisContext)
     {
-        list($fq_class_name) = explode('::', $original_method_id);
+        list($fqClassName) = explode('::', $originalMethodId);
 
-        $file_checker = $this->getFileCheckerForClassLike($fq_class_name);
+        $fileChecker = $this->getFileCheckerForClassLike($fqClassName);
 
-        $appearing_method_id = $this->codebase->methods->getAppearingMethodId($original_method_id);
+        $appearingMethodId = $this->codebase->methods->getAppearingMethodId($originalMethodId);
 
-        if (!$appearing_method_id) {
+        if (!$appearingMethodId) {
             // this can happen for some abstract classes implementing (but not fully) interfaces
             return;
         }
 
-        list($appearing_fq_class_name) = explode('::', $appearing_method_id);
+        list($appearingFqClassName) = explode('::', $appearingMethodId);
 
-        $appearing_class_storage = $this->classlike_storage_provider->get($appearing_fq_class_name);
+        $appearingClassStorage = $this->classlikeStorageProvider->get($appearingFqClassName);
 
-        if (!$appearing_class_storage->user_defined) {
+        if (!$appearingClassStorage->userDefined) {
             return;
         }
 
-        if (strtolower($appearing_fq_class_name) !== strtolower($fq_class_name)) {
-            $file_checker = $this->getFileCheckerForClassLike($appearing_fq_class_name);
+        if (strtolower($appearingFqClassName) !== strtolower($fqClassName)) {
+            $fileChecker = $this->getFileCheckerForClassLike($appearingFqClassName);
         }
 
-        $stmts = $this->codebase->getStatementsForFile($file_checker->getFilePath());
+        $stmts = $this->codebase->getStatementsForFile($fileChecker->getFilePath());
 
-        $file_checker->populateCheckers($stmts);
+        $fileChecker->populateCheckers($stmts);
 
-        if (!$this_context->self) {
-            $this_context->self = $fq_class_name;
-            $this_context->vars_in_scope['$this'] = Type::parseString($fq_class_name);
+        if (!$thisContext->self) {
+            $thisContext->self = $fqClassName;
+            $thisContext->varsInScope['$this'] = Type::parseString($fqClassName);
         }
 
-        $file_checker->getMethodMutations($appearing_method_id, $this_context);
+        $fileChecker->getMethodMutations($appearingMethodId, $thisContext);
     }
 }

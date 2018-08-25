@@ -8,27 +8,27 @@ class ErrorLevelFileFilter extends FileFilter
     /**
      * @var string
      */
-    private $error_level = '';
+    private $errorLevel = '';
 
     /**
      * @param  SimpleXMLElement $e
-     * @param  string           $base_dir
+     * @param  string           $baseDir
      * @param  bool             $inclusive
      *
      * @return static
      */
     public static function loadFromXMLElement(
         SimpleXMLElement $e,
-        $base_dir,
+        $baseDir,
         $inclusive
     ) {
-        $filter = parent::loadFromXMLElement($e, $base_dir, $inclusive);
+        $filter = parent::loadFromXMLElement($e, $baseDir, $inclusive);
 
         if (isset($e['type'])) {
-            $filter->error_level = (string) $e['type'];
+            $filter->errorLevel = (string) $e['type'];
 
-            if (!in_array($filter->error_level, \Psalm\Config::$ERROR_LEVELS, true)) {
-                throw new \Psalm\Exception\ConfigException('Unexepected error level ' . $filter->error_level);
+            if (!in_array($filter->errorLevel, \Psalm\Config::$ERRORLEVELS, true)) {
+                throw new \Psalm\Exception\ConfigException('Unexepected error level ' . $filter->errorLevel);
             }
         } else {
             throw new \Psalm\Exception\ConfigException('<type> element expects a level');
@@ -42,6 +42,6 @@ class ErrorLevelFileFilter extends FileFilter
      */
     public function getErrorLevel()
     {
-        return $this->error_level;
+        return $this->errorLevel;
     }
 }

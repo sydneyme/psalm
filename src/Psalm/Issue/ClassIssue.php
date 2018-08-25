@@ -6,19 +6,19 @@ abstract class ClassIssue extends CodeIssue
     /**
      * @var string
      */
-    public $fq_classlike_name;
+    public $fqClasslikeName;
 
     /**
      * @param string        $message
-     * @param \Psalm\CodeLocation  $code_location
-     * @param string        $fq_classlike_name
+     * @param \Psalm\CodeLocation  $codeLocation
+     * @param string        $fqClasslikeName
      */
     public function __construct(
         $message,
-        \Psalm\CodeLocation $code_location,
-        $fq_classlike_name
+        \Psalm\CodeLocation $codeLocation,
+        $fqClasslikeName
     ) {
-        parent::__construct($message, $code_location);
-        $this->fq_classlike_name = $fq_classlike_name;
+        parent::__construct($message, $codeLocation);
+        $this->fqClasslikeName = $fqClasslikeName;
     }
 }

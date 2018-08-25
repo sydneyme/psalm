@@ -19,19 +19,19 @@ use Psalm\Type;
 class ConstFetchChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PhpParser\Node\Expr\ConstFetch  $stmt
      * @param   Context                         $context
      *
      * @return  void
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\ConstFetch $stmt,
         Context $context
     ) {
-        $const_name = implode('\\', $stmt->name->parts);
-        switch (strtolower($const_name)) {
+        $constName = implode('\\', $stmt->name->parts);
+        switch (strtolower($constName)) {
             case 'null':
                 $stmt->inferredType = Type::getNull();
                 break;
@@ -50,22 +50,22 @@ class ConstFetchChecker
                 break;
 
             default:
-                $const_type = $statements_checker->getConstType(
-                    $statements_checker,
-                    $const_name,
+                $constType = $statementsChecker->getConstType(
+                    $statementsChecker,
+                    $constName,
                     $stmt->name instanceof PhpParser\Node\Name\FullyQualified,
                     $context
                 );
 
-                if ($const_type) {
-                    $stmt->inferredType = clone $const_type;
-                } elseif ($context->check_consts) {
+                if ($constType) {
+                    $stmt->inferredType = clone $constType;
+                } elseif ($context->checkConsts) {
                     if (IssueBuffer::accepts(
                         new UndefinedConstant(
-                            'Const ' . $const_name . ' is not defined',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Const ' . $constName . ' is not defined',
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
@@ -74,39 +74,39 @@ class ConstFetchChecker
     }
 
     /**
-     * @param   StatementsChecker                   $statements_checker
+     * @param   StatementsChecker                   $statementsChecker
      * @param   PhpParser\Node\Expr\ClassConstFetch $stmt
      * @param   Context                             $context
      *
      * @return  null|false
      */
     public static function analyzeClassConst(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\ClassConstFetch $stmt,
         Context $context
     ) {
-        if ($context->check_consts
+        if ($context->checkConsts
             && $stmt->class instanceof PhpParser\Node\Name
             && $stmt->name instanceof PhpParser\Node\Identifier
         ) {
-            $first_part_lc = strtolower($stmt->class->parts[0]);
+            $firstPartLc = strtolower($stmt->class->parts[0]);
 
-            if ($first_part_lc === 'self' || $first_part_lc === 'static') {
+            if ($firstPartLc === 'self' || $firstPartLc === 'static') {
                 if (!$context->self) {
                     throw new \UnexpectedValueException('$context->self cannot be null');
                 }
 
-                $fq_class_name = (string)$context->self;
-            } elseif ($first_part_lc === 'parent') {
-                $fq_class_name = $statements_checker->getParentFQCLN();
+                $fqClassName = (string)$context->self;
+            } elseif ($firstPartLc === 'parent') {
+                $fqClassName = $statementsChecker->getParentFQCLN();
 
-                if ($fq_class_name === null) {
+                if ($fqClassName === null) {
                     if (IssueBuffer::accepts(
                         new ParentNotFound(
                             'Cannot check property fetch on parent as this class does not extend another',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
@@ -114,17 +114,17 @@ class ConstFetchChecker
                     return;
                 }
             } else {
-                $fq_class_name = ClassLikeChecker::getFQCLNFromNameObject(
+                $fqClassName = ClassLikeChecker::getFQCLNFromNameObject(
                     $stmt->class,
-                    $statements_checker->getAliases()
+                    $statementsChecker->getAliases()
                 );
 
-                if (!$context->inside_class_exists || $stmt->name->name !== 'class') {
+                if (!$context->insideClassExists || $stmt->name->name !== 'class') {
                     if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                        $statements_checker,
-                        $fq_class_name,
-                        new CodeLocation($statements_checker->getSource(), $stmt->class),
-                        $statements_checker->getSuppressedIssues(),
+                        $statementsChecker,
+                        $fqClassName,
+                        new CodeLocation($statementsChecker->getSource(), $stmt->class),
+                        $statementsChecker->getSuppressedIssues(),
                         false
                     ) === false) {
                         return false;
@@ -133,70 +133,70 @@ class ConstFetchChecker
             }
 
             if ($stmt->name->name === 'class') {
-                $stmt->inferredType = Type::getClassString($fq_class_name);
+                $stmt->inferredType = Type::getClassString($fqClassName);
 
                 return null;
             }
 
-            $project_checker = $statements_checker->getFileChecker()->project_checker;
-            $codebase = $project_checker->codebase;
+            $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+            $codebase = $projectChecker->codebase;
 
             // if we're ignoring that the class doesn't exist, exit anyway
-            if (!$codebase->classOrInterfaceExists($fq_class_name)) {
+            if (!$codebase->classOrInterfaceExists($fqClassName)) {
                 $stmt->inferredType = Type::getMixed();
 
                 return null;
             }
 
-            $const_id = $fq_class_name . '::' . $stmt->name;
+            $constId = $fqClassName . '::' . $stmt->name;
 
-            if ($fq_class_name === $context->self
+            if ($fqClassName === $context->self
                 || (
-                    $statements_checker->getSource()->getSource() instanceof TraitChecker &&
-                    $fq_class_name === $statements_checker->getSource()->getFQCLN()
+                    $statementsChecker->getSource()->getSource() instanceof TraitChecker &&
+                    $fqClassName === $statementsChecker->getSource()->getFQCLN()
                 )
             ) {
-                $class_visibility = \ReflectionProperty::IS_PRIVATE;
+                $classVisibility = \ReflectionProperty::IS_PRIVATE;
             } elseif ($context->self &&
-                $codebase->classExtends($context->self, $fq_class_name)
+                $codebase->classExtends($context->self, $fqClassName)
             ) {
-                $class_visibility = \ReflectionProperty::IS_PROTECTED;
+                $classVisibility = \ReflectionProperty::IS_PROTECTED;
             } else {
-                $class_visibility = \ReflectionProperty::IS_PUBLIC;
+                $classVisibility = \ReflectionProperty::IS_PUBLIC;
             }
 
-            $class_constants = $codebase->classlikes->getConstantsForClass(
-                $fq_class_name,
-                $class_visibility
+            $classConstants = $codebase->classlikes->getConstantsForClass(
+                $fqClassName,
+                $classVisibility
             );
 
-            if (!isset($class_constants[$stmt->name->name]) && $first_part_lc !== 'static') {
-                $all_class_constants = [];
+            if (!isset($classConstants[$stmt->name->name]) && $firstPartLc !== 'static') {
+                $allClassConstants = [];
 
-                if ($fq_class_name !== $context->self) {
-                    $all_class_constants = $codebase->classlikes->getConstantsForClass(
-                        $fq_class_name,
+                if ($fqClassName !== $context->self) {
+                    $allClassConstants = $codebase->classlikes->getConstantsForClass(
+                        $fqClassName,
                         \ReflectionProperty::IS_PRIVATE
                     );
                 }
 
-                if ($all_class_constants && isset($all_class_constants[$stmt->name->name])) {
+                if ($allClassConstants && isset($allClassConstants[$stmt->name->name])) {
                     if (IssueBuffer::accepts(
                         new InaccessibleClassConstant(
-                            'Constant ' . $const_id . ' is not visible in this context',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Constant ' . $constId . ' is not visible in this context',
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 } else {
                     if (IssueBuffer::accepts(
                         new UndefinedConstant(
-                            'Constant ' . $const_id . ' is not defined',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Constant ' . $constId . ' is not defined',
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
@@ -205,22 +205,22 @@ class ConstFetchChecker
                 return false;
             }
 
-            $class_const_storage = $codebase->classlike_storage_provider->get($fq_class_name);
+            $classConstStorage = $codebase->classlikeStorageProvider->get($fqClassName);
 
-            if (isset($class_const_storage->deprecated_constants[$stmt->name->name])) {
+            if (isset($classConstStorage->deprecatedConstants[$stmt->name->name])) {
                 if (IssueBuffer::accepts(
                     new DeprecatedConstant(
-                        'Constant ' . $const_id . ' is deprecated',
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        'Constant ' . $constId . ' is deprecated',
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
             }
 
-            if (isset($class_constants[$stmt->name->name]) && $first_part_lc !== 'static') {
-                $stmt->inferredType = clone $class_constants[$stmt->name->name];
+            if (isset($classConstants[$stmt->name->name]) && $firstPartLc !== 'static') {
+                $stmt->inferredType = clone $classConstants[$stmt->name->name];
             } else {
                 $stmt->inferredType = Type::getMixed();
             }
@@ -231,7 +231,7 @@ class ConstFetchChecker
         $stmt->inferredType = Type::getMixed();
 
         if ($stmt->class instanceof PhpParser\Node\Expr) {
-            if (ExpressionChecker::analyze($statements_checker, $stmt->class, $context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $stmt->class, $context) === false) {
                 return false;
             }
         }
@@ -241,27 +241,27 @@ class ConstFetchChecker
 
     /**
      * @param  Codebase $codebase
-     * @param  ?string  $fq_const_name
-     * @param  string   $const_name
+     * @param  ?string  $fqConstName
+     * @param  string   $constName
      *
      * @return Type\Union|null
      */
     public static function getGlobalConstType(
         Codebase $codebase,
-        $fq_const_name,
-        $const_name
+        $fqConstName,
+        $constName
     ) {
-        if ($const_name === 'STDERR'
-            || $const_name === 'STDOUT'
-            || $const_name === 'STDIN'
+        if ($constName === 'STDERR'
+            || $constName === 'STDOUT'
+            || $constName === 'STDIN'
         ) {
             return Type::getResource();
         }
 
-        $predefined_constants = $codebase->config->getPredefinedConstants();
+        $predefinedConstants = $codebase->config->getPredefinedConstants();
 
-        if (isset($predefined_constants[$fq_const_name ?: $const_name])) {
-            switch ($fq_const_name ?: $const_name) {
+        if (isset($predefinedConstants[$fqConstName ?: $constName])) {
+            switch ($fqConstName ?: $constName) {
                 case 'PHP_VERSION':
                 case 'DIRECTORY_SEPARATOR':
                 case 'PATH_SEPARATOR':
@@ -304,16 +304,16 @@ class ConstFetchChecker
                     return Type::getFloat();
             }
 
-            $type = ClassLikeChecker::getTypeFromValue($predefined_constants[$fq_const_name ?: $const_name]);
+            $type = ClassLikeChecker::getTypeFromValue($predefinedConstants[$fqConstName ?: $constName]);
             return $type;
         }
 
-        $stubbed_const_type = $codebase->getStubbedConstantType(
-            $fq_const_name ?: $const_name
+        $stubbedConstType = $codebase->getStubbedConstantType(
+            $fqConstName ?: $constName
         );
 
-        if ($stubbed_const_type) {
-            return $stubbed_const_type;
+        if ($stubbedConstType) {
+            return $stubbedConstType;
         }
 
         return null;

@@ -214,11 +214,11 @@ class ArrayObject implements IteratorAggregate, Traversable, ArrayAccess, Serial
      * @link http://php.net/manual/en/arrayobject.construct.php
      * @param array<TKey, TValue>|object $input The input parameter accepts an array or an Object.
      * @param int $flags Flags to control the behaviour of the ArrayObject object.
-     * @param string $iterator_class Specify the class that will be used for iteration of the ArrayObject object. ArrayIterator is the default class used.
+     * @param string $iteratorClass Specify the class that will be used for iteration of the ArrayObject object. ArrayIterator is the default class used.
      * @since 5.0.0
      *
      */
-    public function __construct($input = null, $flags = 0, $iterator_class = "ArrayIterator") { }
+    public function __construct($input = null, $flags = 0, $iteratorClass = "ArrayIterator") { }
     /**
      * Returns whether the requested index exists
      * @link http://php.net/manual/en/arrayobject.offsetexists.php
@@ -349,7 +349,7 @@ class ArrayObject implements IteratorAggregate, Traversable, ArrayAccess, Serial
     /**
      * Sort the entries with a user-defined comparison function and maintain key association
      * @link http://php.net/manual/en/arrayobject.uasort.php
-     * @param callback $cmp_function <p>
+     * @param callback $cmpFunction <p>
      * Function <i>cmp_function</i> should accept two
      * parameters which will be filled by pairs of entries.
      * The comparison function must return an integer less than, equal
@@ -360,11 +360,11 @@ class ArrayObject implements IteratorAggregate, Traversable, ArrayAccess, Serial
      * @return void
      * @since 5.2.0
      */
-    public function uasort($cmp_function) { }
+    public function uasort($cmpFunction) { }
     /**
      * Sort the entries by keys using a user-defined comparison function
      * @link http://php.net/manual/en/arrayobject.uksort.php
-     * @param callback $cmp_function <p>
+     * @param callback $cmpFunction <p>
      * The callback comparison function.
      * </p>
      * <p>
@@ -378,7 +378,7 @@ class ArrayObject implements IteratorAggregate, Traversable, ArrayAccess, Serial
      * @return void
      * @since 5.2.0
      */
-    public function uksort($cmp_function) { }
+    public function uksort($cmpFunction) { }
     /**
      * Sort entries using a "natural order" algorithm
      * @link http://php.net/manual/en/arrayobject.natsort.php
@@ -430,13 +430,13 @@ class ArrayObject implements IteratorAggregate, Traversable, ArrayAccess, Serial
     /**
      * Sets the iterator classname for the ArrayObject.
      * @link http://php.net/manual/en/arrayobject.setiteratorclass.php
-     * @param string $iterator_class <p>
+     * @param string $iteratorClass <p>
      * The classname of the array iterator to use when iterating over this object.
      * </p>
      * @return void
      * @since 5.1.0
      */
-    public function setIteratorClass($iterator_class) { }
+    public function setIteratorClass($iteratorClass) { }
     /**
      * Gets the iterator classname for the ArrayObject.
      * @link http://php.net/manual/en/arrayobject.getiteratorclass.php
@@ -571,23 +571,23 @@ class ArrayIterator implements SeekableIterator, ArrayAccess, Serializable, Coun
     /**
      * User defined sort
      * @link http://php.net/manual/en/arrayiterator.uasort.php
-     * @param string $cmp_function <p>
+     * @param string $cmpFunction <p>
      * The compare function used for the sort.
      * </p>
      * @return void
      * @since 5.2.0
      */
-    public function uasort($cmp_function) { }
+    public function uasort($cmpFunction) { }
     /**
      * User defined sort
      * @link http://php.net/manual/en/arrayiterator.uksort.php
-     * @param string $cmp_function <p>
+     * @param string $cmpFunction <p>
      * The compare function used for the sort.
      * </p>
      * @return void
      * @since 5.2.0
      */
-    public function uksort($cmp_function) { }
+    public function uksort($cmpFunction) { }
     /**
      * Sort an array naturally
      * @link http://php.net/manual/en/arrayiterator.natsort.php

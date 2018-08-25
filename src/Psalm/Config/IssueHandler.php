@@ -8,114 +8,114 @@ class IssueHandler
     /**
      * @var string
      */
-    private $error_level = \Psalm\Config::REPORT_ERROR;
+    private $errorLevel = \Psalm\Config::REPORT_ERROR;
 
     /**
      * @var array<ErrorLevelFileFilter>
      */
-    private $custom_levels = [];
+    private $customLevels = [];
 
     /**
      * @param  SimpleXMLElement $e
-     * @param  string           $base_dir
+     * @param  string           $baseDir
      *
      * @return self
      */
-    public static function loadFromXMLElement(SimpleXMLElement $e, $base_dir)
+    public static function loadFromXMLElement(SimpleXMLElement $e, $baseDir)
     {
         $handler = new self();
 
         if (isset($e['errorLevel'])) {
-            $handler->error_level = (string) $e['errorLevel'];
+            $handler->errorLevel = (string) $e['errorLevel'];
 
-            if (!in_array($handler->error_level, \Psalm\Config::$ERROR_LEVELS, true)) {
-                throw new \Psalm\Exception\ConfigException('Unexepected error level ' . $handler->error_level);
+            if (!in_array($handler->errorLevel, \Psalm\Config::$ERRORLEVELS, true)) {
+                throw new \Psalm\Exception\ConfigException('Unexepected error level ' . $handler->errorLevel);
             }
         }
 
-        /** @var \SimpleXMLElement $error_level */
-        foreach ($e->errorLevel as $error_level) {
-            $handler->custom_levels[] = ErrorLevelFileFilter::loadFromXMLElement($error_level, $base_dir, true);
+        /** @var \SimpleXMLElement $errorLevel */
+        foreach ($e->errorLevel as $errorLevel) {
+            $handler->customLevels[] = ErrorLevelFileFilter::loadFromXMLElement($errorLevel, $baseDir, true);
         }
 
         return $handler;
     }
 
     /**
-     * @param string $error_level
+     * @param string $errorLevel
      *
      * @return void
      */
-    public function setErrorLevel($error_level)
+    public function setErrorLevel($errorLevel)
     {
-        if (!in_array($error_level, \Psalm\Config::$ERROR_LEVELS, true)) {
-            throw new \Psalm\Exception\ConfigException('Unexepected error level ' . $error_level);
+        if (!in_array($errorLevel, \Psalm\Config::$ERRORLEVELS, true)) {
+            throw new \Psalm\Exception\ConfigException('Unexepected error level ' . $errorLevel);
         }
 
-        $this->error_level = $error_level;
+        $this->errorLevel = $errorLevel;
     }
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      *
      * @return string
      */
-    public function getReportingLevelForFile($file_path)
+    public function getReportingLevelForFile($filePath)
     {
-        foreach ($this->custom_levels as $custom_level) {
-            if ($custom_level->allows($file_path)) {
-                return $custom_level->getErrorLevel();
+        foreach ($this->customLevels as $customLevel) {
+            if ($customLevel->allows($filePath)) {
+                return $customLevel->getErrorLevel();
             }
         }
 
-        return $this->error_level;
+        return $this->errorLevel;
     }
 
     /**
-     * @param string $fq_classlike_name
+     * @param string $fqClasslikeName
      *
      * @return string
      */
-    public function getReportingLevelForClass($fq_classlike_name)
+    public function getReportingLevelForClass($fqClasslikeName)
     {
-        foreach ($this->custom_levels as $custom_level) {
-            if ($custom_level->allowsClass($fq_classlike_name)) {
-                return $custom_level->getErrorLevel();
+        foreach ($this->customLevels as $customLevel) {
+            if ($customLevel->allowsClass($fqClasslikeName)) {
+                return $customLevel->getErrorLevel();
             }
         }
 
-        return $this->error_level;
+        return $this->errorLevel;
     }
 
     /**
-     * @param string $method_id
+     * @param string $methodId
      *
      * @return string
      */
-    public function getReportingLevelForMethod($method_id)
+    public function getReportingLevelForMethod($methodId)
     {
-        foreach ($this->custom_levels as $custom_level) {
-            if ($custom_level->allowsMethod(strtolower($method_id))) {
-                return $custom_level->getErrorLevel();
+        foreach ($this->customLevels as $customLevel) {
+            if ($customLevel->allowsMethod(strtolower($methodId))) {
+                return $customLevel->getErrorLevel();
             }
         }
 
-        return $this->error_level;
+        return $this->errorLevel;
     }
 
     /**
-     * @param string $property_id
+     * @param string $propertyId
      *
      * @return string
      */
-    public function getReportingLevelForProperty($property_id)
+    public function getReportingLevelForProperty($propertyId)
     {
-        foreach ($this->custom_levels as $custom_level) {
-            if ($custom_level->allowsProperty($property_id)) {
-                return $custom_level->getErrorLevel();
+        foreach ($this->customLevels as $customLevel) {
+            if ($customLevel->allowsProperty($propertyId)) {
+                return $customLevel->getErrorLevel();
             }
         }
 
-        return $this->error_level;
+        return $this->errorLevel;
     }
 }

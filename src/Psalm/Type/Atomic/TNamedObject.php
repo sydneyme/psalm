@@ -13,7 +13,7 @@ class TNamedObject extends Atomic
     /**
      * @var TNamedObject[]|null
      */
-    public $extra_types;
+    public $extraTypes;
 
     /**
      * @param string $value the name of the object
@@ -37,8 +37,8 @@ class TNamedObject extends Atomic
      */
     public function getKey()
     {
-        if ($this->extra_types) {
-            return $this->value . '&' . implode('&', $this->extra_types);
+        if ($this->extraTypes) {
+            return $this->value . '&' . implode('&', $this->extraTypes);
         }
 
         return $this->value;
@@ -46,78 +46,78 @@ class TNamedObject extends Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  bool          $use_phpdoc_format
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  bool          $usePhpdocFormat
      *
      * @return string
      */
-    public function toNamespacedString($namespace, array $aliased_classes, $this_class, $use_phpdoc_format)
+    public function toNamespacedString($namespace, array $aliasedClasses, $thisClass, $usePhpdocFormat)
     {
-        $class_parts = explode('\\', $this->value);
-        $class_name = array_pop($class_parts);
+        $classParts = explode('\\', $this->value);
+        $className = array_pop($classParts);
 
-        $intersection_types = $this->extra_types
+        $intersectionTypes = $this->extraTypes
             ? '&' . implode(
                 '&',
                 array_map(
                     /**
                      * @return string
                      */
-                    function (TNamedObject $extra_type) use (
+                    function (TNamedObject $extraType) use (
                         $namespace,
-                        $aliased_classes,
-                        $this_class,
-                        $use_phpdoc_format
+                        $aliasedClasses,
+                        $thisClass,
+                        $usePhpdocFormat
                     ) {
-                        return $extra_type->toNamespacedString(
+                        return $extraType->toNamespacedString(
                             $namespace,
-                            $aliased_classes,
-                            $this_class,
-                            $use_phpdoc_format
+                            $aliasedClasses,
+                            $thisClass,
+                            $usePhpdocFormat
                         );
                     },
-                    $this->extra_types
+                    $this->extraTypes
                 )
             )
             : '';
 
-        if ($this->value === $this_class) {
-            return 'self' . $intersection_types;
+        if ($this->value === $thisClass) {
+            return 'self' . $intersectionTypes;
         }
 
-        if ($namespace && preg_match('/^' . preg_quote($namespace) . '\\\\' . $class_name . '$/i', $this->value)) {
-            return $class_name . $intersection_types;
+        if ($namespace && preg_match('/^' . preg_quote($namespace) . '\\\\' . $className . '$/i', $this->value)) {
+            return $className . $intersectionTypes;
         }
 
         if (!$namespace && stripos($this->value, '\\') === false) {
-            return $this->value . $intersection_types;
+            return $this->value . $intersectionTypes;
         }
 
-        if (isset($aliased_classes[strtolower($this->value)])) {
-            return $aliased_classes[strtolower($this->value)] . $intersection_types;
+        if (isset($aliasedClasses[strtolower($this->value)])) {
+            return $aliasedClasses[strtolower($this->value)] . $intersectionTypes;
         }
 
-        return '\\' . $this->value . $intersection_types;
+        return '\\' . $this->value . $intersectionTypes;
     }
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return string
      */
     public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     ) {
-        return $this->toNamespacedString($namespace, $aliased_classes, $this_class, false);
+        return $this->toNamespacedString($namespace, $aliasedClasses, $thisClass, false);
     }
 
     public function canBeFullyExpressedInPhp()
@@ -132,7 +132,7 @@ class TNamedObject extends Atomic
      */
     public function addIntersectionType(TNamedObject $type)
     {
-        $this->extra_types[] = $type;
+        $this->extraTypes[] = $type;
     }
 
     /**
@@ -140,6 +140,6 @@ class TNamedObject extends Atomic
      */
     public function getIntersectionTypes()
     {
-        return $this->extra_types;
+        return $this->extraTypes;
     }
 }

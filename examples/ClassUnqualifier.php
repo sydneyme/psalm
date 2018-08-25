@@ -9,40 +9,40 @@ use Psalm\Type;
 class ClassUnqualifier extends \Psalm\Plugin
 {
     /**
-     * @param  string             $fq_class_name
-     * @param  FileManipulation[] $file_replacements
+     * @param  string             $fqClassName
+     * @param  FileManipulation[] $fileReplacements
      *
      * @return void
      */
     public static function afterClassLikeExistsCheck(
-        StatementsSource $statements_source,
-        $fq_class_name,
-        CodeLocation $code_location,
-        array &$file_replacements = []
+        StatementsSource $statementsSource,
+        $fqClassName,
+        CodeLocation $codeLocation,
+        array &$fileReplacements = []
     ) {
-        $candidate_type = $code_location->getSelectedText();
-        $aliases = $statements_source->getAliasedClassesFlipped();
+        $candidateType = $codeLocation->getSelectedText();
+        $aliases = $statementsSource->getAliasedClassesFlipped();
 
-        if ($statements_source->getFileChecker()->getFilePath() !== $code_location->file_path) {
+        if ($statementsSource->getFileChecker()->getFilePath() !== $codeLocation->filePath) {
             return;
         }
 
-        if (strpos($candidate_type, '\\' . $fq_class_name) !== false) {
-            $type_tokens = Type::tokenize($candidate_type, false);
+        if (strpos($candidateType, '\\' . $fqClassName) !== false) {
+            $typeTokens = Type::tokenize($candidateType, false);
 
-            foreach ($type_tokens as &$type_token) {
-                if ($type_token === ('\\' . $fq_class_name)
-                    && isset($aliases[strtolower($fq_class_name)])
+            foreach ($typeTokens as &$typeToken) {
+                if ($typeToken === ('\\' . $fqClassName)
+                    && isset($aliases[strtolower($fqClassName)])
                 ) {
-                    $type_token = $aliases[strtolower($fq_class_name)];
+                    $typeToken = $aliases[strtolower($fqClassName)];
                 }
             }
 
-            $new_candidate_type = implode('', $type_tokens);
+            $newCandidateType = implode('', $typeTokens);
 
-            if ($new_candidate_type !== $candidate_type) {
-                $bounds = $code_location->getSelectionBounds();
-                $file_replacements[] = new FileManipulation($bounds[0], $bounds[1], $new_candidate_type);
+            if ($newCandidateType !== $candidateType) {
+                $bounds = $codeLocation->getSelectionBounds();
+                $fileReplacements[] = new FileManipulation($bounds[0], $bounds[1], $newCandidateType);
             }
         }
     }

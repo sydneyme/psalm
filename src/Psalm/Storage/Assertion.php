@@ -12,15 +12,15 @@ class Assertion
      * @var int|string the id of the property/variable, or
      *  the parameter offset of the affected arg
      */
-    public $var_id;
+    public $varId;
 
     /**
-     * @param string|int $var_id
+     * @param string|int $varId
      * @param array<int, array<int, string>> $rule
      */
-    public function __construct($var_id, $rule)
+    public function __construct($varId, $rule)
     {
         $this->rule = $rule;
-        $this->var_id = $var_id;
+        $this->varId = $varId;
     }
 }

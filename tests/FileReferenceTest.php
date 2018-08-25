@@ -7,7 +7,7 @@ use Psalm\Context;
 class FileReferenceTest extends TestCase
 {
     /** @var \Psalm\Checker\ProjectChecker */
-    protected $project_checker;
+    protected $projectChecker;
 
     /**
      * @return void
@@ -17,66 +17,66 @@ class FileReferenceTest extends TestCase
         FileChecker::clearCache();
         \Psalm\FileManipulation\FunctionDocblockManipulator::clearCache();
 
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
 
-        $this->project_checker = new \Psalm\Checker\ProjectChecker(
+        $this->projectChecker = new \Psalm\Checker\ProjectChecker(
             new TestConfig(),
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider()
         );
 
-        $this->project_checker->getCodebase()->collectReferences();
+        $this->projectChecker->getCodebase()->collectReferences();
     }
 
     /**
      * @dataProvider providerFileCheckerValidCodeParse
      *
-     * @param string $input_code
+     * @param string $inputCode
      * @param string $symbol
-     * @param array<int, string> $expected_locations
+     * @param array<int, string> $expectedLocations
      *
      * @return void
      */
-    public function testValidCode($input_code, $symbol, $expected_locations)
+    public function testValidCode($inputCode, $symbol, $expectedLocations)
     {
-        $test_name = $this->getTestName();
-        if (strpos($test_name, 'PHP7-') !== false) {
+        $testName = $this->getTestName();
+        if (strpos($testName, 'PHP7-') !== false) {
             if (version_compare(PHP_VERSION, '7.0.0dev', '<')) {
                 $this->markTestSkipped('Test case requires PHP 7.');
 
                 return;
             }
-        } elseif (strpos($test_name, 'SKIPPED-') !== false) {
+        } elseif (strpos($testName, 'SKIPPED-') !== false) {
             $this->markTestSkipped('Skipped due to a bug.');
         }
 
         $context = new Context();
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
-        $this->addFile($file_path, $input_code);
+        $this->addFile($filePath, $inputCode);
 
-        $this->analyzeFile($file_path, $context);
+        $this->analyzeFile($filePath, $context);
 
-        $found_references = $this->project_checker->getCodebase()->findReferencesToSymbol($symbol);
+        $foundReferences = $this->projectChecker->getCodebase()->findReferencesToSymbol($symbol);
 
-        if (!isset($found_references[$file_path])) {
+        if (!isset($foundReferences[$filePath])) {
             throw new \UnexpectedValueException('No file references found in this file');
         }
 
-        $file_references = $found_references[$file_path];
+        $fileReferences = $foundReferences[$filePath];
 
-        $this->assertSame(count($file_references), count($expected_locations));
+        $this->assertSame(count($fileReferences), count($expectedLocations));
 
-        foreach ($expected_locations as $i => $expected_location) {
-            $actual_location = $file_references[$i];
+        foreach ($expectedLocations as $i => $expectedLocation) {
+            $actualLocation = $fileReferences[$i];
 
             $this->assertSame(
-                $expected_location,
-                $actual_location->getLineNumber() . ':' . $actual_location->getColumn()
-                    . ':' . $actual_location->getSelectedText()
+                $expectedLocation,
+                $actualLocation->getLineNumber() . ':' . $actualLocation->getColumn()
+                    . ':' . $actualLocation->getSelectedText()
             );
         }
     }

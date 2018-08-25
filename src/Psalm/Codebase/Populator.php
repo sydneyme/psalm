@@ -22,17 +22,17 @@ class Populator
     /**
      * @var ClassLikeStorageProvider
      */
-    private $classlike_storage_provider;
+    private $classlikeStorageProvider;
 
     /**
      * @var FileStorageProvider
      */
-    private $file_storage_provider;
+    private $fileStorageProvider;
 
     /**
      * @var bool
      */
-    private $debug_output;
+    private $debugOutput;
 
     /**
      * @var ClassLikes
@@ -45,19 +45,19 @@ class Populator
     private $config;
 
     /**
-     * @param bool $debug_output
+     * @param bool $debugOutput
      */
     public function __construct(
         Config $config,
-        ClassLikeStorageProvider $classlike_storage_provider,
-        FileStorageProvider $file_storage_provider,
+        ClassLikeStorageProvider $classlikeStorageProvider,
+        FileStorageProvider $fileStorageProvider,
         ClassLikes $classlikes,
-        $debug_output
+        $debugOutput
     ) {
-        $this->classlike_storage_provider = $classlike_storage_provider;
-        $this->file_storage_provider = $file_storage_provider;
+        $this->classlikeStorageProvider = $classlikeStorageProvider;
+        $this->fileStorageProvider = $fileStorageProvider;
         $this->classlikes = $classlikes;
-        $this->debug_output = $debug_output;
+        $this->debugOutput = $debugOutput;
         $this->config = $config;
     }
 
@@ -66,132 +66,132 @@ class Populator
      */
     public function populateCodebase(\Psalm\Codebase $codebase)
     {
-        if ($this->debug_output) {
+        if ($this->debugOutput) {
             echo 'ClassLikeStorage is populating' . "\n";
         }
 
-        foreach ($this->classlike_storage_provider->getAll() as $class_storage) {
-            if (!$class_storage->user_defined && !$class_storage->stubbed) {
+        foreach ($this->classlikeStorageProvider->getAll() as $classStorage) {
+            if (!$classStorage->userDefined && !$classStorage->stubbed) {
                 continue;
             }
 
-            $this->populateClassLikeStorage($class_storage);
+            $this->populateClassLikeStorage($classStorage);
         }
 
-        if ($this->debug_output) {
+        if ($this->debugOutput) {
             echo 'ClassLikeStorage is populated' . "\n";
         }
 
-        if ($this->debug_output) {
+        if ($this->debugOutput) {
             echo 'FileStorage is populating' . "\n";
         }
 
-        $all_file_storage = $this->file_storage_provider->getAll();
+        $allFileStorage = $this->fileStorageProvider->getAll();
 
-        foreach ($all_file_storage as $file_storage) {
-            $this->populateFileStorage($file_storage);
+        foreach ($allFileStorage as $fileStorage) {
+            $this->populateFileStorage($fileStorage);
         }
 
 
-        foreach ($this->classlike_storage_provider->getAll() as $class_storage) {
-            if ($this->config->allow_phpstorm_generics) {
-                foreach ($class_storage->properties as $property_storage) {
-                    if ($property_storage->type) {
-                        $this->convertPhpStormGenericToPsalmGeneric($property_storage->type, true);
+        foreach ($this->classlikeStorageProvider->getAll() as $classStorage) {
+            if ($this->config->allowPhpstormGenerics) {
+                foreach ($classStorage->properties as $propertyStorage) {
+                    if ($propertyStorage->type) {
+                        $this->convertPhpStormGenericToPsalmGeneric($propertyStorage->type, true);
                     }
                 }
 
-                foreach ($class_storage->methods as $method_storage) {
-                    if ($method_storage->return_type) {
-                        $this->convertPhpStormGenericToPsalmGeneric($method_storage->return_type);
+                foreach ($classStorage->methods as $methodStorage) {
+                    if ($methodStorage->returnType) {
+                        $this->convertPhpStormGenericToPsalmGeneric($methodStorage->returnType);
                     }
 
-                    foreach ($method_storage->params as $param_storage) {
-                        if ($param_storage->type) {
-                            $this->convertPhpStormGenericToPsalmGeneric($param_storage->type);
+                    foreach ($methodStorage->params as $paramStorage) {
+                        if ($paramStorage->type) {
+                            $this->convertPhpStormGenericToPsalmGeneric($paramStorage->type);
                         }
                     }
                 }
             }
 
-            if ($class_storage->aliases) {
-                foreach ($class_storage->public_class_constant_nodes as $const_name => $node) {
-                    $const_type = \Psalm\Checker\StatementsChecker::getSimpleType(
+            if ($classStorage->aliases) {
+                foreach ($classStorage->publicClassConstantNodes as $constName => $node) {
+                    $constType = \Psalm\Checker\StatementsChecker::getSimpleType(
                         $codebase,
                         $node,
-                        $class_storage->aliases,
+                        $classStorage->aliases,
                         null,
                         null,
-                        $class_storage->name
+                        $classStorage->name
                     );
 
-                    $class_storage->public_class_constants[$const_name] = $const_type ?: Type::getMixed();
+                    $classStorage->publicClassConstants[$constName] = $constType ?: Type::getMixed();
                 }
 
-                foreach ($class_storage->protected_class_constant_nodes as $const_name => $node) {
-                    $const_type = \Psalm\Checker\StatementsChecker::getSimpleType(
+                foreach ($classStorage->protectedClassConstantNodes as $constName => $node) {
+                    $constType = \Psalm\Checker\StatementsChecker::getSimpleType(
                         $codebase,
                         $node,
-                        $class_storage->aliases,
+                        $classStorage->aliases,
                         null,
                         null,
-                        $class_storage->name
+                        $classStorage->name
                     );
 
-                    $class_storage->protected_class_constants[$const_name] = $const_type ?: Type::getMixed();
+                    $classStorage->protectedClassConstants[$constName] = $constType ?: Type::getMixed();
                 }
 
-                foreach ($class_storage->private_class_constant_nodes as $const_name => $node) {
-                    $const_type = \Psalm\Checker\StatementsChecker::getSimpleType(
+                foreach ($classStorage->privateClassConstantNodes as $constName => $node) {
+                    $constType = \Psalm\Checker\StatementsChecker::getSimpleType(
                         $codebase,
                         $node,
-                        $class_storage->aliases,
+                        $classStorage->aliases,
                         null,
                         null,
-                        $class_storage->name
+                        $classStorage->name
                     );
 
-                    $class_storage->private_class_constants[$const_name] = $const_type ?: Type::getMixed();
+                    $classStorage->privateClassConstants[$constName] = $constType ?: Type::getMixed();
                 }
             }
         }
 
-        if ($this->config->allow_phpstorm_generics) {
-            foreach ($all_file_storage as $file_storage) {
-                foreach ($file_storage->functions as $function_storage) {
-                    if ($function_storage->return_type) {
-                        $this->convertPhpStormGenericToPsalmGeneric($function_storage->return_type);
+        if ($this->config->allowPhpstormGenerics) {
+            foreach ($allFileStorage as $fileStorage) {
+                foreach ($fileStorage->functions as $functionStorage) {
+                    if ($functionStorage->returnType) {
+                        $this->convertPhpStormGenericToPsalmGeneric($functionStorage->returnType);
                     }
 
-                    foreach ($function_storage->params as $param_storage) {
-                        if ($param_storage->type) {
-                            $this->convertPhpStormGenericToPsalmGeneric($param_storage->type);
+                    foreach ($functionStorage->params as $paramStorage) {
+                        if ($paramStorage->type) {
+                            $this->convertPhpStormGenericToPsalmGeneric($paramStorage->type);
                         }
                     }
                 }
             }
         }
 
-        if ($this->debug_output) {
+        if ($this->debugOutput) {
             echo 'FileStorage is populated' . "\n";
         }
     }
 
     /**
      * @param  ClassLikeStorage $storage
-     * @param  array            $dependent_classlikes
+     * @param  array            $dependentClasslikes
      *
      * @return void
      */
-    private function populateClassLikeStorage(ClassLikeStorage $storage, array $dependent_classlikes = [])
+    private function populateClassLikeStorage(ClassLikeStorage $storage, array $dependentClasslikes = [])
     {
         if ($storage->populated) {
             return;
         }
 
-        $fq_classlike_name_lc = strtolower($storage->name);
+        $fqClasslikeNameLc = strtolower($storage->name);
 
-        if (isset($dependent_classlikes[$fq_classlike_name_lc])) {
+        if (isset($dependentClasslikes[$fqClasslikeNameLc])) {
             if ($storage->location && IssueBuffer::accepts(
                 new CircularReference(
                     'Circular reference discovered when loading ' . $storage->name,
@@ -204,41 +204,41 @@ class Populator
             return;
         }
 
-        $storage_provider = $this->classlike_storage_provider;
+        $storageProvider = $this->classlikeStorageProvider;
 
-        $this->populateDataFromTraits($storage, $storage_provider, $dependent_classlikes);
+        $this->populateDataFromTraits($storage, $storageProvider, $dependentClasslikes);
 
-        $dependent_classlikes[$fq_classlike_name_lc] = true;
+        $dependentClasslikes[$fqClasslikeNameLc] = true;
 
-        if ($storage->parent_classes) {
-            $this->populateDataFromParentClass($storage, $storage_provider, $dependent_classlikes);
+        if ($storage->parentClasses) {
+            $this->populateDataFromParentClass($storage, $storageProvider, $dependentClasslikes);
         }
 
-        $this->populateInterfaceDataFromParentInterfaces($storage, $storage_provider, $dependent_classlikes);
+        $this->populateInterfaceDataFromParentInterfaces($storage, $storageProvider, $dependentClasslikes);
 
-        $this->populateDataFromImplementedInterfaces($storage, $storage_provider, $dependent_classlikes);
+        $this->populateDataFromImplementedInterfaces($storage, $storageProvider, $dependentClasslikes);
 
         if ($storage->location) {
-            $file_path = $storage->location->file_path;
+            $filePath = $storage->location->filePath;
 
-            foreach ($storage->parent_interfaces as $parent_interface_lc) {
-                FileReferenceProvider::addFileInheritanceToClass($file_path, $parent_interface_lc);
+            foreach ($storage->parentInterfaces as $parentInterfaceLc) {
+                FileReferenceProvider::addFileInheritanceToClass($filePath, $parentInterfaceLc);
             }
 
-            foreach ($storage->parent_classes as $parent_class_lc) {
-                FileReferenceProvider::addFileInheritanceToClass($file_path, $parent_class_lc);
+            foreach ($storage->parentClasses as $parentClassLc) {
+                FileReferenceProvider::addFileInheritanceToClass($filePath, $parentClassLc);
             }
 
-            foreach ($storage->class_implements as $implemented_interface) {
-                FileReferenceProvider::addFileInheritanceToClass($file_path, strtolower($implemented_interface));
+            foreach ($storage->classImplements as $implementedInterface) {
+                FileReferenceProvider::addFileInheritanceToClass($filePath, strtolower($implementedInterface));
             }
 
-            foreach ($storage->used_traits as $used_trait_lc) {
-                FileReferenceProvider::addFileInheritanceToClass($file_path, $used_trait_lc);
+            foreach ($storage->usedTraits as $usedTraitLc) {
+                FileReferenceProvider::addFileInheritanceToClass($filePath, $usedTraitLc);
             }
         }
 
-        if ($this->debug_output) {
+        if ($this->debugOutput) {
             echo 'Have populated ' . $storage->name . "\n";
         }
 
@@ -250,20 +250,20 @@ class Populator
      */
     private function populateDataFromTraits(
         ClassLikeStorage $storage,
-        ClassLikeStorageProvider $storage_provider,
-        array $dependent_classlikes
+        ClassLikeStorageProvider $storageProvider,
+        array $dependentClasslikes
     ) {
-        foreach ($storage->used_traits as $used_trait_lc => $_) {
+        foreach ($storage->usedTraits as $usedTraitLc => $_) {
             try {
-                $trait_storage = $storage_provider->get($used_trait_lc);
+                $traitStorage = $storageProvider->get($usedTraitLc);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            $this->populateClassLikeStorage($trait_storage, $dependent_classlikes);
+            $this->populateClassLikeStorage($traitStorage, $dependentClasslikes);
 
-            $this->inheritMethodsFromParent($storage, $trait_storage);
-            $this->inheritPropertiesFromParent($storage, $trait_storage);
+            $this->inheritMethodsFromParent($storage, $traitStorage);
+            $this->inheritPropertiesFromParent($storage, $traitStorage);
         }
     }
 
@@ -272,37 +272,37 @@ class Populator
      */
     private function populateDataFromParentClass(
         ClassLikeStorage $storage,
-        ClassLikeStorageProvider $storage_provider,
-        array $dependent_classlikes
+        ClassLikeStorageProvider $storageProvider,
+        array $dependentClasslikes
     ) {
-        $parent_storage_class = reset($storage->parent_classes);
+        $parentStorageClass = reset($storage->parentClasses);
 
         try {
-            $parent_storage = $storage_provider->get($parent_storage_class);
+            $parentStorage = $storageProvider->get($parentStorageClass);
         } catch (\InvalidArgumentException $e) {
-            $storage->invalid_dependencies[] = $parent_storage_class;
-            $parent_storage = null;
+            $storage->invalidDependencies[] = $parentStorageClass;
+            $parentStorage = null;
         }
 
-        if ($parent_storage) {
-            $this->populateClassLikeStorage($parent_storage, $dependent_classlikes);
+        if ($parentStorage) {
+            $this->populateClassLikeStorage($parentStorage, $dependentClasslikes);
 
-            $storage->parent_classes = array_merge($storage->parent_classes, $parent_storage->parent_classes);
+            $storage->parentClasses = array_merge($storage->parentClasses, $parentStorage->parentClasses);
 
-            $this->inheritMethodsFromParent($storage, $parent_storage);
-            $this->inheritPropertiesFromParent($storage, $parent_storage);
+            $this->inheritMethodsFromParent($storage, $parentStorage);
+            $this->inheritPropertiesFromParent($storage, $parentStorage);
 
-            $storage->class_implements += $parent_storage->class_implements;
-            $storage->invalid_dependencies = array_merge(
-                $storage->invalid_dependencies,
-                $parent_storage->invalid_dependencies
+            $storage->classImplements += $parentStorage->classImplements;
+            $storage->invalidDependencies = array_merge(
+                $storage->invalidDependencies,
+                $parentStorage->invalidDependencies
             );
 
-            $storage->public_class_constants += $parent_storage->public_class_constants;
-            $storage->protected_class_constants += $parent_storage->protected_class_constants;
+            $storage->publicClassConstants += $parentStorage->publicClassConstants;
+            $storage->protectedClassConstants += $parentStorage->protectedClassConstants;
 
-            $storage->pseudo_property_get_types += $parent_storage->pseudo_property_get_types;
-            $storage->pseudo_property_set_types += $parent_storage->pseudo_property_set_types;
+            $storage->pseudoPropertyGetTypes += $parentStorage->pseudoPropertyGetTypes;
+            $storage->pseudoPropertySetTypes += $parentStorage->pseudoPropertySetTypes;
         }
     }
 
@@ -311,38 +311,38 @@ class Populator
      */
     private function populateInterfaceDataFromParentInterfaces(
         ClassLikeStorage $storage,
-        ClassLikeStorageProvider $storage_provider,
-        array $dependent_classlikes
+        ClassLikeStorageProvider $storageProvider,
+        array $dependentClasslikes
     ) {
-        $parent_interfaces = [];
+        $parentInterfaces = [];
 
-        foreach ($storage->parent_interfaces as $parent_interface_lc => $_) {
+        foreach ($storage->parentInterfaces as $parentInterfaceLc => $_) {
             try {
-                $parent_interface_storage = $storage_provider->get($parent_interface_lc);
+                $parentInterfaceStorage = $storageProvider->get($parentInterfaceLc);
             } catch (\InvalidArgumentException $e) {
-                $storage->invalid_dependencies[] = $parent_interface_lc;
+                $storage->invalidDependencies[] = $parentInterfaceLc;
                 continue;
             }
 
-            $this->populateClassLikeStorage($parent_interface_storage, $dependent_classlikes);
+            $this->populateClassLikeStorage($parentInterfaceStorage, $dependentClasslikes);
 
             // copy over any constants
-            $storage->public_class_constants = array_merge(
-                $storage->public_class_constants,
-                $parent_interface_storage->public_class_constants
+            $storage->publicClassConstants = array_merge(
+                $storage->publicClassConstants,
+                $parentInterfaceStorage->publicClassConstants
             );
 
-            $storage->invalid_dependencies = array_merge(
-                $storage->invalid_dependencies,
-                $parent_interface_storage->invalid_dependencies
+            $storage->invalidDependencies = array_merge(
+                $storage->invalidDependencies,
+                $parentInterfaceStorage->invalidDependencies
             );
 
-            $parent_interfaces = array_merge($parent_interfaces, $parent_interface_storage->parent_interfaces);
+            $parentInterfaces = array_merge($parentInterfaces, $parentInterfaceStorage->parentInterfaces);
 
-            $this->inheritMethodsFromParent($storage, $parent_interface_storage);
+            $this->inheritMethodsFromParent($storage, $parentInterfaceStorage);
         }
 
-        $storage->parent_interfaces = array_merge($parent_interfaces, $storage->parent_interfaces);
+        $storage->parentInterfaces = array_merge($parentInterfaces, $storage->parentInterfaces);
     }
 
     /**
@@ -350,147 +350,147 @@ class Populator
      */
     private function populateDataFromImplementedInterfaces(
         ClassLikeStorage $storage,
-        ClassLikeStorageProvider $storage_provider,
-        array $dependent_classlikes
+        ClassLikeStorageProvider $storageProvider,
+        array $dependentClasslikes
     ) {
-        $extra_interfaces = [];
+        $extraInterfaces = [];
 
-        foreach ($storage->class_implements as $implemented_interface_lc => $_) {
+        foreach ($storage->classImplements as $implementedInterfaceLc => $_) {
             try {
-                $implemented_interface_storage = $storage_provider->get($implemented_interface_lc);
+                $implementedInterfaceStorage = $storageProvider->get($implementedInterfaceLc);
             } catch (\InvalidArgumentException $e) {
-                $storage->invalid_dependencies[] = $implemented_interface_lc;
+                $storage->invalidDependencies[] = $implementedInterfaceLc;
                 continue;
             }
 
-            $this->populateClassLikeStorage($implemented_interface_storage, $dependent_classlikes);
+            $this->populateClassLikeStorage($implementedInterfaceStorage, $dependentClasslikes);
 
             // copy over any constants
-            $storage->public_class_constants = array_merge(
-                $storage->public_class_constants,
-                $implemented_interface_storage->public_class_constants
+            $storage->publicClassConstants = array_merge(
+                $storage->publicClassConstants,
+                $implementedInterfaceStorage->publicClassConstants
             );
 
-            $storage->invalid_dependencies = array_merge(
-                $storage->invalid_dependencies,
-                $implemented_interface_storage->invalid_dependencies
+            $storage->invalidDependencies = array_merge(
+                $storage->invalidDependencies,
+                $implementedInterfaceStorage->invalidDependencies
             );
 
-            $extra_interfaces = array_merge($extra_interfaces, $implemented_interface_storage->parent_interfaces);
+            $extraInterfaces = array_merge($extraInterfaces, $implementedInterfaceStorage->parentInterfaces);
 
-            $storage->public_class_constants += $implemented_interface_storage->public_class_constants;
+            $storage->publicClassConstants += $implementedInterfaceStorage->publicClassConstants;
         }
 
-        $storage->class_implements = array_merge($extra_interfaces, $storage->class_implements);
+        $storage->classImplements = array_merge($extraInterfaces, $storage->classImplements);
 
-        $interface_method_implementers = [];
+        $interfaceMethodImplementers = [];
 
-        foreach ($storage->class_implements as $implemented_interface) {
+        foreach ($storage->classImplements as $implementedInterface) {
             try {
-                $implemented_interface_storage = $storage_provider->get($implemented_interface);
+                $implementedInterfaceStorage = $storageProvider->get($implementedInterface);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            foreach ($implemented_interface_storage->methods as $method_name => $method) {
+            foreach ($implementedInterfaceStorage->methods as $methodName => $method) {
                 if ($method->visibility === ClassLikeChecker::VISIBILITY_PUBLIC) {
-                    $mentioned_method_id = $implemented_interface . '::' . $method_name;
-                    $interface_method_implementers[$method_name][] = $mentioned_method_id;
+                    $mentionedMethodId = $implementedInterface . '::' . $methodName;
+                    $interfaceMethodImplementers[$methodName][] = $mentionedMethodId;
                 }
             }
         }
 
-        foreach ($interface_method_implementers as $method_name => $interface_method_ids) {
-            if (count($interface_method_ids) === 1) {
-                $storage->overridden_method_ids[$method_name][] = $interface_method_ids[0];
+        foreach ($interfaceMethodImplementers as $methodName => $interfaceMethodIds) {
+            if (count($interfaceMethodIds) === 1) {
+                $storage->overriddenMethodIds[$methodName][] = $interfaceMethodIds[0];
             } else {
-                $storage->interface_method_ids[$method_name] = $interface_method_ids;
+                $storage->interfaceMethodIds[$methodName] = $interfaceMethodIds;
             }
         }
     }
 
     /**
      * @param  FileStorage $storage
-     * @param  array<string, bool> $dependent_file_paths
+     * @param  array<string, bool> $dependentFilePaths
      *
      * @return void
      */
-    private function populateFileStorage(FileStorage $storage, array $dependent_file_paths = [])
+    private function populateFileStorage(FileStorage $storage, array $dependentFilePaths = [])
     {
         if ($storage->populated) {
             return;
         }
 
-        $file_path_lc = strtolower($storage->file_path);
+        $filePathLc = strtolower($storage->filePath);
 
-        if (isset($dependent_file_paths[$file_path_lc])) {
+        if (isset($dependentFilePaths[$filePathLc])) {
             return;
         }
 
-        $dependent_file_paths[$file_path_lc] = true;
+        $dependentFilePaths[$filePathLc] = true;
 
-        $all_required_file_paths = $storage->required_file_paths;
+        $allRequiredFilePaths = $storage->requiredFilePaths;
 
-        foreach ($storage->required_file_paths as $included_file_path => $_) {
+        foreach ($storage->requiredFilePaths as $includedFilePath => $_) {
             try {
-                $included_file_storage = $this->file_storage_provider->get($included_file_path);
+                $includedFileStorage = $this->fileStorageProvider->get($includedFilePath);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            $this->populateFileStorage($included_file_storage, $dependent_file_paths);
+            $this->populateFileStorage($includedFileStorage, $dependentFilePaths);
 
-            $all_required_file_paths = $all_required_file_paths + $included_file_storage->required_file_paths;
+            $allRequiredFilePaths = $allRequiredFilePaths + $includedFileStorage->requiredFilePaths;
         }
 
-        foreach ($all_required_file_paths as $included_file_path => $_) {
+        foreach ($allRequiredFilePaths as $includedFilePath => $_) {
             try {
-                $included_file_storage = $this->file_storage_provider->get($included_file_path);
+                $includedFileStorage = $this->fileStorageProvider->get($includedFilePath);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            $storage->declaring_function_ids = array_merge(
-                $included_file_storage->declaring_function_ids,
-                $storage->declaring_function_ids
+            $storage->declaringFunctionIds = array_merge(
+                $includedFileStorage->declaringFunctionIds,
+                $storage->declaringFunctionIds
             );
 
-            $storage->declaring_constants = array_merge(
-                $included_file_storage->declaring_constants,
-                $storage->declaring_constants
+            $storage->declaringConstants = array_merge(
+                $includedFileStorage->declaringConstants,
+                $storage->declaringConstants
             );
         }
 
-        $storage->required_file_paths = $all_required_file_paths;
+        $storage->requiredFilePaths = $allRequiredFilePaths;
 
-        foreach ($all_required_file_paths as $required_file_path) {
+        foreach ($allRequiredFilePaths as $requiredFilePath) {
             try {
-                $required_file_storage = $this->file_storage_provider->get($required_file_path);
+                $requiredFileStorage = $this->fileStorageProvider->get($requiredFilePath);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            $required_file_storage->required_by_file_paths += [$file_path_lc => $storage->file_path];
+            $requiredFileStorage->requiredByFilePaths += [$filePathLc => $storage->filePath];
         }
 
-        foreach ($storage->required_classes as $required_classlike) {
+        foreach ($storage->requiredClasses as $requiredClasslike) {
             try {
-                $classlike_storage = $this->classlike_storage_provider->get($required_classlike);
+                $classlikeStorage = $this->classlikeStorageProvider->get($requiredClasslike);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            if (!$classlike_storage->location) {
+            if (!$classlikeStorage->location) {
                 continue;
             }
 
             try {
-                $required_file_storage = $this->file_storage_provider->get($classlike_storage->location->file_path);
+                $requiredFileStorage = $this->fileStorageProvider->get($classlikeStorage->location->filePath);
             } catch (\InvalidArgumentException $e) {
                 continue;
             }
 
-            $required_file_storage->required_by_file_paths += [$file_path_lc => $storage->file_path];
+            $requiredFileStorage->requiredByFilePaths += [$filePathLc => $storage->filePath];
         }
 
         $storage->populated = true;
@@ -498,21 +498,21 @@ class Populator
 
     /**
      * @param  Type\Union $candidate
-     * @param  bool       $is_property
+     * @param  bool       $isProperty
      *
      * @return void
      */
-    private function convertPhpStormGenericToPsalmGeneric(Type\Union $candidate, $is_property = false)
+    private function convertPhpStormGenericToPsalmGeneric(Type\Union $candidate, $isProperty = false)
     {
-        $atomic_types = $candidate->getTypes();
+        $atomicTypes = $candidate->getTypes();
 
-        if (isset($atomic_types['array']) && count($atomic_types) > 1) {
-            $iterator_name = null;
-            $generic_params = null;
+        if (isset($atomicTypes['array']) && count($atomicTypes) > 1) {
+            $iteratorName = null;
+            $genericParams = null;
 
-            foreach ($atomic_types as $type) {
+            foreach ($atomicTypes as $type) {
                 if ($type instanceof Type\Atomic\TNamedObject
-                    && (!$type->from_docblock || $is_property)
+                    && (!$type->fromDocblock || $isProperty)
                     && (
                         strtolower($type->value) === 'traversable'
                         || $this->classlikes->interfaceExtends(
@@ -525,100 +525,100 @@ class Populator
                         )
                     )
                 ) {
-                    $iterator_name = $type->value;
+                    $iteratorName = $type->value;
                 } elseif ($type instanceof Type\Atomic\TArray) {
-                    $generic_params = $type->type_params;
+                    $genericParams = $type->typeParams;
                 }
             }
 
-            if ($iterator_name && $generic_params) {
-                $generic_iterator = new Type\Atomic\TGenericObject($iterator_name, $generic_params);
+            if ($iteratorName && $genericParams) {
+                $genericIterator = new Type\Atomic\TGenericObject($iteratorName, $genericParams);
                 $candidate->removeType('array');
-                $candidate->addType($generic_iterator);
+                $candidate->addType($genericIterator);
             }
         }
     }
 
     /**
      * @param ClassLikeStorage $storage
-     * @param ClassLikeStorage $parent_storage
+     * @param ClassLikeStorage $parentStorage
      *
      * @return void
      */
-    protected function inheritMethodsFromParent(ClassLikeStorage $storage, ClassLikeStorage $parent_storage)
+    protected function inheritMethodsFromParent(ClassLikeStorage $storage, ClassLikeStorage $parentStorage)
     {
-        $fq_class_name = $storage->name;
+        $fqClassName = $storage->name;
 
         // register where they appear (can never be in a trait)
-        foreach ($parent_storage->appearing_method_ids as $method_name => $appearing_method_id) {
-            $aliased_method_names = [$method_name];
+        foreach ($parentStorage->appearingMethodIds as $methodName => $appearingMethodId) {
+            $aliasedMethodNames = [$methodName];
 
-            if ($parent_storage->is_trait
-                && $storage->trait_alias_map
-                && isset($storage->trait_alias_map[$method_name])
+            if ($parentStorage->isTrait
+                && $storage->traitAliasMap
+                && isset($storage->traitAliasMap[$methodName])
             ) {
-                $aliased_method_names[] = $storage->trait_alias_map[$method_name];
+                $aliasedMethodNames[] = $storage->traitAliasMap[$methodName];
             }
 
-            foreach ($aliased_method_names as $aliased_method_name) {
-                if (isset($storage->appearing_method_ids[$aliased_method_name])) {
+            foreach ($aliasedMethodNames as $aliasedMethodName) {
+                if (isset($storage->appearingMethodIds[$aliasedMethodName])) {
                     continue;
                 }
 
-                $implemented_method_id = $fq_class_name . '::' . $aliased_method_name;
+                $implementedMethodId = $fqClassName . '::' . $aliasedMethodName;
 
-                $storage->appearing_method_ids[$aliased_method_name] =
-                    $parent_storage->is_trait ? $implemented_method_id : $appearing_method_id;
+                $storage->appearingMethodIds[$aliasedMethodName] =
+                    $parentStorage->isTrait ? $implementedMethodId : $appearingMethodId;
             }
         }
 
         // register where they're declared
-        foreach ($parent_storage->inheritable_method_ids as $method_name => $declaring_method_id) {
-            if (!$parent_storage->is_trait) {
-                $storage->overridden_method_ids[$method_name][] = $declaring_method_id;
+        foreach ($parentStorage->inheritableMethodIds as $methodName => $declaringMethodId) {
+            if (!$parentStorage->isTrait) {
+                $storage->overriddenMethodIds[$methodName][] = $declaringMethodId;
 
-                if (isset($storage->methods[$method_name])) {
-                    $storage->methods[$method_name]->overridden_somewhere = true;
+                if (isset($storage->methods[$methodName])) {
+                    $storage->methods[$methodName]->overriddenSomewhere = true;
                 }
             }
 
-            $aliased_method_names = [$method_name];
+            $aliasedMethodNames = [$methodName];
 
-            if ($parent_storage->is_trait
-                && $storage->trait_alias_map
-                && isset($storage->trait_alias_map[$method_name])
+            if ($parentStorage->isTrait
+                && $storage->traitAliasMap
+                && isset($storage->traitAliasMap[$methodName])
             ) {
-                $aliased_method_names[] = $storage->trait_alias_map[$method_name];
+                $aliasedMethodNames[] = $storage->traitAliasMap[$methodName];
             }
 
-            foreach ($aliased_method_names as $aliased_method_name) {
-                if (isset($storage->declaring_method_ids[$aliased_method_name])) {
-                    list($implementing_fq_class_name, $implementing_method_name) = explode(
+            foreach ($aliasedMethodNames as $aliasedMethodName) {
+                if (isset($storage->declaringMethodIds[$aliasedMethodName])) {
+                    list($implementingFqClassName, $implementingMethodName) = explode(
                         '::',
-                        $storage->declaring_method_ids[$aliased_method_name]
+                        $storage->declaringMethodIds[$aliasedMethodName]
                     );
 
-                    $implementing_class_storage = $this->classlike_storage_provider->get($implementing_fq_class_name);
+                    $implementingClassStorage = $this->classlikeStorageProvider->get($implementingFqClassName);
 
-                    if (!$implementing_class_storage->methods[$implementing_method_name]->abstract) {
+                    if (!$implementingClassStorage->methods[$implementingMethodName]->abstract) {
                         continue;
                     }
                 }
 
-                $storage->declaring_method_ids[$aliased_method_name] = $declaring_method_id;
-                $storage->inheritable_method_ids[$aliased_method_name] = $declaring_method_id;
+                $storage->declaringMethodIds[$aliasedMethodName] = $declaringMethodId;
+                $storage->inheritableMethodIds[$aliasedMethodName] = $declaringMethodId;
             }
         }
 
-        foreach ($storage->methods as $method_name => $_) {
-            if (isset($storage->overridden_method_ids[$method_name])) {
-                foreach ($storage->overridden_method_ids[$method_name] as $declaring_method_id) {
-                    list($declaring_class, $declaring_method_name) = explode('::', $declaring_method_id);
-                    $declaring_class_storage = $this->classlike_storage_provider->get($declaring_class);
+        foreach ($storage->methods as $methodName => $_) {
+            if (isset($storage->overriddenMethodIds[$methodName])) {
+                foreach ($storage->overriddenMethodIds[$methodName] as $declaringMethodId) {
+                    list($declaringClass, $declaringMethodName) = explode('::', $declaringMethodId);
+                    $declaringClassStorage = $this->classlikeStorageProvider->get($declaringClass);
 
                     // tell the declaring class it's overridden downstream
-                    $declaring_class_storage->methods[strtolower($declaring_method_name)]->overridden_downstream = true;
-                    $declaring_class_storage->methods[strtolower($declaring_method_name)]->overridden_somewhere = true;
+                    $declaringClassStorage->methods[strtolower($declaringMethodName)]->overriddenDownstream = true;
+                    $declaringClassStorage->methods[strtolower($declaringMethodName)]->overriddenSomewhere = true;
                 }
             }
         }
@@ -626,61 +626,61 @@ class Populator
 
     /**
      * @param ClassLikeStorage $storage
-     * @param ClassLikeStorage $parent_storage
+     * @param ClassLikeStorage $parentStorage
      *
      * @return void
      */
-    private function inheritPropertiesFromParent(ClassLikeStorage $storage, ClassLikeStorage $parent_storage)
+    private function inheritPropertiesFromParent(ClassLikeStorage $storage, ClassLikeStorage $parentStorage)
     {
         // register where they appear (can never be in a trait)
-        foreach ($parent_storage->appearing_property_ids as $property_name => $appearing_property_id) {
-            if (isset($storage->appearing_property_ids[$property_name])) {
+        foreach ($parentStorage->appearingPropertyIds as $propertyName => $appearingPropertyId) {
+            if (isset($storage->appearingPropertyIds[$propertyName])) {
                 continue;
             }
 
-            if (!$parent_storage->is_trait
-                && isset($parent_storage->properties[$property_name])
-                && $parent_storage->properties[$property_name]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
+            if (!$parentStorage->isTrait
+                && isset($parentStorage->properties[$propertyName])
+                && $parentStorage->properties[$propertyName]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
             ) {
                 continue;
             }
 
-            $implemented_property_id = $storage->name . '::$' . $property_name;
+            $implementedPropertyId = $storage->name . '::$' . $propertyName;
 
-            $storage->appearing_property_ids[$property_name] =
-                $parent_storage->is_trait ? $implemented_property_id : $appearing_property_id;
+            $storage->appearingPropertyIds[$propertyName] =
+                $parentStorage->isTrait ? $implementedPropertyId : $appearingPropertyId;
         }
 
         // register where they're declared
-        foreach ($parent_storage->declaring_property_ids as $property_name => $declaring_property_class) {
-            if (isset($storage->declaring_property_ids[$property_name])) {
+        foreach ($parentStorage->declaringPropertyIds as $propertyName => $declaringPropertyClass) {
+            if (isset($storage->declaringPropertyIds[$propertyName])) {
                 continue;
             }
 
-            if (!$parent_storage->is_trait
-                && isset($parent_storage->properties[$property_name])
-                && $parent_storage->properties[$property_name]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
+            if (!$parentStorage->isTrait
+                && isset($parentStorage->properties[$propertyName])
+                && $parentStorage->properties[$propertyName]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
             ) {
                 continue;
             }
 
-            $storage->declaring_property_ids[$property_name] = $declaring_property_class;
+            $storage->declaringPropertyIds[$propertyName] = $declaringPropertyClass;
         }
 
         // register where they're declared
-        foreach ($parent_storage->inheritable_property_ids as $property_name => $inheritable_property_id) {
-            if (!$parent_storage->is_trait
-                && isset($parent_storage->properties[$property_name])
-                && $parent_storage->properties[$property_name]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
+        foreach ($parentStorage->inheritablePropertyIds as $propertyName => $inheritablePropertyId) {
+            if (!$parentStorage->isTrait
+                && isset($parentStorage->properties[$propertyName])
+                && $parentStorage->properties[$propertyName]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
             ) {
                 continue;
             }
 
-            if (!$parent_storage->is_trait) {
-                $storage->overridden_property_ids[$property_name][] = $inheritable_property_id;
+            if (!$parentStorage->isTrait) {
+                $storage->overriddenPropertyIds[$propertyName][] = $inheritablePropertyId;
             }
 
-            $storage->inheritable_property_ids[$property_name] = $inheritable_property_id;
+            $storage->inheritablePropertyIds[$propertyName] = $inheritablePropertyId;
         }
     }
 }

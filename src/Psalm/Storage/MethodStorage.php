@@ -8,7 +8,7 @@ class MethodStorage extends FunctionLikeStorage
     /**
      * @var bool
      */
-    public $is_static;
+    public $isStatic;
 
     /**
      * @var int
@@ -28,20 +28,20 @@ class MethodStorage extends FunctionLikeStorage
     /**
      * @var array<int, CodeLocation>
      */
-    public $unused_params = [];
+    public $unusedParams = [];
 
     /**
      * @var array<int, bool>
      */
-    public $used_params = [];
+    public $usedParams = [];
 
     /**
      * @var bool
      */
-    public $overridden_downstream = false;
+    public $overriddenDownstream = false;
 
     /**
      * @var bool
      */
-    public $overridden_somewhere = false;
+    public $overriddenSomewhere = false;
 }

@@ -15,17 +15,17 @@ class IssueBuffer
      * file_name: string, file_path: string, snippet: string, from: int, to: int,
      * snippet_from: int, snippet_to: int, column_from: int, column_to: int}>
      */
-    protected static $issues_data = [];
+    protected static $issuesData = [];
 
     /**
      * @var array<int, array>
      */
-    protected static $console_issues = [];
+    protected static $consoleIssues = [];
 
     /**
      * @var int
      */
-    protected static $error_count = 0;
+    protected static $errorCount = 0;
 
     /**
      * @var array<string, bool>
@@ -33,64 +33,64 @@ class IssueBuffer
     protected static $emitted = [];
 
     /** @var int */
-    protected static $recording_level = 0;
+    protected static $recordingLevel = 0;
 
     /** @var array<int, array<int, CodeIssue>> */
-    protected static $recorded_issues = [];
+    protected static $recordedIssues = [];
 
     /**
      * @param   CodeIssue $e
-     * @param   array     $suppressed_issues
+     * @param   array     $suppressedIssues
      *
      * @return  bool
      */
-    public static function accepts(CodeIssue $e, array $suppressed_issues = [])
+    public static function accepts(CodeIssue $e, array $suppressedIssues = [])
     {
         $config = Config::getInstance();
 
-        $fqcn_parts = explode('\\', get_class($e));
-        $issue_type = array_pop($fqcn_parts);
+        $fqcnParts = explode('\\', get_class($e));
+        $issueType = array_pop($fqcnParts);
 
-        if (in_array($issue_type, $suppressed_issues, true)) {
+        if (in_array($issueType, $suppressedIssues, true)) {
             return false;
         }
 
-        if (!$config->reportIssueInFile($issue_type, $e->getFilePath())) {
+        if (!$config->reportIssueInFile($issueType, $e->getFilePath())) {
             return false;
         }
 
         if ($e instanceof ClassIssue
-            && $config->getReportingLevelForClass($issue_type, $e->fq_classlike_name) === Config::REPORT_SUPPRESS
+            && $config->getReportingLevelForClass($issueType, $e->fqClasslikeName) === Config::REPORT_SUPPRESS
         ) {
             return false;
         }
 
         if ($e instanceof MethodIssue
-            && $config->getReportingLevelForMethod($issue_type, $e->method_id) === Config::REPORT_SUPPRESS
+            && $config->getReportingLevelForMethod($issueType, $e->methodId) === Config::REPORT_SUPPRESS
         ) {
             return false;
         }
 
         if ($e instanceof PropertyIssue
-            && $config->getReportingLevelForProperty($issue_type, $e->property_id) === Config::REPORT_SUPPRESS
+            && $config->getReportingLevelForProperty($issueType, $e->propertyId) === Config::REPORT_SUPPRESS
         ) {
             return false;
         }
 
-        $parent_issue_type = self::getParentIssueType($issue_type);
+        $parentIssueType = self::getParentIssueType($issueType);
 
-        if ($parent_issue_type) {
-            if (in_array($parent_issue_type, $suppressed_issues, true)) {
+        if ($parentIssueType) {
+            if (in_array($parentIssueType, $suppressedIssues, true)) {
                 return false;
             }
 
-            if (!$config->reportIssueInFile($parent_issue_type, $e->getFilePath())) {
+            if (!$config->reportIssueInFile($parentIssueType, $e->getFilePath())) {
                 return false;
             }
         }
 
-        if (self::$recording_level > 0) {
-            self::$recorded_issues[self::$recording_level][] = $e;
+        if (self::$recordingLevel > 0) {
+            self::$recordedIssues[self::$recordingLevel][] = $e;
 
             return false;
         }
@@ -99,23 +99,23 @@ class IssueBuffer
     }
 
     /**
-     * @param  string $issue_type
+     * @param  string $issueType
      * @return string|null
      */
-    private static function getParentIssueType($issue_type)
+    private static function getParentIssueType($issueType)
     {
-        if (strpos($issue_type, 'Possibly') === 0) {
-            $stripped_issue_type = preg_replace('/^Possibly(False|Null)?/', '', $issue_type);
+        if (strpos($issueType, 'Possibly') === 0) {
+            $strippedIssueType = preg_replace('/^Possibly(False|Null)?/', '', $issueType);
 
-            if (strpos($stripped_issue_type, 'Invalid') === false && strpos($stripped_issue_type, 'Un') !== 0) {
-                $stripped_issue_type = 'Invalid' . $stripped_issue_type;
+            if (strpos($strippedIssueType, 'Invalid') === false && strpos($strippedIssueType, 'Un') !== 0) {
+                $strippedIssueType = 'Invalid' . $strippedIssueType;
             }
 
-            return $stripped_issue_type;
+            return $strippedIssueType;
         }
 
-        if (preg_match('/^(False|Null)[A-Z]/', $issue_type)) {
-            return preg_replace('/^(False|Null)/', 'Invalid', $issue_type);
+        if (preg_match('/^(False|Null)[A-Z]/', $issueType)) {
+            return preg_replace('/^(False|Null)/', 'Invalid', $issueType);
         }
 
         return null;
@@ -132,47 +132,47 @@ class IssueBuffer
     {
         $config = Config::getInstance();
 
-        $fqcn_parts = explode('\\', get_class($e));
-        $issue_type = array_pop($fqcn_parts);
+        $fqcnParts = explode('\\', get_class($e));
+        $issueType = array_pop($fqcnParts);
 
-        $project_checker = ProjectChecker::getInstance();
+        $projectChecker = ProjectChecker::getInstance();
 
-        if (!$project_checker->show_issues) {
+        if (!$projectChecker->showIssues) {
             return false;
         }
 
-        $error_message = $issue_type . ' - ' . $e->getShortLocation() . ' - ' . $e->getMessage();
+        $errorMessage = $issueType . ' - ' . $e->getShortLocation() . ' - ' . $e->getMessage();
 
-        $reporting_level = $config->getReportingLevelForFile($issue_type, $e->getFilePath());
+        $reportingLevel = $config->getReportingLevelForFile($issueType, $e->getFilePath());
 
-        $parent_issue_type = self::getParentIssueType($issue_type);
+        $parentIssueType = self::getParentIssueType($issueType);
 
-        if ($parent_issue_type && $reporting_level === Config::REPORT_ERROR) {
-            $parent_reporting_level = $config->getReportingLevelForFile($parent_issue_type, $e->getFilePath());
+        if ($parentIssueType && $reportingLevel === Config::REPORT_ERROR) {
+            $parentReportingLevel = $config->getReportingLevelForFile($parentIssueType, $e->getFilePath());
 
-            if ($parent_reporting_level !== $reporting_level) {
-                $reporting_level = $parent_reporting_level;
+            if ($parentReportingLevel !== $reportingLevel) {
+                $reportingLevel = $parentReportingLevel;
             }
         }
 
-        if ($reporting_level === Config::REPORT_SUPPRESS) {
+        if ($reportingLevel === Config::REPORT_SUPPRESS) {
             return false;
         }
 
-        if ($reporting_level === Config::REPORT_INFO) {
-            if ($project_checker->show_info && !self::alreadyEmitted($error_message)) {
-                self::$issues_data[] = $e->toArray(Config::REPORT_INFO);
+        if ($reportingLevel === Config::REPORT_INFO) {
+            if ($projectChecker->showInfo && !self::alreadyEmitted($errorMessage)) {
+                self::$issuesData[] = $e->toArray(Config::REPORT_INFO);
             }
 
             return false;
         }
 
-        if ($config->throw_exception) {
-            throw new Exception\CodeException($error_message);
+        if ($config->throwException) {
+            throw new Exception\CodeException($errorMessage);
         }
 
-        if (!self::alreadyEmitted($error_message)) {
-            self::$issues_data[] = $e->toArray(Config::REPORT_ERROR);
+        if (!self::alreadyEmitted($errorMessage)) {
+            self::$issuesData[] = $e->toArray(Config::REPORT_ERROR);
         }
 
         return true;
@@ -181,31 +181,31 @@ class IssueBuffer
     /**
      * @param  array{severity: string, line_from: int, line_to: int, type: string, message: string,
      *  file_name: string, file_path: string, snippet: string, from: int, to: int,
-     *  snippet_from: int, snippet_to: int, column_from: int, column_to: int} $issue_data
+     *  snippet_from: int, snippet_to: int, column_from: int, column_to: int} $issueData
      *
      * @return string
      */
-    protected static function getEmacsOutput(array $issue_data)
+    protected static function getEmacsOutput(array $issueData)
     {
-        return $issue_data['file_path'] . ':' . $issue_data['line_from'] . ':' . $issue_data['column_from'] . ':' .
-            ($issue_data['severity'] === Config::REPORT_ERROR ? 'error' : 'warning') . ' - ' . $issue_data['message'];
+        return $issueData['file_path'] . ':' . $issueData['line_from'] . ':' . $issueData['column_from'] . ':' .
+            ($issueData['severity'] === Config::REPORT_ERROR ? 'error' : 'warning') . ' - ' . $issueData['message'];
     }
 
     /**
      * @param  array{severity: string, line_from: int, line_to: int, type: string, message: string,
      *  file_name: string, file_path: string, snippet: string, from: int, to: int,
-     *  snippet_from: int, snippet_to: int, column_from: int, column_to: int} $issue_data
+     *  snippet_from: int, snippet_to: int, column_from: int, column_to: int} $issueData
      *
      * @return string
      */
-    protected static function getPylintOutput(array $issue_data)
+    protected static function getPylintOutput(array $issueData)
     {
         $message = sprintf(
             '%s: %s',
-            $issue_data['type'],
-            $issue_data['message']
+            $issueData['type'],
+            $issueData['message']
         );
-        if ($issue_data['severity'] === Config::REPORT_ERROR) {
+        if ($issueData['severity'] === Config::REPORT_ERROR) {
             $code = 'E0001';
         } else {
             $code = 'W0001';
@@ -214,58 +214,58 @@ class IssueBuffer
         // https://docs.pylint.org/en/1.6.0/output.html doesn't mention what to do about 'column',
         // but it's still useful for users.
         // E.g. jenkins can't parse %s:%d:%d.
-        $message = sprintf('%s (column %d)', $message, $issue_data['column_from']);
-        $issue_string = sprintf(
+        $message = sprintf('%s (column %d)', $message, $issueData['column_from']);
+        $issueString = sprintf(
             '%s:%d: [%s] %s',
-            $issue_data['file_name'],
-            $issue_data['line_from'],
+            $issueData['file_name'],
+            $issueData['line_from'],
             $code,
             $message
         );
 
-        return $issue_string;
+        return $issueString;
     }
 
     /**
      * @param  array{severity: string, line_from: int, line_to: int, type: string, message: string,
      *  file_name: string, file_path: string, snippet: string, from: int, to: int,
-     *  snippet_from: int, snippet_to: int, column_from: int, column_to: int} $issue_data
-     * @param  bool  $include_snippet
-     * @param  bool  $use_color
+     *  snippet_from: int, snippet_to: int, column_from: int, column_to: int} $issueData
+     * @param  bool  $includeSnippet
+     * @param  bool  $useColor
      *
      * @return string
      */
-    protected static function getConsoleOutput(array $issue_data, $use_color, $include_snippet = true)
+    protected static function getConsoleOutput(array $issueData, $useColor, $includeSnippet = true)
     {
-        $issue_string = '';
+        $issueString = '';
 
-        $is_error = $issue_data['severity'] === Config::REPORT_ERROR;
+        $isError = $issueData['severity'] === Config::REPORT_ERROR;
 
-        if ($is_error) {
-            $issue_string .= ($use_color ? "\e[0;31mERROR\e[0m" : 'ERROR');
+        if ($isError) {
+            $issueString .= ($useColor ? "\e[0;31mERROR\e[0m" : 'ERROR');
         } else {
-            $issue_string .= 'INFO';
+            $issueString .= 'INFO';
         }
 
-        $issue_string .= ': ' . $issue_data['type'] . ' - ' . $issue_data['file_name'] . ':' .
-            $issue_data['line_from'] . ':' . $issue_data['column_from'] . ' - ' . $issue_data['message'] . "\n";
+        $issueString .= ': ' . $issueData['type'] . ' - ' . $issueData['file_name'] . ':' .
+            $issueData['line_from'] . ':' . $issueData['column_from'] . ' - ' . $issueData['message'] . "\n";
 
-        if ($include_snippet) {
-            $snippet = $issue_data['snippet'];
+        if ($includeSnippet) {
+            $snippet = $issueData['snippet'];
 
-            if (!$use_color) {
-                $issue_string .= $snippet;
+            if (!$useColor) {
+                $issueString .= $snippet;
             } else {
-                $selection_start = $issue_data['from'] - $issue_data['snippet_from'];
-                $selection_length = $issue_data['to'] - $issue_data['from'];
+                $selectionStart = $issueData['from'] - $issueData['snippet_from'];
+                $selectionLength = $issueData['to'] - $issueData['from'];
 
-                $issue_string .= substr($snippet, 0, $selection_start)
-                    . ($is_error ? "\e[97;41m" : "\e[30;47m") . substr($snippet, $selection_start, $selection_length)
-                    . "\e[0m" . substr($snippet, $selection_length + $selection_start) . "\n";
+                $issueString .= substr($snippet, 0, $selectionStart)
+                    . ($isError ? "\e[97;41m" : "\e[30;47m") . substr($snippet, $selectionStart, $selectionLength)
+                    . "\e[0m" . substr($snippet, $selectionLength + $selectionStart) . "\n";
             }
         }
 
-        return $issue_string;
+        return $issueString;
     }
 
     /**
@@ -275,48 +275,48 @@ class IssueBuffer
      */
     public static function getIssuesData()
     {
-        return self::$issues_data;
+        return self::$issuesData;
     }
 
     /**
      * @param array<int, array{severity: string, line_from: int, line_to: int, type: string, message: string,
      *  file_name: string, file_path: string, snippet: string, from: int, to: int, snippet_from: int,
-     *  snippet_to: int, column_from: int, column_to: int}> $issues_data
+     *  snippet_to: int, column_from: int, column_to: int}> $issuesData
      *
      * @return void
      */
-    public static function addIssues(array $issues_data)
+    public static function addIssues(array $issuesData)
     {
-        self::$issues_data = array_merge($issues_data, self::$issues_data);
+        self::$issuesData = array_merge($issuesData, self::$issuesData);
     }
 
     /**
-     * @param  ProjectChecker       $project_checker
-     * @param  bool                 $is_full
-     * @param  float                $start_time
-     * @param  bool                 $add_stats
+     * @param  ProjectChecker       $projectChecker
+     * @param  bool                 $isFull
+     * @param  float                $startTime
+     * @param  bool                 $addStats
      *
      * @return void
      */
     public static function finish(
-        ProjectChecker $project_checker,
-        $is_full,
-        $start_time,
-        $add_stats = false
+        ProjectChecker $projectChecker,
+        $isFull,
+        $startTime,
+        $addStats = false
     ) {
-        $scanned_files = $project_checker->codebase->scanner->getScannedFiles();
-        Provider\FileReferenceProvider::updateReferenceCache($project_checker, $scanned_files);
+        $scannedFiles = $projectChecker->codebase->scanner->getScannedFiles();
+        Provider\FileReferenceProvider::updateReferenceCache($projectChecker, $scannedFiles);
 
-        if ($project_checker->output_format === ProjectChecker::TYPE_CONSOLE) {
+        if ($projectChecker->outputFormat === ProjectChecker::TYPE_CONSOLE) {
             echo "\n";
         }
 
-        $error_count = 0;
-        $info_count = 0;
+        $errorCount = 0;
+        $infoCount = 0;
 
-        if (self::$issues_data) {
+        if (self::$issuesData) {
             usort(
-                self::$issues_data,
+                self::$issuesData,
                 /** @return int */
                 function (array $d1, array $d2) {
                     if ($d1['file_path'] === $d2['file_path']) {
@@ -335,112 +335,112 @@ class IssueBuffer
                 }
             );
 
-            foreach (self::$issues_data as $issue_data) {
-                if ($issue_data['severity'] === Config::REPORT_ERROR) {
-                    ++$error_count;
+            foreach (self::$issuesData as $issueData) {
+                if ($issueData['severity'] === Config::REPORT_ERROR) {
+                    ++$errorCount;
                 } else {
-                    ++$info_count;
+                    ++$infoCount;
                 }
             }
 
             echo self::getOutput(
-                $project_checker->output_format,
-                $project_checker->use_color,
-                $project_checker->show_snippet
+                $projectChecker->outputFormat,
+                $projectChecker->useColor,
+                $projectChecker->showSnippet
             );
         }
 
-        foreach ($project_checker->reports as $format => $path) {
+        foreach ($projectChecker->reports as $format => $path) {
             file_put_contents(
                 $path,
-                self::getOutput($format, $project_checker->use_color)
+                self::getOutput($format, $projectChecker->useColor)
             );
         }
 
-        if ($project_checker->output_format === ProjectChecker::TYPE_CONSOLE) {
+        if ($projectChecker->outputFormat === ProjectChecker::TYPE_CONSOLE) {
             echo str_repeat('-', 30) . "\n";
 
-            if ($error_count) {
-                echo ($project_checker->use_color
-                    ? "\e[0;31m" . $error_count . " errors\e[0m"
-                    : $error_count . ' errors'
+            if ($errorCount) {
+                echo ($projectChecker->useColor
+                    ? "\e[0;31m" . $errorCount . " errors\e[0m"
+                    : $errorCount . ' errors'
                 ) . ' found' . "\n";
             } else {
                 echo 'No errors found!' . "\n";
             }
 
-            if ($info_count) {
+            if ($infoCount) {
                 echo str_repeat('-', 30) . "\n";
 
-                echo $info_count . ' other issues found.' . "\n"
+                echo $infoCount . ' other issues found.' . "\n"
                     . 'You can hide them with ' .
-                    ($project_checker->use_color
+                    ($projectChecker->useColor
                         ? "\e[30;48;5;195m--show-info=false\e[0m"
                         : '--show-info=false') . "\n";
             }
 
             echo str_repeat('-', 30) . "\n" . "\n";
 
-            if ($start_time) {
-                echo 'Checks took ' . number_format((float)microtime(true) - $start_time, 2) . ' seconds';
+            if ($startTime) {
+                echo 'Checks took ' . number_format((float)microtime(true) - $startTime, 2) . ' seconds';
                 echo ' and used ' . number_format(memory_get_peak_usage() / (1024 * 1024), 3) . 'MB of memory' . "\n";
 
-                if ($is_full) {
-                    $analysis_summary = $project_checker->codebase->analyzer->getTypeInferenceSummary();
-                    echo $analysis_summary . "\n";
+                if ($isFull) {
+                    $analysisSummary = $projectChecker->codebase->analyzer->getTypeInferenceSummary();
+                    echo $analysisSummary . "\n";
                 }
 
-                if ($add_stats) {
+                if ($addStats) {
                     echo '-----------------' . "\n";
-                    echo $project_checker->codebase->analyzer->getNonMixedStats();
+                    echo $projectChecker->codebase->analyzer->getNonMixedStats();
                     echo "\n";
                 }
             }
         }
 
-        if ($error_count) {
+        if ($errorCount) {
             exit(1);
         }
 
-        if ($is_full && $start_time) {
-            $project_checker->cache_provider->processSuccessfulRun($start_time);
+        if ($isFull && $startTime) {
+            $projectChecker->cacheProvider->processSuccessfulRun($startTime);
         }
     }
 
     /**
      * @param string $format
-     * @param bool   $use_color
-     * @param bool   $show_snippet
+     * @param bool   $useColor
+     * @param bool   $showSnippet
      *
      * @return string
      */
-    public static function getOutput($format, $use_color, $show_snippet = true)
+    public static function getOutput($format, $useColor, $showSnippet = true)
     {
         if ($format === ProjectChecker::TYPE_JSON) {
-            return json_encode(self::$issues_data) . "\n";
+            return json_encode(self::$issuesData) . "\n";
         } elseif ($format === ProjectChecker::TYPE_XML) {
-            $xml = Array2XML::createXML('report', ['item' => self::$issues_data]);
+            $xml = Array2XML::createXML('report', ['item' => self::$issuesData]);
 
             return $xml->saveXML();
         } elseif ($format === ProjectChecker::TYPE_EMACS) {
             $output = '';
-            foreach (self::$issues_data as $issue_data) {
-                $output .= self::getEmacsOutput($issue_data) . "\n";
+            foreach (self::$issuesData as $issueData) {
+                $output .= self::getEmacsOutput($issueData) . "\n";
             }
 
             return $output;
         } elseif ($format === ProjectChecker::TYPE_PYLINT) {
             $output = '';
-            foreach (self::$issues_data as $issue_data) {
-                $output .= self::getPylintOutput($issue_data) . "\n";
+            foreach (self::$issuesData as $issueData) {
+                $output .= self::getPylintOutput($issueData) . "\n";
             }
 
             return $output;
         }
 
         $output = '';
-        foreach (self::$issues_data as $issue_data) {
-            $output .= self::getConsoleOutput($issue_data, $use_color, $show_snippet) . "\n" . "\n";
+        foreach (self::$issuesData as $issueData) {
+            $output .= self::getConsoleOutput($issueData, $useColor, $showSnippet) . "\n" . "\n";
         }
 
         return $output;
@@ -469,12 +469,12 @@ class IssueBuffer
      */
     public static function clearCache()
     {
-        self::$issues_data = [];
+        self::$issuesData = [];
         self::$emitted = [];
-        self::$error_count = 0;
-        self::$recording_level = 0;
-        self::$recorded_issues = [];
-        self::$console_issues = [];
+        self::$errorCount = 0;
+        self::$recordingLevel = 0;
+        self::$recordedIssues = [];
+        self::$consoleIssues = [];
     }
 
     /**
@@ -482,7 +482,7 @@ class IssueBuffer
      */
     public static function isRecording()
     {
-        return self::$recording_level > 0;
+        return self::$recordingLevel > 0;
     }
 
     /**
@@ -490,8 +490,8 @@ class IssueBuffer
      */
     public static function startRecording()
     {
-        ++self::$recording_level;
-        self::$recorded_issues[self::$recording_level] = [];
+        ++self::$recordingLevel;
+        self::$recordedIssues[self::$recordingLevel] = [];
     }
 
     /**
@@ -499,11 +499,11 @@ class IssueBuffer
      */
     public static function stopRecording()
     {
-        if (self::$recording_level === 0) {
+        if (self::$recordingLevel === 0) {
             throw new \UnexpectedValueException('Cannot stop recording - already at base level');
         }
 
-        --self::$recording_level;
+        --self::$recordingLevel;
     }
 
     /**
@@ -511,15 +511,15 @@ class IssueBuffer
      */
     public static function clearRecordingLevel()
     {
-        if (self::$recording_level === 0) {
+        if (self::$recordingLevel === 0) {
             throw new \UnexpectedValueException('Not currently recording');
         }
 
-        $recorded_issues = self::$recorded_issues[self::$recording_level];
+        $recordedIssues = self::$recordedIssues[self::$recordingLevel];
 
-        self::$recorded_issues[self::$recording_level] = [];
+        self::$recordedIssues[self::$recordingLevel] = [];
 
-        return $recorded_issues;
+        return $recordedIssues;
     }
 
     /**
@@ -527,12 +527,12 @@ class IssueBuffer
      */
     public static function bubbleUp(CodeIssue $e)
     {
-        if (self::$recording_level === 0) {
+        if (self::$recordingLevel === 0) {
             self::add($e);
 
             return;
         }
 
-        self::$recorded_issues[self::$recording_level][] = $e;
+        self::$recordedIssues[self::$recordingLevel][] = $e;
     }
 }

@@ -37,7 +37,7 @@ abstract class Type
     /**
      * @var array<string, bool>
      */
-    public static $PSALM_RESERVED_WORDS = [
+    public static $PSALMRESERVEDWORDS = [
         'int' => true,
         'string' => true,
         'float' => true,
@@ -68,71 +68,71 @@ abstract class Type
     /**
      * @var array<string, array<int, string>>
      */
-    private static $memoized_tokens = [];
+    private static $memoizedTokens = [];
 
     /**
      * Parses a string type representation
      *
-     * @param  string $type_string
-     * @param  bool   $php_compatible
-     * @param  array<string, string> $template_type_names
+     * @param  string $typeString
+     * @param  bool   $phpCompatible
+     * @param  array<string, string> $templateTypeNames
      *
      * @return Union
      */
-    public static function parseString($type_string, $php_compatible = false, array $template_type_names = [])
+    public static function parseString($typeString, $phpCompatible = false, array $templateTypeNames = [])
     {
-        return self::parseTokens(self::tokenize($type_string), $php_compatible, $template_type_names);
+        return self::parseTokens(self::tokenize($typeString), $phpCompatible, $templateTypeNames);
     }
 
     /**
      * Parses a string type representation
      *
-     * @param  array<int, string> $type_tokens
-     * @param  bool   $php_compatible
-     * @param  array<string, string> $template_type_names
+     * @param  array<int, string> $typeTokens
+     * @param  bool   $phpCompatible
+     * @param  array<string, string> $templateTypeNames
      *
      * @return Union
      */
-    public static function parseTokens(array $type_tokens, $php_compatible = false, array $template_type_names = [])
+    public static function parseTokens(array $typeTokens, $phpCompatible = false, array $templateTypeNames = [])
     {
-        if (count($type_tokens) === 1) {
-            $only_token = $type_tokens[0];
+        if (count($typeTokens) === 1) {
+            $onlyToken = $typeTokens[0];
 
             // Note: valid identifiers can include class names or $this
-            if (!preg_match('@^(\$this|\\\\?[a-zA-Z_\x7f-\xff][\\\\\-0-9a-zA-Z_\x7f-\xff]*)$@', $only_token)) {
-                throw new TypeParseTreeException("Invalid type '$only_token'");
+            if (!preg_match('@^(\$this|\\\\?[a-zA-Z_\x7f-\xff][\\\\\-0-9a-zA-Z_\x7f-\xff]*)$@', $onlyToken)) {
+                throw new TypeParseTreeException("Invalid type '$onlyToken'");
             }
 
-            $only_token = self::fixScalarTerms($only_token, $php_compatible);
+            $onlyToken = self::fixScalarTerms($onlyToken, $phpCompatible);
 
-            return new Union([Atomic::create($only_token, $php_compatible, $template_type_names)]);
+            return new Union([Atomic::create($onlyToken, $phpCompatible, $templateTypeNames)]);
         }
 
         try {
-            $parse_tree = ParseTree::createFromTokens($type_tokens);
-            $parsed_type = self::getTypeFromTree($parse_tree, $php_compatible, $template_type_names);
+            $parseTree = ParseTree::createFromTokens($typeTokens);
+            $parsedType = self::getTypeFromTree($parseTree, $phpCompatible, $templateTypeNames);
         } catch (TypeParseTreeException $e) {
             throw $e;
         }
 
-        if (!($parsed_type instanceof Union)) {
-            $parsed_type = new Union([$parsed_type]);
+        if (!($parsedType instanceof Union)) {
+            $parsedType = new Union([$parsedType]);
         }
 
-        return $parsed_type;
+        return $parsedType;
     }
 
     /**
-     * @param  string $type_string
-     * @param  bool   $php_compatible
+     * @param  string $typeString
+     * @param  bool   $phpCompatible
      *
      * @return string
      */
-    private static function fixScalarTerms($type_string, $php_compatible = false)
+    private static function fixScalarTerms($typeString, $phpCompatible = false)
     {
-        $type_string_lc = strtolower($type_string);
+        $typeStringLc = strtolower($typeString);
 
-        switch ($type_string_lc) {
+        switch ($typeStringLc) {
             case 'int':
             case 'void':
             case 'float':
@@ -148,163 +148,163 @@ abstract class Type
             case 'null':
             case 'mixed':
             case 'resource':
-                return $type_string_lc;
+                return $typeStringLc;
         }
 
-        switch ($type_string) {
+        switch ($typeString) {
             case 'boolean':
-                return $php_compatible ? $type_string : 'bool';
+                return $phpCompatible ? $typeString : 'bool';
 
             case 'integer':
-                return $php_compatible ? $type_string : 'int';
+                return $phpCompatible ? $typeString : 'int';
 
             case 'double':
             case 'real':
-                return $php_compatible ? $type_string : 'float';
+                return $phpCompatible ? $typeString : 'float';
         }
 
-        return $type_string;
+        return $typeString;
     }
 
     /**
-     * @param  ParseTree $parse_tree
-     * @param  bool      $php_compatible
-     * @param  array<string, string> $template_type_names
+     * @param  ParseTree $parseTree
+     * @param  bool      $phpCompatible
+     * @param  array<string, string> $templateTypeNames
      *
      * @return  Atomic|TArray|TGenericObject|ObjectLike|Union
      */
     public static function getTypeFromTree(
-        ParseTree $parse_tree,
-        $php_compatible = false,
-        array $template_type_names = []
+        ParseTree $parseTree,
+        $phpCompatible = false,
+        array $templateTypeNames = []
     ) {
-        if ($parse_tree instanceof ParseTree\GenericTree) {
-            $generic_type = $parse_tree->value;
+        if ($parseTree instanceof ParseTree\GenericTree) {
+            $genericType = $parseTree->value;
 
-            $generic_params = array_map(
+            $genericParams = array_map(
                 /**
                  * @return Union
                  */
-                function (ParseTree $child_tree) use ($template_type_names) {
-                    $tree_type = self::getTypeFromTree($child_tree, false, $template_type_names);
+                function (ParseTree $childTree) use ($templateTypeNames) {
+                    $treeType = self::getTypeFromTree($childTree, false, $templateTypeNames);
 
-                    return $tree_type instanceof Union ? $tree_type : new Union([$tree_type]);
+                    return $treeType instanceof Union ? $treeType : new Union([$treeType]);
                 },
-                $parse_tree->children
+                $parseTree->children
             );
 
-            $generic_type_value = self::fixScalarTerms($generic_type, false);
+            $genericTypeValue = self::fixScalarTerms($genericType, false);
 
-            if (($generic_type_value === 'array' || $generic_type_value === 'Generator') &&
-                count($generic_params) === 1
+            if (($genericTypeValue === 'array' || $genericTypeValue === 'Generator') &&
+                count($genericParams) === 1
             ) {
-                array_unshift($generic_params, new Union([new TMixed]));
+                array_unshift($genericParams, new Union([new TMixed]));
             }
 
-            if (!$generic_params) {
+            if (!$genericParams) {
                 throw new \InvalidArgumentException('No generic params provided for type');
             }
 
-            if ($generic_type_value === 'array') {
-                return new TArray($generic_params);
+            if ($genericTypeValue === 'array') {
+                return new TArray($genericParams);
             }
 
-            return new TGenericObject($generic_type_value, $generic_params);
+            return new TGenericObject($genericTypeValue, $genericParams);
         }
 
-        if ($parse_tree instanceof ParseTree\UnionTree) {
-            $has_null = false;
+        if ($parseTree instanceof ParseTree\UnionTree) {
+            $hasNull = false;
 
-            $atomic_types = [];
+            $atomicTypes = [];
 
-            foreach ($parse_tree->children as $child_tree) {
-                if ($child_tree instanceof ParseTree\NullableTree) {
-                    $atomic_type = self::getTypeFromTree($child_tree->children[0], false, $template_type_names);
-                    $has_null = true;
+            foreach ($parseTree->children as $childTree) {
+                if ($childTree instanceof ParseTree\NullableTree) {
+                    $atomicType = self::getTypeFromTree($childTree->children[0], false, $templateTypeNames);
+                    $hasNull = true;
                 } else {
-                    $atomic_type = self::getTypeFromTree($child_tree, false, $template_type_names);
+                    $atomicType = self::getTypeFromTree($childTree, false, $templateTypeNames);
                 }
 
-                if ($atomic_type instanceof Union) {
-                    foreach ($atomic_type->getTypes() as $type) {
-                        $atomic_types[] = $type;
+                if ($atomicType instanceof Union) {
+                    foreach ($atomicType->getTypes() as $type) {
+                        $atomicTypes[] = $type;
                     }
 
                     continue;
                 }
 
-                $atomic_types[] = $atomic_type;
+                $atomicTypes[] = $atomicType;
             }
 
-            if ($has_null) {
-                $atomic_types[] = new TNull;
+            if ($hasNull) {
+                $atomicTypes[] = new TNull;
             }
 
-            return TypeCombination::combineTypes($atomic_types);
+            return TypeCombination::combineTypes($atomicTypes);
         }
 
-        if ($parse_tree instanceof ParseTree\IntersectionTree) {
-            $intersection_types = array_map(
+        if ($parseTree instanceof ParseTree\IntersectionTree) {
+            $intersectionTypes = array_map(
                 /**
                  * @return Atomic
                  */
-                function (ParseTree $child_tree) use ($template_type_names) {
-                    $atomic_type = self::getTypeFromTree($child_tree, false, $template_type_names);
+                function (ParseTree $childTree) use ($templateTypeNames) {
+                    $atomicType = self::getTypeFromTree($childTree, false, $templateTypeNames);
 
-                    if (!$atomic_type instanceof Atomic) {
+                    if (!$atomicType instanceof Atomic) {
                         throw new TypeParseTreeException(
                             'Intersection types cannot contain unions'
                         );
                     }
 
-                    return $atomic_type;
+                    return $atomicType;
                 },
-                $parse_tree->children
+                $parseTree->children
             );
 
-            foreach ($intersection_types as $intersection_type) {
-                if (!$intersection_type instanceof TNamedObject) {
+            foreach ($intersectionTypes as $intersectionType) {
+                if (!$intersectionType instanceof TNamedObject) {
                     throw new TypeParseTreeException('Intersection types must all be objects');
                 }
             }
 
-            /** @var TNamedObject[] $intersection_types */
-            $first_type = array_shift($intersection_types);
+            /** @var TNamedObject[] $intersectionTypes */
+            $firstType = array_shift($intersectionTypes);
 
-            $first_type->extra_types = $intersection_types;
+            $firstType->extraTypes = $intersectionTypes;
 
-            return $first_type;
+            return $firstType;
         }
 
-        if ($parse_tree instanceof ParseTree\ObjectLikeTree) {
+        if ($parseTree instanceof ParseTree\ObjectLikeTree) {
             $properties = [];
 
-            $type = $parse_tree->value;
+            $type = $parseTree->value;
 
-            foreach ($parse_tree->children as $i => $property_branch) {
-                if (!$property_branch instanceof ParseTree\ObjectLikePropertyTree) {
-                    $property_type = self::getTypeFromTree($property_branch, false, $template_type_names);
-                    $property_maybe_undefined = false;
-                    $property_key = (string)$i;
-                } elseif (count($property_branch->children) === 1) {
-                    $property_type = self::getTypeFromTree($property_branch->children[0], false, $template_type_names);
-                    $property_maybe_undefined = $property_branch->possibly_undefined;
-                    $property_key = $property_branch->value;
+            foreach ($parseTree->children as $i => $propertyBranch) {
+                if (!$propertyBranch instanceof ParseTree\ObjectLikePropertyTree) {
+                    $propertyType = self::getTypeFromTree($propertyBranch, false, $templateTypeNames);
+                    $propertyMaybeUndefined = false;
+                    $propertyKey = (string)$i;
+                } elseif (count($propertyBranch->children) === 1) {
+                    $propertyType = self::getTypeFromTree($propertyBranch->children[0], false, $templateTypeNames);
+                    $propertyMaybeUndefined = $propertyBranch->possiblyUndefined;
+                    $propertyKey = $propertyBranch->value;
                 } else {
                     throw new \InvalidArgumentException(
-                        'Unexpected number of property parts (' . count($property_branch->children) . ')'
+                        'Unexpected number of property parts (' . count($propertyBranch->children) . ')'
                     );
                 }
 
-                if (!$property_type instanceof Union) {
-                    $property_type = new Union([$property_type]);
+                if (!$propertyType instanceof Union) {
+                    $propertyType = new Union([$propertyType]);
                 }
 
-                if ($property_maybe_undefined) {
-                    $property_type->possibly_undefined = true;
+                if ($propertyMaybeUndefined) {
+                    $propertyType->possiblyUndefined = true;
                 }
 
-                $properties[$property_key] = $property_type;
+                $properties[$propertyKey] = $propertyType;
             }
 
             if ($type !== 'array') {
@@ -318,157 +318,157 @@ abstract class Type
             return new ObjectLike($properties);
         }
 
-        if ($parse_tree instanceof ParseTree\CallableWithReturnTypeTree) {
-            $callable_type = self::getTypeFromTree($parse_tree->children[0], false, $template_type_names);
+        if ($parseTree instanceof ParseTree\CallableWithReturnTypeTree) {
+            $callableType = self::getTypeFromTree($parseTree->children[0], false, $templateTypeNames);
 
-            if (!$callable_type instanceof TCallable && !$callable_type instanceof Type\Atomic\Fn) {
+            if (!$callableType instanceof TCallable && !$callableType instanceof Type\Atomic\Fn) {
                 throw new \InvalidArgumentException('Parsing callable tree node should return TCallable');
             }
 
-            if (!isset($parse_tree->children[1])) {
+            if (!isset($parseTree->children[1])) {
                 throw new TypeParseTreeException('Invalid return type');
             }
 
-            $return_type = self::getTypeFromTree($parse_tree->children[1], false, $template_type_names);
+            $returnType = self::getTypeFromTree($parseTree->children[1], false, $templateTypeNames);
 
-            $callable_type->return_type = $return_type instanceof Union ? $return_type : new Union([$return_type]);
+            $callableType->returnType = $returnType instanceof Union ? $returnType : new Union([$returnType]);
 
-            return $callable_type;
+            return $callableType;
         }
 
-        if ($parse_tree instanceof ParseTree\CallableTree) {
+        if ($parseTree instanceof ParseTree\CallableTree) {
             $params = array_map(
                 /**
                  * @return FunctionLikeParameter
                  */
-                function (ParseTree $child_tree) use ($template_type_names) {
-                    $is_variadic = false;
-                    $is_optional = false;
+                function (ParseTree $childTree) use ($templateTypeNames) {
+                    $isVariadic = false;
+                    $isOptional = false;
 
-                    if ($child_tree instanceof ParseTree\CallableParamTree) {
-                        $tree_type = self::getTypeFromTree($child_tree->children[0], false, $template_type_names);
-                        $is_variadic = $child_tree->variadic;
-                        $is_optional = $child_tree->has_default;
+                    if ($childTree instanceof ParseTree\CallableParamTree) {
+                        $treeType = self::getTypeFromTree($childTree->children[0], false, $templateTypeNames);
+                        $isVariadic = $childTree->variadic;
+                        $isOptional = $childTree->hasDefault;
                     } else {
-                        $tree_type = self::getTypeFromTree($child_tree, false, $template_type_names);
+                        $treeType = self::getTypeFromTree($childTree, false, $templateTypeNames);
                     }
 
-                    $tree_type = $tree_type instanceof Union ? $tree_type : new Union([$tree_type]);
+                    $treeType = $treeType instanceof Union ? $treeType : new Union([$treeType]);
 
                     return new FunctionLikeParameter(
                         '',
                         false,
-                        $tree_type,
+                        $treeType,
                         null,
                         null,
-                        $is_optional,
+                        $isOptional,
                         false,
-                        $is_variadic
+                        $isVariadic
                     );
                 },
-                $parse_tree->children
+                $parseTree->children
             );
 
-            if (in_array(strtolower($parse_tree->value), ['closure', '\closure'], true)) {
+            if (in_array(strtolower($parseTree->value), ['closure', '\closure'], true)) {
                 return new Type\Atomic\Fn('Closure', $params);
             }
 
-            return new TCallable($parse_tree->value, $params);
+            return new TCallable($parseTree->value, $params);
         }
 
-        if ($parse_tree instanceof ParseTree\EncapsulationTree) {
-            return self::getTypeFromTree($parse_tree->children[0], false, $template_type_names);
+        if ($parseTree instanceof ParseTree\EncapsulationTree) {
+            return self::getTypeFromTree($parseTree->children[0], false, $templateTypeNames);
         }
 
-        if ($parse_tree instanceof ParseTree\NullableTree) {
-            $atomic_type = self::getTypeFromTree($parse_tree->children[0], false, $template_type_names);
+        if ($parseTree instanceof ParseTree\NullableTree) {
+            $atomicType = self::getTypeFromTree($parseTree->children[0], false, $templateTypeNames);
 
-            if (!$atomic_type instanceof Atomic) {
+            if (!$atomicType instanceof Atomic) {
                 throw new \UnexpectedValueException(
-                    'Was expecting an atomic type, got ' . get_class($atomic_type)
+                    'Was expecting an atomic type, got ' . get_class($atomicType)
                 );
             }
 
             return TypeCombination::combineTypes([
                 new TNull,
-                $atomic_type
+                $atomicType
             ]);
         }
 
-        if (!$parse_tree instanceof ParseTree\Value) {
-            throw new \InvalidArgumentException('Unrecognised parse tree type ' . get_class($parse_tree));
+        if (!$parseTree instanceof ParseTree\Value) {
+            throw new \InvalidArgumentException('Unrecognised parse tree type ' . get_class($parseTree));
         }
 
-        if ($parse_tree->value[0] === '"' || $parse_tree->value[0] === '\'') {
-            return new TLiteralString(substr($parse_tree->value, 1, -1));
+        if ($parseTree->value[0] === '"' || $parseTree->value[0] === '\'') {
+            return new TLiteralString(substr($parseTree->value, 1, -1));
         }
 
-        if (strpos($parse_tree->value, '::')) {
-            list($fq_classlike_name, $const_name) = explode('::', $parse_tree->value);
-            return new Atomic\TScalarClassConstant($fq_classlike_name, $const_name);
+        if (strpos($parseTree->value, '::')) {
+            list($fqClasslikeName, $constName) = explode('::', $parseTree->value);
+            return new Atomic\TScalarClassConstant($fqClasslikeName, $constName);
         }
 
-        if (preg_match('/^\-?(0|[1-9][0-9]*)$/', $parse_tree->value)) {
-            return new TLiteralInt((int) $parse_tree->value);
+        if (preg_match('/^\-?(0|[1-9][0-9]*)$/', $parseTree->value)) {
+            return new TLiteralInt((int) $parseTree->value);
         }
 
-        if (!preg_match('@^(\$this|\\\\?[a-zA-Z_\x7f-\xff][\\\\\-0-9a-zA-Z_\x7f-\xff]*)$@', $parse_tree->value)) {
-            throw new TypeParseTreeException('Invalid type \'' . $parse_tree->value . '\'');
+        if (!preg_match('@^(\$this|\\\\?[a-zA-Z_\x7f-\xff][\\\\\-0-9a-zA-Z_\x7f-\xff]*)$@', $parseTree->value)) {
+            throw new TypeParseTreeException('Invalid type \'' . $parseTree->value . '\'');
         }
 
-        $atomic_type = self::fixScalarTerms($parse_tree->value, $php_compatible);
+        $atomicType = self::fixScalarTerms($parseTree->value, $phpCompatible);
 
-        return Atomic::create($atomic_type, $php_compatible, $template_type_names);
+        return Atomic::create($atomicType, $phpCompatible, $templateTypeNames);
     }
 
     /**
-     * @param  string $string_type
-     * @param  bool   $ignore_space
+     * @param  string $stringType
+     * @param  bool   $ignoreSpace
      *
      * @return array<int,string>
      */
-    public static function tokenize($string_type, $ignore_space = true)
+    public static function tokenize($stringType, $ignoreSpace = true)
     {
-        $type_tokens = [''];
-        $was_char = false;
-        $quote_char = null;
+        $typeTokens = [''];
+        $wasChar = false;
+        $quoteChar = null;
         $escaped = false;
 
-        if (isset(self::$memoized_tokens[$string_type])) {
-            return self::$memoized_tokens[$string_type];
+        if (isset(self::$memoizedTokens[$stringType])) {
+            return self::$memoizedTokens[$stringType];
         }
 
         // index of last type token
         $rtc = 0;
 
-        $chars = str_split($string_type);
+        $chars = str_split($stringType);
         for ($i = 0, $c = count($chars); $i < $c; ++$i) {
             $char = $chars[$i];
 
-            if (!$quote_char && $char === ' ' && $ignore_space) {
+            if (!$quoteChar && $char === ' ' && $ignoreSpace) {
                 continue;
             }
 
-            if ($was_char) {
-                $type_tokens[++$rtc] = '';
+            if ($wasChar) {
+                $typeTokens[++$rtc] = '';
             }
 
-            if ($quote_char) {
-                if ($char === $quote_char && $i > 1 && !$escaped) {
-                    $quote_char = null;
+            if ($quoteChar) {
+                if ($char === $quoteChar && $i > 1 && !$escaped) {
+                    $quoteChar = null;
 
-                    $type_tokens[$rtc] .= $char;
-                    $was_char = true;
+                    $typeTokens[$rtc] .= $char;
+                    $wasChar = true;
 
                     continue;
                 }
 
-                $was_char = false;
+                $wasChar = false;
 
                 if ($char === '\\'
                     && !$escaped
                     && $i < $c - 1
-                    && ($chars[$i + 1] === $quote_char || $chars[$i + 1] === '\\')
+                    && ($chars[$i + 1] === $quoteChar || $chars[$i + 1] === '\\')
                 ) {
                     $escaped = true;
                     continue;
@@ -476,21 +476,21 @@ abstract class Type
 
                 $escaped = false;
 
-                $type_tokens[$rtc] .= $char;
+                $typeTokens[$rtc] .= $char;
 
                 continue;
             }
 
             if ($char === '"' || $char === '\'') {
-                if ($type_tokens[$rtc] === '') {
-                    $type_tokens[$rtc] = $char;
+                if ($typeTokens[$rtc] === '') {
+                    $typeTokens[$rtc] = $char;
                 } else {
-                    $type_tokens[++$rtc] = $char;
+                    $typeTokens[++$rtc] = $char;
                 }
 
-                $quote_char = $char;
+                $quoteChar = $char;
 
-                $was_char = false;
+                $wasChar = false;
                 continue;
             }
 
@@ -509,39 +509,39 @@ abstract class Type
                 || $char === '&'
                 || $char === '='
             ) {
-                if ($type_tokens[$rtc] === '') {
-                    $type_tokens[$rtc] = $char;
+                if ($typeTokens[$rtc] === '') {
+                    $typeTokens[$rtc] = $char;
                 } else {
-                    $type_tokens[++$rtc] = $char;
+                    $typeTokens[++$rtc] = $char;
                 }
 
-                $was_char = true;
+                $wasChar = true;
 
                 continue;
             }
 
             if ($char === ':') {
                 if ($i + 1 < $c && $chars[$i + 1] === ':') {
-                    if ($type_tokens[$rtc] === '') {
-                        $type_tokens[$rtc] = '::';
+                    if ($typeTokens[$rtc] === '') {
+                        $typeTokens[$rtc] = '::';
                     } else {
-                        $type_tokens[++$rtc] = '::';
+                        $typeTokens[++$rtc] = '::';
                     }
 
-                    $was_char = true;
+                    $wasChar = true;
 
                     $i++;
 
                     continue;
                 }
 
-                if ($type_tokens[$rtc] === '') {
-                    $type_tokens[$rtc] = ':';
+                if ($typeTokens[$rtc] === '') {
+                    $typeTokens[$rtc] = ':';
                 } else {
-                    $type_tokens[++$rtc] = ':';
+                    $typeTokens[++$rtc] = ':';
                 }
 
-                $was_char = true;
+                $wasChar = true;
 
                 continue;
             }
@@ -551,117 +551,117 @@ abstract class Type
                     throw new TypeParseTreeException('Unexpected token ' . $char);
                 }
 
-                if ($type_tokens[$rtc] === '') {
-                    $type_tokens[$rtc] = '...';
+                if ($typeTokens[$rtc] === '') {
+                    $typeTokens[$rtc] = '...';
                 } else {
-                    $type_tokens[++$rtc] = '...';
+                    $typeTokens[++$rtc] = '...';
                 }
 
-                $was_char = true;
+                $wasChar = true;
 
                 $i += 2;
 
                 continue;
             }
 
-            $type_tokens[$rtc] .= $char;
-            $was_char = false;
+            $typeTokens[$rtc] .= $char;
+            $wasChar = false;
         }
 
-        self::$memoized_tokens[$string_type] = $type_tokens;
+        self::$memoizedTokens[$stringType] = $typeTokens;
 
-        return $type_tokens;
+        return $typeTokens;
     }
 
     /**
-     * @param  string                       $string_type
+     * @param  string                       $stringType
      * @param  Aliases                      $aliases
-     * @param  array<string, string>|null   $template_type_names
-     * @param  array<string, array<int, string>>|null   $type_aliases
+     * @param  array<string, string>|null   $templateTypeNames
+     * @param  array<string, array<int, string>>|null   $typeAliases
      *
      * @return array<int, string>
      */
     public static function fixUpLocalType(
-        $string_type,
+        $stringType,
         Aliases $aliases,
-        array $template_type_names = null,
-        array $type_aliases = null
+        array $templateTypeNames = null,
+        array $typeAliases = null
     ) {
-        $type_tokens = self::tokenize($string_type);
+        $typeTokens = self::tokenize($stringType);
 
-        for ($i = 0, $l = count($type_tokens); $i < $l; $i++) {
-            $string_type_token = $type_tokens[$i];
+        for ($i = 0, $l = count($typeTokens); $i < $l; $i++) {
+            $stringTypeToken = $typeTokens[$i];
 
             if (in_array(
-                $string_type_token,
+                $stringTypeToken,
                 ['<', '>', '|', '?', ',', '{', '}', ':', '::', '[', ']', '(', ')', '&'],
                 true
             )) {
                 continue;
             }
 
-            if ($string_type_token[0] === '"'
-                || $string_type_token[0] === '\''
-                || $string_type_token === '0'
-                || preg_match('/[1-9]/', $string_type_token[0])
+            if ($stringTypeToken[0] === '"'
+                || $stringTypeToken[0] === '\''
+                || $stringTypeToken === '0'
+                || preg_match('/[1-9]/', $stringTypeToken[0])
             ) {
                 continue;
             }
 
-            if (isset($type_tokens[$i + 1]) && $type_tokens[$i + 1] === ':') {
+            if (isset($typeTokens[$i + 1]) && $typeTokens[$i + 1] === ':') {
                 continue;
             }
 
-            if ($i > 0 && $type_tokens[$i - 1] === '::') {
+            if ($i > 0 && $typeTokens[$i - 1] === '::') {
                 continue;
             }
 
-            $type_tokens[$i] = $string_type_token = self::fixScalarTerms($string_type_token);
+            $typeTokens[$i] = $stringTypeToken = self::fixScalarTerms($stringTypeToken);
 
-            if (isset(self::$PSALM_RESERVED_WORDS[$string_type_token])) {
+            if (isset(self::$PSALMRESERVEDWORDS[$stringTypeToken])) {
                 continue;
             }
 
-            if (isset($template_type_names[$string_type_token])) {
+            if (isset($templateTypeNames[$stringTypeToken])) {
                 continue;
             }
 
-            if (isset($type_tokens[$i + 1])) {
-                $next_char = $type_tokens[$i + 1];
-                if ($next_char === ':') {
+            if (isset($typeTokens[$i + 1])) {
+                $nextChar = $typeTokens[$i + 1];
+                if ($nextChar === ':') {
                     continue;
                 }
 
-                if ($next_char === '?' && isset($type_tokens[$i + 2]) && $type_tokens[$i + 2] === ':') {
+                if ($nextChar === '?' && isset($typeTokens[$i + 2]) && $typeTokens[$i + 2] === ':') {
                     continue;
                 }
             }
 
-            if ($string_type_token[0] === '$') {
+            if ($stringTypeToken[0] === '$') {
                 continue;
             }
 
-            if (isset($type_aliases[$string_type_token])) {
-                $replacement_tokens = $type_aliases[$string_type_token];
+            if (isset($typeAliases[$stringTypeToken])) {
+                $replacementTokens = $typeAliases[$stringTypeToken];
 
-                array_unshift($replacement_tokens, '(');
-                array_push($replacement_tokens, ')');
+                array_unshift($replacementTokens, '(');
+                array_push($replacementTokens, ')');
 
-                $diff = count($replacement_tokens) - 1;
+                $diff = count($replacementTokens) - 1;
 
-                array_splice($type_tokens, $i, 1, $replacement_tokens);
+                array_splice($typeTokens, $i, 1, $replacementTokens);
 
                 $i += $diff;
                 $l += $diff;
             } else {
-                $type_tokens[$i] = self::getFQCLNFromString(
-                    $string_type_token,
+                $typeTokens[$i] = self::getFQCLNFromString(
+                    $stringTypeToken,
                     $aliases
                 );
             }
         }
 
-        return $type_tokens;
+        return $typeTokens;
     }
 
     /**
@@ -680,17 +680,17 @@ abstract class Type
             return substr($class, 1);
         }
 
-        $imported_namespaces = $aliases->uses;
+        $importedNamespaces = $aliases->uses;
 
         if (strpos($class, '\\') !== false) {
-            $class_parts = explode('\\', $class);
-            $first_namespace = array_shift($class_parts);
+            $classParts = explode('\\', $class);
+            $firstNamespace = array_shift($classParts);
 
-            if (isset($imported_namespaces[strtolower($first_namespace)])) {
-                return $imported_namespaces[strtolower($first_namespace)] . '\\' . implode('\\', $class_parts);
+            if (isset($importedNamespaces[strtolower($firstNamespace)])) {
+                return $importedNamespaces[strtolower($firstNamespace)] . '\\' . implode('\\', $classParts);
             }
-        } elseif (isset($imported_namespaces[strtolower($class)])) {
-            return $imported_namespaces[strtolower($class)];
+        } elseif (isset($importedNamespaces[strtolower($class)])) {
+            return $importedNamespaces[strtolower($class)];
         }
 
         $namespace = $aliases->namespace;
@@ -699,12 +699,12 @@ abstract class Type
     }
 
     /**
-     * @param bool $from_calculation
+     * @param bool $fromCalculation
      * @param int|null $value
      *
      * @return Type\Union
      */
-    public static function getInt($from_calculation = false, $value = null)
+    public static function getInt($fromCalculation = false, $value = null)
     {
         if ($value !== null) {
             $union = new Union([new TLiteralInt($value)]);
@@ -712,7 +712,7 @@ abstract class Type
             $union = new Union([new TInt()]);
         }
 
-        $union->from_calculation = $from_calculation;
+        $union->fromCalculation = $fromCalculation;
 
         return $union;
     }
@@ -754,17 +754,17 @@ abstract class Type
     }
 
     /**
-     * @param string $class_type
+     * @param string $classType
      *
      * @return Type\Union
      */
-    public static function getClassString($class_type = null)
+    public static function getClassString($classType = null)
     {
-        if (!$class_type) {
+        if (!$classType) {
             return new Union([new TClassString()]);
         }
 
-        $type = new TLiteralClassString($class_type);
+        $type = new TLiteralClassString($classType);
 
         return new Union([$type]);
     }
@@ -780,13 +780,13 @@ abstract class Type
     }
 
     /**
-     * @param bool $from_isset
+     * @param bool $fromIsset
      *
      * @return Type\Union
      */
-    public static function getMixed($from_isset = false)
+    public static function getMixed($fromIsset = false)
     {
-        $type = new TMixed($from_isset);
+        $type = new TMixed($fromIsset);
 
         return new Union([$type]);
     }
@@ -867,17 +867,17 @@ abstract class Type
      */
     public static function getEmptyArray()
     {
-        $array_type = new TArray(
+        $arrayType = new TArray(
             [
                 new Type\Union([new TEmpty]),
                 new Type\Union([new TEmpty]),
             ]
         );
 
-        $array_type->count = 0;
+        $arrayType->count = 0;
 
         return new Type\Union([
-            $array_type,
+            $arrayType,
         ]);
     }
 
@@ -922,68 +922,68 @@ abstract class Type
     /**
      * Combines two union types into one
      *
-     * @param  Union  $type_1
-     * @param  Union  $type_2
+     * @param  Union  $type1
+     * @param  Union  $type2
      *
      * @return Union
      */
-    public static function combineUnionTypes(Union $type_1, Union $type_2)
+    public static function combineUnionTypes(Union $type1, Union $type2)
     {
-        if ($type_1->isVanillaMixed() || $type_2->isVanillaMixed()) {
-            $combined_type = Type::getMixed();
+        if ($type1->isVanillaMixed() || $type2->isVanillaMixed()) {
+            $combinedType = Type::getMixed();
         } else {
-             $both_failed_reconciliation = false;
+             $bothFailedReconciliation = false;
 
-            if ($type_1->failed_reconciliation) {
-                if ($type_2->failed_reconciliation) {
-                    $both_failed_reconciliation = true;
+            if ($type1->failedReconciliation) {
+                if ($type2->failedReconciliation) {
+                    $bothFailedReconciliation = true;
                 } else {
-                    return $type_2;
+                    return $type2;
                 }
-            } elseif ($type_2->failed_reconciliation) {
-                return $type_1;
+            } elseif ($type2->failedReconciliation) {
+                return $type1;
             }
 
-            $combined_type = TypeCombination::combineTypes(
+            $combinedType = TypeCombination::combineTypes(
                 array_merge(
-                    array_values($type_1->getTypes()),
-                    array_values($type_2->getTypes())
+                    array_values($type1->getTypes()),
+                    array_values($type2->getTypes())
                 )
             );
 
-            if (!$type_1->initialized || !$type_2->initialized) {
-                $combined_type->initialized = false;
+            if (!$type1->initialized || !$type2->initialized) {
+                $combinedType->initialized = false;
             }
 
-            if ($type_1->possibly_undefined_from_try || $type_2->possibly_undefined_from_try) {
-                $combined_type->possibly_undefined_from_try = true;
+            if ($type1->possiblyUndefinedFromTry || $type2->possiblyUndefinedFromTry) {
+                $combinedType->possiblyUndefinedFromTry = true;
             }
 
-            if ($type_1->from_docblock || $type_2->from_docblock) {
-                $combined_type->from_docblock = true;
+            if ($type1->fromDocblock || $type2->fromDocblock) {
+                $combinedType->fromDocblock = true;
             }
 
-            if ($type_1->from_calculation || $type_2->from_calculation) {
-                $combined_type->from_calculation = true;
+            if ($type1->fromCalculation || $type2->fromCalculation) {
+                $combinedType->fromCalculation = true;
             }
 
-            if ($type_1->ignore_nullable_issues || $type_2->ignore_nullable_issues) {
-                $combined_type->ignore_nullable_issues = true;
+            if ($type1->ignoreNullableIssues || $type2->ignoreNullableIssues) {
+                $combinedType->ignoreNullableIssues = true;
             }
 
-            if ($type_1->ignore_falsable_issues || $type_2->ignore_falsable_issues) {
-                $combined_type->ignore_falsable_issues = true;
+            if ($type1->ignoreFalsableIssues || $type2->ignoreFalsableIssues) {
+                $combinedType->ignoreFalsableIssues = true;
             }
 
-            if ($both_failed_reconciliation) {
-                $combined_type->failed_reconciliation = true;
+            if ($bothFailedReconciliation) {
+                $combinedType->failedReconciliation = true;
             }
         }
 
-        if ($type_1->possibly_undefined || $type_2->possibly_undefined) {
-            $combined_type->possibly_undefined = true;
+        if ($type1->possiblyUndefined || $type2->possiblyUndefined) {
+            $combinedType->possiblyUndefined = true;
         }
 
-        return $combined_type;
+        return $combinedType;
     }
 }

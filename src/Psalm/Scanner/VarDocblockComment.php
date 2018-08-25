@@ -13,17 +13,17 @@ class VarDocblockComment
     /**
      * @var string
      */
-    public $original_type;
+    public $originalType;
 
     /**
      * @var string|null
      */
-    public $var_id = null;
+    public $varId = null;
 
     /**
      * @var int|null
      */
-    public $line_number;
+    public $lineNumber;
 
     /**
      * Whether or not the function is deprecated

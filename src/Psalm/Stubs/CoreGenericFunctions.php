@@ -3,11 +3,11 @@
  * @template T
  *
  * @param array<T, mixed> $arr
- * @param mixed           $search_value
+ * @param mixed           $searchValue
  * @param bool            $strict
  * @return array<int, T>
  */
-function array_keys(array $arr, $search_value = null, bool $strict = false) {}
+function array_keys(array $arr, $searchValue = null, bool $strict = false) {}
 
 /**
  * @template T
@@ -21,10 +21,10 @@ function array_values(array $arr) {}
  * @template T
  *
  * @param array<mixed, T> $arr
- * @param int $sort_flags
+ * @param int $sortFlags
  * @return array<int, T>
  */
-function array_unique(array $arr, int $sort_flags = 0) {}
+function array_unique(array $arr, int $sortFlags = 0) {}
 
 /**
  * @template T
@@ -32,10 +32,10 @@ function array_unique(array $arr, int $sort_flags = 0) {}
  * @param array<mixed, T> $arr
  * @param int $offset
  * @param int|null $length
- * @param bool $preserve_keys
+ * @param bool $preserveKeys
  * @return array<int, T>
  */
-function array_slice(array $arr, int $offset, int $length = null, bool $preserve_keys = false) {}
+function array_slice(array $arr, int $offset, int $length = null, bool $preserveKeys = false) {}
 
 /**
  * @template TKey
@@ -120,10 +120,10 @@ function array_pop(array &$arr) {}
  * @template TValue
  *
  * @param array<TKey, TValue> $arr
- * @param bool            $preserve_keys
+ * @param bool            $preserveKeys
  * @return array<TKey, TValue>
  */
-function array_reverse(array $arr, bool $preserve_keys = false) {}
+function array_reverse(array $arr, bool $preserveKeys = false) {}
 
 /**
  * @template TKey

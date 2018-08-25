@@ -8,22 +8,22 @@ class StatementsProvider
     /**
      * @var FileProvider
      */
-    private $file_provider;
+    private $fileProvider;
 
     /**
      * @var ParserCacheProvider
      */
-    private $cache_provider;
+    private $cacheProvider;
 
     /**
      * @var int
      */
-    private $this_modified_time;
+    private $thisModifiedTime;
 
     /**
      * @var FileStorageCacheProvider
      */
-    private $file_storage_cache_provider;
+    private $fileStorageCacheProvider;
 
     /**
      * @var PhpParser\Parser|null
@@ -31,49 +31,49 @@ class StatementsProvider
     protected static $parser;
 
     public function __construct(
-        FileProvider $file_provider,
-        ParserCacheProvider $cache_provider,
-        FileStorageCacheProvider $file_storage_cache_provider
+        FileProvider $fileProvider,
+        ParserCacheProvider $cacheProvider,
+        FileStorageCacheProvider $fileStorageCacheProvider
     ) {
-        $this->file_provider = $file_provider;
-        $this->cache_provider = $cache_provider;
-        $this->this_modified_time = filemtime(__FILE__);
-        $this->file_storage_cache_provider = $file_storage_cache_provider;
+        $this->fileProvider = $fileProvider;
+        $this->cacheProvider = $cacheProvider;
+        $this->thisModifiedTime = filemtime(__FILE__);
+        $this->fileStorageCacheProvider = $fileStorageCacheProvider;
     }
 
     /**
-     * @param  string  $file_path
-     * @param  bool    $debug_output
+     * @param  string  $filePath
+     * @param  bool    $debugOutput
      *
      * @return array<int, \PhpParser\Node\Stmt>
      */
-    public function getStatementsForFile($file_path, $debug_output = false)
+    public function getStatementsForFile($filePath, $debugOutput = false)
     {
-        $from_cache = false;
+        $fromCache = false;
 
-        $version = (string) PHP_PARSER_VERSION . $this->this_modified_time;
+        $version = (string) PHP_PARSER_VERSION . $this->thisModifiedTime;
 
-        $file_contents = $this->file_provider->getContents($file_path);
-        $modified_time = $this->file_provider->getModifiedTime($file_path);
+        $fileContents = $this->fileProvider->getContents($filePath);
+        $modifiedTime = $this->fileProvider->getModifiedTime($filePath);
 
-        $file_content_hash = md5($version . $file_contents);
-        $file_cache_key = $this->cache_provider->getParserCacheKey($file_path, $this->cache_provider->use_igbinary);
+        $fileContentHash = md5($version . $fileContents);
+        $fileCacheKey = $this->cacheProvider->getParserCacheKey($filePath, $this->cacheProvider->useIgbinary);
 
-        $stmts = $this->cache_provider->loadStatementsFromCache(
-            $modified_time,
-            $file_content_hash,
-            $file_cache_key
+        $stmts = $this->cacheProvider->loadStatementsFromCache(
+            $modifiedTime,
+            $fileContentHash,
+            $fileCacheKey
         );
 
         if ($stmts === null) {
-            if ($debug_output) {
-                echo 'Parsing ' . $file_path . "\n";
+            if ($debugOutput) {
+                echo 'Parsing ' . $filePath . "\n";
             }
 
-            $stmts = self::parseStatements($file_contents);
-            $this->file_storage_cache_provider->removeCacheForFile($file_path);
+            $stmts = self::parseStatements($fileContents);
+            $this->fileStorageCacheProvider->removeCacheForFile($filePath);
         } else {
-            $from_cache = true;
+            $fromCache = true;
         }
 
         $nameResolver = new \Psalm\Visitor\SimpleNameResolver;
@@ -83,7 +83,7 @@ class StatementsProvider
         /** @var array<int, \PhpParser\Node\Stmt> */
         $stmts = $nodeTraverser->traverse($stmts);
 
-        $this->cache_provider->saveStatementsToCache($file_cache_key, $file_content_hash, $stmts, $from_cache);
+        $this->cacheProvider->saveStatementsToCache($fileCacheKey, $fileContentHash, $stmts, $fromCache);
 
         if (!$stmts) {
             return [];
@@ -93,11 +93,11 @@ class StatementsProvider
     }
 
     /**
-     * @param  string   $file_contents
+     * @param  string   $fileContents
      *
      * @return array<int, \PhpParser\Node\Stmt>
      */
-    public static function parseStatements($file_contents)
+    public static function parseStatements($fileContents)
     {
         if (!self::$parser) {
             $lexer = new PhpParser\Lexer([
@@ -109,13 +109,13 @@ class StatementsProvider
             self::$parser = (new PhpParser\ParserFactory())->create(PhpParser\ParserFactory::PREFER_PHP7, $lexer);
         }
 
-        $error_handler = new \PhpParser\ErrorHandler\Collecting();
+        $errorHandler = new \PhpParser\ErrorHandler\Collecting();
 
         /** @var array<int, \PhpParser\Node\Stmt> */
-        $stmts = self::$parser->parse($file_contents, $error_handler);
+        $stmts = self::$parser->parse($fileContents, $errorHandler);
 
-        if (!$stmts && $error_handler->hasErrors()) {
-            foreach ($error_handler->getErrors() as $error) {
+        if (!$stmts && $errorHandler->hasErrors()) {
+            foreach ($errorHandler->getErrors() as $error) {
                 throw $error;
             }
         }

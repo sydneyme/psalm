@@ -23,50 +23,50 @@ use Psalm\Type\Atomic\TNamedObject;
 class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PhpParser\Node\Expr\StaticCall  $stmt
      * @param   Context                         $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\StaticCall $stmt,
         Context $context
     ) {
-        $method_id = null;
+        $methodId = null;
 
-        $lhs_type = null;
+        $lhsType = null;
 
-        $file_checker = $statements_checker->getFileChecker();
-        $project_checker = $file_checker->project_checker;
-        $codebase = $project_checker->codebase;
-        $source = $statements_checker->getSource();
+        $fileChecker = $statementsChecker->getFileChecker();
+        $projectChecker = $fileChecker->projectChecker;
+        $codebase = $projectChecker->codebase;
+        $source = $statementsChecker->getSource();
 
         $stmt->inferredType = null;
 
-        $config = $project_checker->config;
+        $config = $projectChecker->config;
 
         if ($stmt->class instanceof PhpParser\Node\Name) {
-            $fq_class_name = null;
+            $fqClassName = null;
 
             if (count($stmt->class->parts) === 1
                 && in_array(strtolower($stmt->class->parts[0]), ['self', 'static', 'parent'], true)
             ) {
                 if ($stmt->class->parts[0] === 'parent') {
-                    $child_fq_class_name = $context->self;
+                    $childFqClassName = $context->self;
 
-                    $class_storage = $child_fq_class_name
-                        ? $project_checker->classlike_storage_provider->get($child_fq_class_name)
+                    $classStorage = $childFqClassName
+                        ? $projectChecker->classlikeStorageProvider->get($childFqClassName)
                         : null;
 
-                    if (!$class_storage || !$class_storage->parent_classes) {
+                    if (!$classStorage || !$classStorage->parentClasses) {
                         if (IssueBuffer::accepts(
                             new ParentNotFound(
                                 'Cannot call method on parent as this class does not extend another',
-                                new CodeLocation($statements_checker->getSource(), $stmt)
+                                new CodeLocation($statementsChecker->getSource(), $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -74,28 +74,28 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                         return;
                     }
 
-                    $fq_class_name = reset($class_storage->parent_classes);
+                    $fqClassName = reset($classStorage->parentClasses);
 
-                    $class_storage = $project_checker->classlike_storage_provider->get($fq_class_name);
+                    $classStorage = $projectChecker->classlikeStorageProvider->get($fqClassName);
 
-                    $fq_class_name = $class_storage->name;
+                    $fqClassName = $classStorage->name;
 
                     if ($stmt->name instanceof PhpParser\Node\Identifier
-                        && $class_storage->user_defined
-                        && ($context->collect_mutations || $context->collect_initializations)
+                        && $classStorage->userDefined
+                        && ($context->collectMutations || $context->collectInitializations)
                     ) {
-                        $method_id = $fq_class_name . '::' . strtolower($stmt->name->name);
+                        $methodId = $fqClassName . '::' . strtolower($stmt->name->name);
 
-                        $appearing_method_id = $codebase->getAppearingMethodId($method_id);
+                        $appearingMethodId = $codebase->getAppearingMethodId($methodId);
 
-                        if (!$appearing_method_id) {
+                        if (!$appearingMethodId) {
                             if (IssueBuffer::accepts(
                                 new UndefinedMethod(
-                                    'Method ' . $method_id . ' does not exist',
-                                    new CodeLocation($statements_checker->getSource(), $stmt),
-                                    $method_id
+                                    'Method ' . $methodId . ' does not exist',
+                                    new CodeLocation($statementsChecker->getSource(), $stmt),
+                                    $methodId
                                 ),
-                                $statements_checker->getSuppressedIssues()
+                                $statementsChecker->getSuppressedIssues()
                             )) {
                                 return false;
                             }
@@ -103,123 +103,123 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                             return;
                         }
 
-                        list($appearing_method_class_name) = explode('::', $appearing_method_id);
+                        list($appearingMethodClassName) = explode('::', $appearingMethodId);
 
-                        $old_context_include_location = $context->include_location;
-                        $old_self = $context->self;
-                        $context->include_location = new CodeLocation($statements_checker->getSource(), $stmt);
-                        $context->self = $appearing_method_class_name;
+                        $oldContextIncludeLocation = $context->includeLocation;
+                        $oldSelf = $context->self;
+                        $context->includeLocation = new CodeLocation($statementsChecker->getSource(), $stmt);
+                        $context->self = $appearingMethodClassName;
 
-                        if ($context->collect_mutations) {
-                            $file_checker->getMethodMutations($method_id, $context);
+                        if ($context->collectMutations) {
+                            $fileChecker->getMethodMutations($methodId, $context);
                         } else {
                             // collecting initializations
-                            $local_vars_in_scope = [];
-                            $local_vars_possibly_in_scope = [];
+                            $localVarsInScope = [];
+                            $localVarsPossiblyInScope = [];
 
-                            foreach ($context->vars_in_scope as $var => $_) {
+                            foreach ($context->varsInScope as $var => $_) {
                                 if (strpos($var, '$this->') !== 0 && $var !== '$this') {
-                                    $local_vars_in_scope[$var] = $context->vars_in_scope[$var];
+                                    $localVarsInScope[$var] = $context->varsInScope[$var];
                                 }
                             }
 
-                            foreach ($context->vars_possibly_in_scope as $var => $_) {
+                            foreach ($context->varsPossiblyInScope as $var => $_) {
                                 if (strpos($var, '$this->') !== 0 && $var !== '$this') {
-                                    $local_vars_possibly_in_scope[$var] = $context->vars_possibly_in_scope[$var];
+                                    $localVarsPossiblyInScope[$var] = $context->varsPossiblyInScope[$var];
                                 }
                             }
 
-                            if (!isset($context->initialized_methods[$method_id])) {
-                                if ($context->initialized_methods === null) {
-                                    $context->initialized_methods = [];
+                            if (!isset($context->initializedMethods[$methodId])) {
+                                if ($context->initializedMethods === null) {
+                                    $context->initializedMethods = [];
                                 }
 
-                                $context->initialized_methods[$method_id] = true;
+                                $context->initializedMethods[$methodId] = true;
 
-                                $file_checker->getMethodMutations($method_id, $context);
+                                $fileChecker->getMethodMutations($methodId, $context);
 
-                                foreach ($local_vars_in_scope as $var => $type) {
-                                    $context->vars_in_scope[$var] = $type;
+                                foreach ($localVarsInScope as $var => $type) {
+                                    $context->varsInScope[$var] = $type;
                                 }
 
-                                foreach ($local_vars_possibly_in_scope as $var => $type) {
-                                    $context->vars_possibly_in_scope[$var] = $type;
+                                foreach ($localVarsPossiblyInScope as $var => $type) {
+                                    $context->varsPossiblyInScope[$var] = $type;
                                 }
                             }
                         }
 
-                        $context->include_location = $old_context_include_location;
-                        $context->self = $old_self;
+                        $context->includeLocation = $oldContextIncludeLocation;
+                        $context->self = $oldSelf;
 
-                        if (isset($context->vars_in_scope['$this']) && $old_self) {
-                            $context->vars_in_scope['$this'] = Type::parseString($old_self);
+                        if (isset($context->varsInScope['$this']) && $oldSelf) {
+                            $context->varsInScope['$this'] = Type::parseString($oldSelf);
                         }
                     }
                 } elseif ($context->self) {
-                    if ($stmt->class->parts[0] === 'static' && isset($context->vars_in_scope['$this'])) {
-                        $fq_class_name = (string) $context->vars_in_scope['$this'];
-                        $lhs_type = clone $context->vars_in_scope['$this'];
+                    if ($stmt->class->parts[0] === 'static' && isset($context->varsInScope['$this'])) {
+                        $fqClassName = (string) $context->varsInScope['$this'];
+                        $lhsType = clone $context->varsInScope['$this'];
                     } else {
-                        $fq_class_name = $context->self;
+                        $fqClassName = $context->self;
                     }
                 } else {
-                    $namespace = $statements_checker->getNamespace()
-                        ? $statements_checker->getNamespace() . '\\'
+                    $namespace = $statementsChecker->getNamespace()
+                        ? $statementsChecker->getNamespace() . '\\'
                         : '';
 
-                    $fq_class_name = $namespace . $statements_checker->getClassName();
+                    $fqClassName = $namespace . $statementsChecker->getClassName();
                 }
 
-                if ($context->isPhantomClass($fq_class_name)) {
+                if ($context->isPhantomClass($fqClassName)) {
                     return null;
                 }
-            } elseif ($context->check_classes) {
-                $fq_class_name = ClassLikeChecker::getFQCLNFromNameObject(
+            } elseif ($context->checkClasses) {
+                $fqClassName = ClassLikeChecker::getFQCLNFromNameObject(
                     $stmt->class,
-                    $statements_checker->getAliases()
+                    $statementsChecker->getAliases()
                 );
 
-                if ($context->isPhantomClass($fq_class_name)) {
+                if ($context->isPhantomClass($fqClassName)) {
                     return null;
                 }
 
-                $does_class_exist = false;
+                $doesClassExist = false;
 
                 if ($context->self) {
-                    $self_storage = $project_checker->classlike_storage_provider->get($context->self);
+                    $selfStorage = $projectChecker->classlikeStorageProvider->get($context->self);
 
-                    if (isset($self_storage->used_traits[strtolower($fq_class_name)])) {
-                        $fq_class_name = $context->self;
-                        $does_class_exist = true;
+                    if (isset($selfStorage->usedTraits[strtolower($fqClassName)])) {
+                        $fqClassName = $context->self;
+                        $doesClassExist = true;
                     }
                 }
 
-                if (!$does_class_exist) {
-                    $does_class_exist = ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                        $statements_checker,
-                        $fq_class_name,
+                if (!$doesClassExist) {
+                    $doesClassExist = ClassLikeChecker::checkFullyQualifiedClassLikeName(
+                        $statementsChecker,
+                        $fqClassName,
                         new CodeLocation($source, $stmt->class),
-                        $statements_checker->getSuppressedIssues(),
+                        $statementsChecker->getSuppressedIssues(),
                         false
                     );
                 }
 
-                if (!$does_class_exist) {
-                    return $does_class_exist;
+                if (!$doesClassExist) {
+                    return $doesClassExist;
                 }
             }
 
-            if ($fq_class_name && !$lhs_type) {
-                $lhs_type = new Type\Union([new TNamedObject($fq_class_name)]);
+            if ($fqClassName && !$lhsType) {
+                $lhsType = new Type\Union([new TNamedObject($fqClassName)]);
             }
         } else {
-            ExpressionChecker::analyze($statements_checker, $stmt->class, $context);
-            $lhs_type = $stmt->class->inferredType;
+            ExpressionChecker::analyze($statementsChecker, $stmt->class, $context);
+            $lhsType = $stmt->class->inferredType;
         }
 
-        if (!$context->check_methods || !$lhs_type) {
+        if (!$context->checkMethods || !$lhsType) {
             if (self::checkFunctionArguments(
-                $statements_checker,
+                $statementsChecker,
                 $stmt->args,
                 null,
                 null,
@@ -231,23 +231,23 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
             return null;
         }
 
-        $has_mock = false;
+        $hasMock = false;
 
-        foreach ($lhs_type->getTypes() as $lhs_type_part) {
-            if (!$lhs_type_part instanceof TNamedObject) {
+        foreach ($lhsType->getTypes() as $lhsTypePart) {
+            if (!$lhsTypePart instanceof TNamedObject) {
                 // this is always OK
-                if ($lhs_type_part instanceof Type\Atomic\TClassString) {
+                if ($lhsTypePart instanceof Type\Atomic\TClassString) {
                     continue;
                 }
 
                 // ok for now
-                if ($lhs_type_part instanceof Type\Atomic\TLiteralClassString) {
+                if ($lhsTypePart instanceof Type\Atomic\TLiteralClassString) {
                     continue;
                 }
 
-                if ($lhs_type_part instanceof Type\Atomic\TString) {
-                    if ($config->allow_string_standin_for_class
-                        && !$lhs_type_part instanceof Type\Atomic\TNumericString
+                if ($lhsTypePart instanceof Type\Atomic\TString) {
+                    if ($config->allowStringStandinForClass
+                        && !$lhsTypePart instanceof Type\Atomic\TNumericString
                     ) {
                         continue;
                     }
@@ -255,9 +255,9 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                     if (IssueBuffer::accepts(
                         new InvalidStringClass(
                             'String cannot be used as a class',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
@@ -265,25 +265,25 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                     continue;
                 }
 
-                if ($lhs_type_part instanceof Type\Atomic\TMixed
-                    || $lhs_type_part instanceof Type\Atomic\TGenericParam
+                if ($lhsTypePart instanceof Type\Atomic\TMixed
+                    || $lhsTypePart instanceof Type\Atomic\TGenericParam
                 ) {
                     continue;
                 }
 
-                if ($lhs_type_part instanceof Type\Atomic\TNull
-                    && $lhs_type->ignore_nullable_issues
+                if ($lhsTypePart instanceof Type\Atomic\TNull
+                    && $lhsType->ignoreNullableIssues
                 ) {
                     continue;
                 }
 
                 if (IssueBuffer::accepts(
                     new UndefinedClass(
-                        'Type ' . $lhs_type_part . ' cannot be called as a class',
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        (string) $lhs_type_part
+                        'Type ' . $lhsTypePart . ' cannot be called as a class',
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        (string) $lhsTypePart
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
@@ -291,83 +291,83 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                 continue;
             }
 
-            $fq_class_name = $lhs_type_part->value;
+            $fqClassName = $lhsTypePart->value;
 
-            $is_mock = ExpressionChecker::isMock($fq_class_name);
+            $isMock = ExpressionChecker::isMock($fqClassName);
 
-            $has_mock = $has_mock || $is_mock;
+            $hasMock = $hasMock || $isMock;
 
-            $method_id = null;
+            $methodId = null;
 
             if ($stmt->name instanceof PhpParser\Node\Identifier
-                && !$codebase->methodExists($fq_class_name . '::__callStatic')
-                && !$is_mock
+                && !$codebase->methodExists($fqClassName . '::__callStatic')
+                && !$isMock
             ) {
-                $method_id = $fq_class_name . '::' . strtolower($stmt->name->name);
-                $cased_method_id = $fq_class_name . '::' . $stmt->name->name;
+                $methodId = $fqClassName . '::' . strtolower($stmt->name->name);
+                $casedMethodId = $fqClassName . '::' . $stmt->name->name;
 
-                $source_method_id = $source instanceof FunctionLikeChecker
+                $sourceMethodId = $source instanceof FunctionLikeChecker
                     ? $source->getMethodId()
                     : null;
 
-                $does_method_exist = MethodChecker::checkMethodExists(
-                    $project_checker,
-                    $cased_method_id,
+                $doesMethodExist = MethodChecker::checkMethodExists(
+                    $projectChecker,
+                    $casedMethodId,
                     new CodeLocation($source, $stmt),
-                    $statements_checker->getSuppressedIssues(),
-                    $source_method_id
+                    $statementsChecker->getSuppressedIssues(),
+                    $sourceMethodId
                 );
 
-                if (!$does_method_exist) {
-                    return $does_method_exist;
+                if (!$doesMethodExist) {
+                    return $doesMethodExist;
                 }
 
-                $class_storage = $project_checker->classlike_storage_provider->get($fq_class_name);
+                $classStorage = $projectChecker->classlikeStorageProvider->get($fqClassName);
 
-                if ($class_storage->deprecated) {
+                if ($classStorage->deprecated) {
                     if (IssueBuffer::accepts(
                         new DeprecatedClass(
-                            $fq_class_name . ' is marked deprecated',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            $fqClassName . ' is marked deprecated',
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 }
 
                 if (MethodChecker::checkMethodVisibility(
-                    $method_id,
+                    $methodId,
                     $context->self,
-                    $statements_checker->getSource(),
+                    $statementsChecker->getSource(),
                     new CodeLocation($source, $stmt),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 ) === false) {
                     return false;
                 }
 
                 if ($stmt->class instanceof PhpParser\Node\Name
-                    && ($stmt->class->parts[0] !== 'parent' || $statements_checker->isStatic())
+                    && ($stmt->class->parts[0] !== 'parent' || $statementsChecker->isStatic())
                     && (
                         !$context->self
-                        || $statements_checker->isStatic()
-                        || !$codebase->classExtends($context->self, $fq_class_name)
+                        || $statementsChecker->isStatic()
+                        || !$codebase->classExtends($context->self, $fqClassName)
                     )
                 ) {
                     if (MethodChecker::checkStatic(
-                        $method_id,
-                        strtolower($stmt->class->parts[0]) === 'self' || $context->self === $fq_class_name,
-                        !$statements_checker->isStatic(),
-                        $project_checker,
+                        $methodId,
+                        strtolower($stmt->class->parts[0]) === 'self' || $context->self === $fqClassName,
+                        !$statementsChecker->isStatic(),
+                        $projectChecker,
                         new CodeLocation($source, $stmt),
-                        $statements_checker->getSuppressedIssues(),
-                        $is_dynamic_this_method
+                        $statementsChecker->getSuppressedIssues(),
+                        $isDynamicThisMethod
                     ) === false) {
                         // fall through
                     }
 
-                    if ($is_dynamic_this_method) {
-                        $fake_method_call_expr = new PhpParser\Node\Expr\MethodCall(
+                    if ($isDynamicThisMethod) {
+                        $fakeMethodCallExpr = new PhpParser\Node\Expr\MethodCall(
                             new PhpParser\Node\Expr\Variable(
                                 'this',
                                 $stmt->class->getAttributes()
@@ -378,15 +378,15 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                         );
 
                         if (MethodCallChecker::analyze(
-                            $statements_checker,
-                            $fake_method_call_expr,
+                            $statementsChecker,
+                            $fakeMethodCallExpr,
                             $context
                         ) === false) {
                             return false;
                         }
 
-                        if (isset($fake_method_call_expr->inferredType)) {
-                            $stmt->inferredType = $fake_method_call_expr->inferredType;
+                        if (isset($fakeMethodCallExpr->inferredType)) {
+                            $stmt->inferredType = $fakeMethodCallExpr->inferredType;
                         }
 
                         return null;
@@ -394,135 +394,135 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                 }
 
                 if (MethodChecker::checkMethodNotDeprecated(
-                    $project_checker,
-                    $method_id,
-                    new CodeLocation($statements_checker->getSource(), $stmt),
-                    $statements_checker->getSuppressedIssues()
+                    $projectChecker,
+                    $methodId,
+                    new CodeLocation($statementsChecker->getSource(), $stmt),
+                    $statementsChecker->getSuppressedIssues()
                 ) === false) {
                     // fall through
                 }
 
                 if (self::checkMethodArgs(
-                    $method_id,
+                    $methodId,
                     $stmt->args,
-                    $found_generic_params,
+                    $foundGenericParams,
                     $context,
-                    new CodeLocation($statements_checker->getSource(), $stmt),
-                    $statements_checker
+                    new CodeLocation($statementsChecker->getSource(), $stmt),
+                    $statementsChecker
                 ) === false) {
                     return false;
                 }
 
-                $fq_class_name = $stmt->class instanceof PhpParser\Node\Name && $stmt->class->parts === ['parent']
-                    ? (string) $statements_checker->getFQCLN()
-                    : $fq_class_name;
+                $fqClassName = $stmt->class instanceof PhpParser\Node\Name && $stmt->class->parts === ['parent']
+                    ? (string) $statementsChecker->getFQCLN()
+                    : $fqClassName;
 
-                $self_fq_class_name = $fq_class_name;
+                $selfFqClassName = $fqClassName;
 
-                $return_type_candidate = $codebase->methods->getMethodReturnType(
-                    $method_id,
-                    $self_fq_class_name,
+                $returnTypeCandidate = $codebase->methods->getMethodReturnType(
+                    $methodId,
+                    $selfFqClassName,
                     $stmt->args
                 );
 
-                if ($return_type_candidate) {
-                    $return_type_candidate = clone $return_type_candidate;
+                if ($returnTypeCandidate) {
+                    $returnTypeCandidate = clone $returnTypeCandidate;
 
-                    if ($found_generic_params) {
-                        $return_type_candidate->replaceTemplateTypesWithArgTypes(
-                            $found_generic_params
+                    if ($foundGenericParams) {
+                        $returnTypeCandidate->replaceTemplateTypesWithArgTypes(
+                            $foundGenericParams
                         );
                     }
 
-                    $return_type_candidate = ExpressionChecker::fleshOutType(
-                        $project_checker,
-                        $return_type_candidate,
-                        $self_fq_class_name,
-                        $fq_class_name
+                    $returnTypeCandidate = ExpressionChecker::fleshOutType(
+                        $projectChecker,
+                        $returnTypeCandidate,
+                        $selfFqClassName,
+                        $fqClassName
                     );
 
-                    $return_type_location = $codebase->methods->getMethodReturnTypeLocation(
-                        $method_id,
-                        $secondary_return_type_location
+                    $returnTypeLocation = $codebase->methods->getMethodReturnTypeLocation(
+                        $methodId,
+                        $secondaryReturnTypeLocation
                     );
 
-                    if ($secondary_return_type_location) {
-                        $return_type_location = $secondary_return_type_location;
+                    if ($secondaryReturnTypeLocation) {
+                        $returnTypeLocation = $secondaryReturnTypeLocation;
                     }
 
                     // only check the type locally if it's defined externally
-                    if ($return_type_location && !$config->isInProjectDirs($return_type_location->file_path)) {
-                        $return_type_candidate->check(
-                            $statements_checker,
+                    if ($returnTypeLocation && !$config->isInProjectDirs($returnTypeLocation->filePath)) {
+                        $returnTypeCandidate->check(
+                            $statementsChecker,
                             new CodeLocation($source, $stmt),
-                            $statements_checker->getSuppressedIssues(),
-                            $context->phantom_classes
+                            $statementsChecker->getSuppressedIssues(),
+                            $context->phantomClasses
                         );
                     }
                 }
 
                 try {
-                    $method_storage = $codebase->methods->getUserMethodStorage($method_id);
+                    $methodStorage = $codebase->methods->getUserMethodStorage($methodId);
 
-                    if ($method_storage->assertions) {
+                    if ($methodStorage->assertions) {
                         self::applyAssertionsToContext(
-                            $method_storage->assertions,
+                            $methodStorage->assertions,
                             $stmt->args,
                             $context,
-                            $statements_checker
+                            $statementsChecker
                         );
                     }
 
-                    if ($method_storage->if_true_assertions) {
-                        $stmt->ifTrueAssertions = $method_storage->if_true_assertions;
+                    if ($methodStorage->ifTrueAssertions) {
+                        $stmt->ifTrueAssertions = $methodStorage->ifTrueAssertions;
                     }
 
-                    if ($method_storage->if_false_assertions) {
-                        $stmt->ifFalseAssertions = $method_storage->if_false_assertions;
+                    if ($methodStorage->ifFalseAssertions) {
+                        $stmt->ifFalseAssertions = $methodStorage->ifFalseAssertions;
                     }
                 } catch (\UnexpectedValueException $e) {
                     // do nothing for non-user-defined methods
                 }
 
-                if ($config->after_method_checks) {
-                    $file_manipulations = [];
+                if ($config->afterMethodChecks) {
+                    $fileManipulations = [];
 
-                    $appearing_method_id = $codebase->methods->getAppearingMethodId($method_id);
-                    $declaring_method_id = $codebase->methods->getDeclaringMethodId($method_id);
+                    $appearingMethodId = $codebase->methods->getAppearingMethodId($methodId);
+                    $declaringMethodId = $codebase->methods->getDeclaringMethodId($methodId);
 
-                    $code_location = new CodeLocation($source, $stmt);
+                    $codeLocation = new CodeLocation($source, $stmt);
 
-                    foreach ($config->after_method_checks as $plugin_fq_class_name) {
-                        $plugin_fq_class_name::afterMethodCallCheck(
-                            $statements_checker,
-                            $method_id,
-                            $appearing_method_id,
-                            $declaring_method_id,
+                    foreach ($config->afterMethodChecks as $pluginFqClassName) {
+                        $pluginFqClassName::afterMethodCallCheck(
+                            $statementsChecker,
+                            $methodId,
+                            $appearingMethodId,
+                            $declaringMethodId,
                             null,
                             $stmt->args,
-                            $code_location,
+                            $codeLocation,
                             $context,
-                            $file_manipulations,
-                            $return_type_candidate
+                            $fileManipulations,
+                            $returnTypeCandidate
                         );
                     }
 
-                    if ($file_manipulations) {
+                    if ($fileManipulations) {
                         /** @psalm-suppress MixedTypeCoercion */
-                        FileManipulationBuffer::add($statements_checker->getFilePath(), $file_manipulations);
+                        FileManipulationBuffer::add($statementsChecker->getFilePath(), $fileManipulations);
                     }
                 }
 
-                if ($return_type_candidate) {
+                if ($returnTypeCandidate) {
                     if (isset($stmt->inferredType)) {
-                        $stmt->inferredType = Type::combineUnionTypes($stmt->inferredType, $return_type_candidate);
+                        $stmt->inferredType = Type::combineUnionTypes($stmt->inferredType, $returnTypeCandidate);
                     } else {
-                        $stmt->inferredType = $return_type_candidate;
+                        $stmt->inferredType = $returnTypeCandidate;
                     }
                 }
             } else {
                 if (self::checkFunctionArguments(
-                    $statements_checker,
+                    $statementsChecker,
                     $stmt->args,
                     null,
                     null,
@@ -533,18 +533,18 @@ class StaticCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
             }
         }
 
-        if ($method_id === null) {
+        if ($methodId === null) {
             return self::checkMethodArgs(
-                $method_id,
+                $methodId,
                 $stmt->args,
-                $found_generic_params,
+                $foundGenericParams,
                 $context,
-                new CodeLocation($statements_checker->getSource(), $stmt),
-                $statements_checker
+                new CodeLocation($statementsChecker->getSource(), $stmt),
+                $statementsChecker
             );
         }
 
-        if (!$config->remember_property_assignments_after_call && !$context->collect_initializations) {
+        if (!$config->rememberPropertyAssignmentsAfterCall && !$context->collectInitializations) {
             $context->removeAllObjectVars();
         }
     }

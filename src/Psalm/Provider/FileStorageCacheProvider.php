@@ -9,7 +9,7 @@ class FileStorageCacheProvider
     /**
      * @var string
      */
-    private $modified_timestamps = '';
+    private $modifiedTimestamps = '';
 
     /**
      * @var Config
@@ -22,142 +22,142 @@ class FileStorageCacheProvider
     {
         $this->config = $config;
 
-        $storage_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Storage' . DIRECTORY_SEPARATOR;
+        $storageDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Storage' . DIRECTORY_SEPARATOR;
 
-        $dependent_files = [
-            $storage_dir . 'FileStorage.php',
-            $storage_dir . 'FunctionLikeStorage.php',
-            $storage_dir . 'ClassLikeStorage.php',
-            $storage_dir . 'MethodStorage.php',
-            $storage_dir . 'FunctionLikeParameter.php',
+        $dependentFiles = [
+            $storageDir . 'FileStorage.php',
+            $storageDir . 'FunctionLikeStorage.php',
+            $storageDir . 'ClassLikeStorage.php',
+            $storageDir . 'MethodStorage.php',
+            $storageDir . 'FunctionLikeParameter.php',
         ];
 
-        foreach ($dependent_files as $dependent_file_path) {
-            if (!file_exists($dependent_file_path)) {
-                throw new \UnexpectedValueException($dependent_file_path . ' must exist');
+        foreach ($dependentFiles as $dependentFilePath) {
+            if (!file_exists($dependentFilePath)) {
+                throw new \UnexpectedValueException($dependentFilePath . ' must exist');
             }
 
-            $this->modified_timestamps .= ' ' . filemtime($dependent_file_path);
+            $this->modifiedTimestamps .= ' ' . filemtime($dependentFilePath);
         }
 
-        $this->modified_timestamps .= PSALM_VERSION;
+        $this->modifiedTimestamps .= PSALM_VERSION;
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return void
      */
-    public function writeToCache(FileStorage $storage, $file_contents)
+    public function writeToCache(FileStorage $storage, $fileContents)
     {
-        $file_path = strtolower($storage->file_path);
-        $cache_location = $this->getCacheLocationForPath($file_path, true);
-        $storage->hash = $this->getCacheHash($file_path, $file_contents);
+        $filePath = strtolower($storage->filePath);
+        $cacheLocation = $this->getCacheLocationForPath($filePath, true);
+        $storage->hash = $this->getCacheHash($filePath, $fileContents);
 
-        if ($this->config->use_igbinary) {
-            file_put_contents($cache_location, igbinary_serialize($storage));
+        if ($this->config->useIgbinary) {
+            file_put_contents($cacheLocation, igbinary_serialize($storage));
         } else {
-            file_put_contents($cache_location, serialize($storage));
+            file_put_contents($cacheLocation, serialize($storage));
         }
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return FileStorage|null
      */
-    public function getLatestFromCache($file_path, $file_contents)
+    public function getLatestFromCache($filePath, $fileContents)
     {
-        $cached_value = $this->loadFromCache($file_path);
+        $cachedValue = $this->loadFromCache($filePath);
 
-        if (!$cached_value) {
+        if (!$cachedValue) {
             return null;
         }
 
-        $cache_hash = $this->getCacheHash($file_path, $file_contents);
+        $cacheHash = $this->getCacheHash($filePath, $fileContents);
 
-        if (@get_class($cached_value) === '__PHP_Incomplete_Class'
-            || $cache_hash !== $cached_value->hash
+        if (@get_class($cachedValue) === '__PHP_Incomplete_Class'
+            || $cacheHash !== $cachedValue->hash
         ) {
-            $this->removeCacheForFile($file_path);
+            $this->removeCacheForFile($filePath);
 
             return null;
         }
 
-        return $cached_value;
+        return $cachedValue;
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return void
      */
-    public function removeCacheForFile($file_path)
+    public function removeCacheForFile($filePath)
     {
-        $cache_path = $this->getCacheLocationForPath($file_path);
+        $cachePath = $this->getCacheLocationForPath($filePath);
 
-        if (file_exists($cache_path)) {
-            unlink($cache_path);
+        if (file_exists($cachePath)) {
+            unlink($cachePath);
         }
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return string
      */
-    private function getCacheHash($file_path, $file_contents)
+    private function getCacheHash($filePath, $fileContents)
     {
-        return sha1(strtolower($file_path) . ' ' . $file_contents . $this->modified_timestamps);
+        return sha1(strtolower($filePath) . ' ' . $fileContents . $this->modifiedTimestamps);
     }
 
     /**
-     * @param  string  $file_path
+     * @param  string  $filePath
      *
      * @return FileStorage|null
      */
-    private function loadFromCache($file_path)
+    private function loadFromCache($filePath)
     {
-        $cache_location = $this->getCacheLocationForPath($file_path);
+        $cacheLocation = $this->getCacheLocationForPath($filePath);
 
-        if (file_exists($cache_location)) {
-            if ($this->config->use_igbinary) {
+        if (file_exists($cacheLocation)) {
+            if ($this->config->useIgbinary) {
                 /** @var FileStorage */
-                return igbinary_unserialize((string)file_get_contents($cache_location)) ?: null;
+                return igbinary_unserialize((string)file_get_contents($cacheLocation)) ?: null;
             }
             /** @var FileStorage */
-            return unserialize((string)file_get_contents($cache_location)) ?: null;
+            return unserialize((string)file_get_contents($cacheLocation)) ?: null;
         }
 
         return null;
     }
 
     /**
-     * @param  string  $file_path
-     * @param  bool $create_directory
+     * @param  string  $filePath
+     * @param  bool $createDirectory
      *
      * @return string
      */
-    private function getCacheLocationForPath($file_path, $create_directory = false)
+    private function getCacheLocationForPath($filePath, $createDirectory = false)
     {
-        $root_cache_directory = $this->config->getCacheDirectory();
+        $rootCacheDirectory = $this->config->getCacheDirectory();
 
-        if (!$root_cache_directory) {
+        if (!$rootCacheDirectory) {
             throw new \UnexpectedValueException('No cache directory defined');
         }
 
-        $parser_cache_directory = $root_cache_directory . DIRECTORY_SEPARATOR . self::FILE_CACHE_DIRECTORY;
+        $parserCacheDirectory = $rootCacheDirectory . DIRECTORY_SEPARATOR . self::FILE_CACHE_DIRECTORY;
 
-        if ($create_directory && !is_dir($parser_cache_directory)) {
-            mkdir($parser_cache_directory, 0777, true);
+        if ($createDirectory && !is_dir($parserCacheDirectory)) {
+            mkdir($parserCacheDirectory, 0777, true);
         }
 
-        return $parser_cache_directory
+        return $parserCacheDirectory
             . DIRECTORY_SEPARATOR
-            . sha1($file_path)
-            . ($this->config->use_igbinary ? '-igbinary' : '');
+            . sha1($filePath)
+            . ($this->config->useIgbinary ? '-igbinary' : '');
     }
 }

@@ -39,105 +39,105 @@ use Psalm\Type\Atomic\TObject;
 class PropertyAssignmentChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PropertyFetch|PropertyProperty  $stmt
-     * @param   string                          $prop_name
-     * @param   PhpParser\Node\Expr|null        $assignment_value
-     * @param   Type\Union                      $assignment_value_type
+     * @param   string                          $propName
+     * @param   PhpParser\Node\Expr|null        $assignmentValue
+     * @param   Type\Union                      $assignmentValueType
      * @param   Context                         $context
-     * @param   bool                            $direct_assignment whether the variable is assigned explicitly
+     * @param   bool                            $directAssignment whether the variable is assigned explicitly
      *
      * @return  false|null
      */
     public static function analyzeInstance(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         $stmt,
-        $prop_name,
-        $assignment_value,
-        Type\Union $assignment_value_type,
+        $propName,
+        $assignmentValue,
+        Type\Union $assignmentValueType,
         Context $context,
-        $direct_assignment = true
+        $directAssignment = true
     ) {
-        $class_property_types = [];
+        $classPropertyTypes = [];
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
-        $property_exists = false;
+        $propertyExists = false;
 
-        $property_ids = [];
+        $propertyIds = [];
 
         if ($stmt instanceof PropertyProperty) {
             if (!$context->self || !$stmt->default) {
                 return null;
             }
 
-            $property_id = $context->self . '::$' . $prop_name;
-            $property_ids[] = $property_id;
+            $propertyId = $context->self . '::$' . $propName;
+            $propertyIds[] = $propertyId;
 
-            if (!$codebase->properties->propertyExists($property_id)) {
+            if (!$codebase->properties->propertyExists($propertyId)) {
                 return null;
             }
 
-            $property_exists = true;
+            $propertyExists = true;
 
-            $declaring_property_class = $codebase->properties->getDeclaringClassForProperty($property_id);
+            $declaringPropertyClass = $codebase->properties->getDeclaringClassForProperty($propertyId);
 
-            $class_storage = $project_checker->classlike_storage_provider->get((string)$declaring_property_class);
+            $classStorage = $projectChecker->classlikeStorageProvider->get((string)$declaringPropertyClass);
 
-            $class_property_type = $class_storage->properties[$prop_name]->type;
+            $classPropertyType = $classStorage->properties[$propName]->type;
 
-            $class_property_types[] = $class_property_type ? clone $class_property_type : Type::getMixed();
+            $classPropertyTypes[] = $classPropertyType ? clone $classPropertyType : Type::getMixed();
 
-            $var_id = '$this->' . $prop_name;
+            $varId = '$this->' . $propName;
         } else {
-            if (ExpressionChecker::analyze($statements_checker, $stmt->var, $context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $stmt->var, $context) === false) {
                 return false;
             }
 
-            $lhs_type = isset($stmt->var->inferredType) ? $stmt->var->inferredType : null;
+            $lhsType = isset($stmt->var->inferredType) ? $stmt->var->inferredType : null;
 
-            if ($lhs_type === null) {
+            if ($lhsType === null) {
                 return null;
             }
 
-            $lhs_var_id = ExpressionChecker::getVarId(
+            $lhsVarId = ExpressionChecker::getVarId(
                 $stmt->var,
-                $statements_checker->getFQCLN(),
-                $statements_checker
+                $statementsChecker->getFQCLN(),
+                $statementsChecker
             );
 
-            $var_id = ExpressionChecker::getVarId(
+            $varId = ExpressionChecker::getVarId(
                 $stmt,
-                $statements_checker->getFQCLN(),
-                $statements_checker
+                $statementsChecker->getFQCLN(),
+                $statementsChecker
             );
 
-            if ($var_id) {
-                $context->assigned_var_ids[$var_id] = true;
+            if ($varId) {
+                $context->assignedVarIds[$varId] = true;
 
-                if ($direct_assignment && isset($context->protected_var_ids[$var_id])) {
+                if ($directAssignment && isset($context->protectedVarIds[$varId])) {
                     if (IssueBuffer::accepts(
                         new LoopInvalidation(
-                            'Variable ' . $var_id . ' has already been assigned in a for/foreach loop',
-                            new CodeLocation($statements_checker->getSource(), $stmt->var)
+                            'Variable ' . $varId . ' has already been assigned in a for/foreach loop',
+                            new CodeLocation($statementsChecker->getSource(), $stmt->var)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 }
             }
 
-            if ($lhs_type->isMixed()) {
-                $codebase->analyzer->incrementMixedCount($statements_checker->getFilePath());
+            if ($lhsType->isMixed()) {
+                $codebase->analyzer->incrementMixedCount($statementsChecker->getFilePath());
 
                 if (IssueBuffer::accepts(
                     new MixedPropertyAssignment(
-                        $lhs_var_id . ' of type mixed cannot be assigned to',
-                        new CodeLocation($statements_checker->getSource(), $stmt->var)
+                        $lhsVarId . ' of type mixed cannot be assigned to',
+                        new CodeLocation($statementsChecker->getSource(), $stmt->var)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
@@ -145,15 +145,15 @@ class PropertyAssignmentChecker
                 return null;
             }
 
-            $codebase->analyzer->incrementNonMixedCount($statements_checker->getFilePath());
+            $codebase->analyzer->incrementNonMixedCount($statementsChecker->getFilePath());
 
-            if ($lhs_type->isNull()) {
+            if ($lhsType->isNull()) {
                 if (IssueBuffer::accepts(
                     new NullPropertyAssignment(
-                        $lhs_var_id . ' of type null cannot be assigned to',
-                        new CodeLocation($statements_checker->getSource(), $stmt->var)
+                        $lhsVarId . ' of type null cannot be assigned to',
+                        new CodeLocation($statementsChecker->getSource(), $stmt->var)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
@@ -161,78 +161,78 @@ class PropertyAssignmentChecker
                 return null;
             }
 
-            if ($lhs_type->isNullable() && !$lhs_type->ignore_nullable_issues) {
+            if ($lhsType->isNullable() && !$lhsType->ignoreNullableIssues) {
                 if (IssueBuffer::accepts(
                     new PossiblyNullPropertyAssignment(
-                        $lhs_var_id . ' with possibly null type \'' . $lhs_type . '\' cannot be assigned to',
-                        new CodeLocation($statements_checker->getSource(), $stmt->var)
+                        $lhsVarId . ' with possibly null type \'' . $lhsType . '\' cannot be assigned to',
+                        new CodeLocation($statementsChecker->getSource(), $stmt->var)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
             }
 
-            $has_regular_setter = false;
+            $hasRegularSetter = false;
 
-            $invalid_assignment_types = [];
+            $invalidAssignmentTypes = [];
 
-            $has_valid_assignment_type = false;
+            $hasValidAssignmentType = false;
 
-            foreach ($lhs_type->getTypes() as $lhs_type_part) {
-                if ($lhs_type_part instanceof TNull) {
+            foreach ($lhsType->getTypes() as $lhsTypePart) {
+                if ($lhsTypePart instanceof TNull) {
                     continue;
                 }
 
-                if (!$lhs_type_part instanceof TObject && !$lhs_type_part instanceof TNamedObject) {
-                    $invalid_assignment_types[] = (string)$lhs_type_part;
+                if (!$lhsTypePart instanceof TObject && !$lhsTypePart instanceof TNamedObject) {
+                    $invalidAssignmentTypes[] = (string)$lhsTypePart;
 
                     continue;
                 }
 
-                $has_valid_assignment_type = true;
+                $hasValidAssignmentType = true;
 
                 // stdClass and SimpleXMLElement are special cases where we cannot infer the return types
                 // but we don't want to throw an error
                 // Hack has a similar issue: https://github.com/facebook/hhvm/issues/5164
-                if ($lhs_type_part instanceof TObject ||
+                if ($lhsTypePart instanceof TObject ||
                     (
                         in_array(
-                            strtolower($lhs_type_part->value),
+                            strtolower($lhsTypePart->value),
                             ['stdclass', 'simplexmlelement', 'dateinterval', 'domdocument', 'domnode'],
                             true
                         )
                     )
                 ) {
-                    if ($var_id) {
-                        if ($lhs_type_part instanceof TNamedObject &&
-                            strtolower($lhs_type_part->value) === 'stdclass'
+                    if ($varId) {
+                        if ($lhsTypePart instanceof TNamedObject &&
+                            strtolower($lhsTypePart->value) === 'stdclass'
                         ) {
-                            $context->vars_in_scope[$var_id] = $assignment_value_type;
+                            $context->varsInScope[$varId] = $assignmentValueType;
                         } else {
-                            $context->vars_in_scope[$var_id] = Type::getMixed();
+                            $context->varsInScope[$varId] = Type::getMixed();
                         }
                     }
 
                     return null;
                 }
 
-                if (ExpressionChecker::isMock($lhs_type_part->value)) {
-                    if ($var_id) {
-                        $context->vars_in_scope[$var_id] = Type::getMixed();
+                if (ExpressionChecker::isMock($lhsTypePart->value)) {
+                    if ($varId) {
+                        $context->varsInScope[$varId] = Type::getMixed();
                     }
 
                     return null;
                 }
 
-                if (!$codebase->classExists($lhs_type_part->value)) {
-                    if ($codebase->interfaceExists($lhs_type_part->value)) {
+                if (!$codebase->classExists($lhsTypePart->value)) {
+                    if ($codebase->interfaceExists($lhsTypePart->value)) {
                         if (IssueBuffer::accepts(
                             new NoInterfaceProperties(
                                 'Interfaces cannot have properties',
-                                new CodeLocation($statements_checker->getSource(), $stmt)
+                                new CodeLocation($statementsChecker->getSource(), $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -242,11 +242,11 @@ class PropertyAssignmentChecker
 
                     if (IssueBuffer::accepts(
                         new UndefinedClass(
-                            'Cannot set properties of undefined class ' . $lhs_type_part->value,
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            $lhs_type_part->value
+                            'Cannot set properties of undefined class ' . $lhsTypePart->value,
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            $lhsTypePart->value
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
@@ -254,79 +254,79 @@ class PropertyAssignmentChecker
                     return null;
                 }
 
-                $property_id = $lhs_type_part->value . '::$' . $prop_name;
-                $property_ids[] = $property_id;
+                $propertyId = $lhsTypePart->value . '::$' . $propName;
+                $propertyIds[] = $propertyId;
 
-                $statements_checker_source = $statements_checker->getSource();
+                $statementsCheckerSource = $statementsChecker->getSource();
 
-                if ($codebase->methodExists($lhs_type_part->value . '::__set')
-                    && (!$statements_checker_source instanceof FunctionLikeChecker
-                        || $statements_checker_source->getMethodId() !== $lhs_type_part->value . '::__set')
-                    && (!$context->self || !$codebase->classExtends($context->self, $lhs_type_part->value))
-                    && (!$codebase->properties->propertyExists($property_id)
-                        || ($lhs_var_id !== '$this'
-                            && $lhs_type_part->value !== $context->self
+                if ($codebase->methodExists($lhsTypePart->value . '::__set')
+                    && (!$statementsCheckerSource instanceof FunctionLikeChecker
+                        || $statementsCheckerSource->getMethodId() !== $lhsTypePart->value . '::__set')
+                    && (!$context->self || !$codebase->classExtends($context->self, $lhsTypePart->value))
+                    && (!$codebase->properties->propertyExists($propertyId)
+                        || ($lhsVarId !== '$this'
+                            && $lhsTypePart->value !== $context->self
                             && ClassLikeChecker::checkPropertyVisibility(
-                                $property_id,
+                                $propertyId,
                                 $context->self,
-                                $statements_checker_source,
-                                new CodeLocation($statements_checker->getSource(), $stmt),
-                                $statements_checker->getSuppressedIssues(),
+                                $statementsCheckerSource,
+                                new CodeLocation($statementsChecker->getSource(), $stmt),
+                                $statementsChecker->getSuppressedIssues(),
                                 false
                             ) !== true)
                     )
                 ) {
-                    $class_storage = $project_checker->classlike_storage_provider->get((string)$lhs_type_part);
+                    $classStorage = $projectChecker->classlikeStorageProvider->get((string)$lhsTypePart);
 
-                    if ($var_id) {
-                        if (isset($class_storage->pseudo_property_set_types['$' . $prop_name])) {
-                            $class_property_types[] =
-                                clone $class_storage->pseudo_property_set_types['$' . $prop_name];
+                    if ($varId) {
+                        if (isset($classStorage->pseudoPropertySetTypes['$' . $propName])) {
+                            $classPropertyTypes[] =
+                                clone $classStorage->pseudoPropertySetTypes['$' . $propName];
 
-                            $has_regular_setter = true;
-                            $property_exists = true;
+                            $hasRegularSetter = true;
+                            $propertyExists = true;
                             continue;
                         }
 
-                        $context->vars_in_scope[$var_id] = Type::getMixed();
+                        $context->varsInScope[$varId] = Type::getMixed();
                     }
 
                     /*
                      * If we have an explicit list of all allowed magic properties on the class, and we're
                      * not in that list, fall through
                      */
-                    if (!$var_id || !$class_storage->sealed_properties) {
+                    if (!$varId || !$classStorage->sealedProperties) {
                         continue;
                     }
                 }
 
-                $has_regular_setter = true;
+                $hasRegularSetter = true;
 
-                if (!$codebase->properties->propertyExists($property_id)) {
+                if (!$codebase->properties->propertyExists($propertyId)) {
                     if ($stmt->var instanceof PhpParser\Node\Expr\Variable && $stmt->var->name === 'this') {
                         // if this is a proper error, we'll see it on the first pass
-                        if ($context->collect_mutations) {
+                        if ($context->collectMutations) {
                             continue;
                         }
 
                         if (IssueBuffer::accepts(
                             new UndefinedThisPropertyAssignment(
-                                'Instance property ' . $property_id . ' is not defined',
-                                new CodeLocation($statements_checker->getSource(), $stmt),
-                                $property_id
+                                'Instance property ' . $propertyId . ' is not defined',
+                                new CodeLocation($statementsChecker->getSource(), $stmt),
+                                $propertyId
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
                     } else {
                         if (IssueBuffer::accepts(
                             new UndefinedPropertyAssignment(
-                                'Instance property ' . $property_id . ' is not defined',
-                                new CodeLocation($statements_checker->getSource(), $stmt),
-                                $property_id
+                                'Instance property ' . $propertyId . ' is not defined',
+                                new CodeLocation($statementsChecker->getSource(), $stmt),
+                                $propertyId
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -335,267 +335,267 @@ class PropertyAssignmentChecker
                     continue;
                 }
 
-                $property_exists = true;
+                $propertyExists = true;
 
-                if (!$context->collect_mutations) {
+                if (!$context->collectMutations) {
                     if (ClassLikeChecker::checkPropertyVisibility(
-                        $property_id,
+                        $propertyId,
                         $context->self,
-                        $statements_checker->getSource(),
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSource(),
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $statementsChecker->getSuppressedIssues()
                     ) === false) {
                         return false;
                     }
                 } else {
                     if (ClassLikeChecker::checkPropertyVisibility(
-                        $property_id,
+                        $propertyId,
                         $context->self,
-                        $statements_checker->getSource(),
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $statements_checker->getSuppressedIssues(),
+                        $statementsChecker->getSource(),
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $statementsChecker->getSuppressedIssues(),
                         false
                     ) !== true) {
                         continue;
                     }
                 }
 
-                $declaring_property_class = $codebase->properties->getDeclaringClassForProperty(
-                    $lhs_type_part->value . '::$' . $prop_name
+                $declaringPropertyClass = $codebase->properties->getDeclaringClassForProperty(
+                    $lhsTypePart->value . '::$' . $propName
                 );
 
-                $class_storage = $project_checker->classlike_storage_provider->get((string)$declaring_property_class);
+                $classStorage = $projectChecker->classlikeStorageProvider->get((string)$declaringPropertyClass);
 
-                $property_storage = $class_storage->properties[$prop_name];
+                $propertyStorage = $classStorage->properties[$propName];
 
-                if ($property_storage->deprecated) {
+                if ($propertyStorage->deprecated) {
                     if (IssueBuffer::accepts(
                         new DeprecatedProperty(
-                            $property_id . ' is marked deprecated',
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            $property_id
+                            $propertyId . ' is marked deprecated',
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            $propertyId
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 }
 
-                $class_property_type = $property_storage->type;
+                $classPropertyType = $propertyStorage->type;
 
-                if ($class_property_type === false) {
-                    $class_property_type = Type::getMixed();
+                if ($classPropertyType === false) {
+                    $classPropertyType = Type::getMixed();
 
-                    if (!$assignment_value_type->isMixed()) {
-                        if ($property_storage->suggested_type) {
-                            $property_storage->suggested_type = Type::combineUnionTypes(
-                                $assignment_value_type,
-                                $property_storage->suggested_type
+                    if (!$assignmentValueType->isMixed()) {
+                        if ($propertyStorage->suggestedType) {
+                            $propertyStorage->suggestedType = Type::combineUnionTypes(
+                                $assignmentValueType,
+                                $propertyStorage->suggestedType
                             );
                         } else {
-                            $property_storage->suggested_type =
-                                $lhs_var_id === '$this' &&
-                                    ($context->inside_constructor || $context->collect_initializations)
-                                    ? $assignment_value_type
-                                    : Type::combineUnionTypes(Type::getNull(), $assignment_value_type);
+                            $propertyStorage->suggestedType =
+                                $lhsVarId === '$this' &&
+                                    ($context->insideConstructor || $context->collectInitializations)
+                                    ? $assignmentValueType
+                                    : Type::combineUnionTypes(Type::getNull(), $assignmentValueType);
                         }
                     }
                 } else {
-                    $class_property_type = ExpressionChecker::fleshOutType(
-                        $project_checker,
-                        $class_property_type,
-                        $lhs_type_part->value,
-                        $lhs_type_part->value
+                    $classPropertyType = ExpressionChecker::fleshOutType(
+                        $projectChecker,
+                        $classPropertyType,
+                        $lhsTypePart->value,
+                        $lhsTypePart->value
                     );
 
-                    if (!$class_property_type->isMixed() && $assignment_value_type->isMixed()) {
+                    if (!$classPropertyType->isMixed() && $assignmentValueType->isMixed()) {
                         if (IssueBuffer::accepts(
                             new MixedAssignment(
-                                'Cannot assign ' . $var_id . ' to a mixed type',
-                                new CodeLocation($statements_checker->getSource(), $stmt)
+                                'Cannot assign ' . $varId . ' to a mixed type',
+                                new CodeLocation($statementsChecker->getSource(), $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             // fall through
                         }
                     }
                 }
 
-                $class_property_types[] = $class_property_type;
+                $classPropertyTypes[] = $classPropertyType;
             }
 
-            if ($invalid_assignment_types) {
-                $invalid_assignment_type = $invalid_assignment_types[0];
+            if ($invalidAssignmentTypes) {
+                $invalidAssignmentType = $invalidAssignmentTypes[0];
 
-                if (!$has_valid_assignment_type) {
+                if (!$hasValidAssignmentType) {
                     if (IssueBuffer::accepts(
                         new InvalidPropertyAssignment(
-                            $lhs_var_id . ' with non-object type \'' . $invalid_assignment_type .
+                            $lhsVarId . ' with non-object type \'' . $invalidAssignmentType .
                             '\' cannot treated as an object',
-                            new CodeLocation($statements_checker->getSource(), $stmt->var)
+                            new CodeLocation($statementsChecker->getSource(), $stmt->var)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 } else {
                     if (IssueBuffer::accepts(
                         new PossiblyInvalidPropertyAssignment(
-                            $lhs_var_id . ' with possible non-object type \'' . $invalid_assignment_type .
+                            $lhsVarId . ' with possible non-object type \'' . $invalidAssignmentType .
                             '\' cannot treated as an object',
-                            new CodeLocation($statements_checker->getSource(), $stmt->var)
+                            new CodeLocation($statementsChecker->getSource(), $stmt->var)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 }
             }
 
-            if (!$has_regular_setter) {
+            if (!$hasRegularSetter) {
                 return null;
             }
 
-            if ($var_id) {
+            if ($varId) {
                 // because we don't want to be assigning for property declarations
-                $context->vars_in_scope[$var_id] = $assignment_value_type;
+                $context->varsInScope[$varId] = $assignmentValueType;
             }
         }
 
-        if (!$property_exists) {
+        if (!$propertyExists) {
             return null;
         }
 
-        if ($assignment_value_type->isMixed()) {
+        if ($assignmentValueType->isMixed()) {
             return null;
         }
 
-        $invalid_assignment_value_types = [];
+        $invalidAssignmentValueTypes = [];
 
-        $has_valid_assignment_value_type = false;
+        $hasValidAssignmentValueType = false;
 
-        foreach ($class_property_types as $class_property_type) {
-            if ($class_property_type->isMixed()) {
+        foreach ($classPropertyTypes as $classPropertyType) {
+            if ($classPropertyType->isMixed()) {
                 continue;
             }
 
-            $type_match_found = TypeChecker::isContainedBy(
-                $project_checker->codebase,
-                $assignment_value_type,
-                $class_property_type,
+            $typeMatchFound = TypeChecker::isContainedBy(
+                $projectChecker->codebase,
+                $assignmentValueType,
+                $classPropertyType,
                 true,
                 true,
-                $has_scalar_match,
-                $type_coerced,
-                $type_coerced_from_mixed,
-                $to_string_cast
+                $hasScalarMatch,
+                $typeCoerced,
+                $typeCoercedFromMixed,
+                $toStringCast
             );
 
-            if ($type_coerced) {
-                if ($type_coerced_from_mixed) {
+            if ($typeCoerced) {
+                if ($typeCoercedFromMixed) {
                     if (IssueBuffer::accepts(
                         new MixedTypeCoercion(
-                            $var_id . ' expects \'' . $class_property_type . '\', '
-                                . ' parent type `' . $assignment_value_type . '` provided',
+                            $varId . ' expects \'' . $classPropertyType . '\', '
+                                . ' parent type `' . $assignmentValueType . '` provided',
                             new CodeLocation(
-                                $statements_checker->getSource(),
-                                $assignment_value ?: $stmt,
-                                $context->include_location
+                                $statementsChecker->getSource(),
+                                $assignmentValue ?: $stmt,
+                                $context->includeLocation
                             )
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // keep soldiering on
                     }
                 } else {
                     if (IssueBuffer::accepts(
                         new TypeCoercion(
-                            $var_id . ' expects \'' . $class_property_type . '\', '
-                                . ' parent type \'' . $assignment_value_type . '\' provided',
+                            $varId . ' expects \'' . $classPropertyType . '\', '
+                                . ' parent type \'' . $assignmentValueType . '\' provided',
                             new CodeLocation(
-                                $statements_checker->getSource(),
-                                $assignment_value ?: $stmt,
-                                $context->include_location
+                                $statementsChecker->getSource(),
+                                $assignmentValue ?: $stmt,
+                                $context->includeLocation
                             )
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // keep soldiering on
                     }
                 }
             }
 
-            if ($to_string_cast) {
+            if ($toStringCast) {
                 if (IssueBuffer::accepts(
                     new ImplicitToStringCast(
-                        $var_id . ' expects \'' . $class_property_type . '\', '
-                            . '\'' . $assignment_value_type . '\' provided with a __toString method',
+                        $varId . ' expects \'' . $classPropertyType . '\', '
+                            . '\'' . $assignmentValueType . '\' provided with a __toString method',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt,
-                            $context->include_location
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt,
+                            $context->includeLocation
                         )
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
             }
 
-            if (!$type_match_found && !$type_coerced) {
+            if (!$typeMatchFound && !$typeCoerced) {
                 if (TypeChecker::canBeContainedBy(
-                    $project_checker->codebase,
-                    $assignment_value_type,
-                    $class_property_type,
+                    $projectChecker->codebase,
+                    $assignmentValueType,
+                    $classPropertyType,
                     true,
                     true
                 )) {
-                    $has_valid_assignment_value_type = true;
+                    $hasValidAssignmentValueType = true;
                 }
 
-                $invalid_assignment_value_types[] = $class_property_type->getId();
+                $invalidAssignmentValueTypes[] = $classPropertyType->getId();
             } else {
-                $has_valid_assignment_value_type = true;
+                $hasValidAssignmentValueType = true;
             }
 
-            if ($type_match_found) {
-                if (!$assignment_value_type->ignore_nullable_issues
-                    && $assignment_value_type->isNullable()
-                    && !$class_property_type->isNullable()
+            if ($typeMatchFound) {
+                if (!$assignmentValueType->ignoreNullableIssues
+                    && $assignmentValueType->isNullable()
+                    && !$classPropertyType->isNullable()
                 ) {
                     if (IssueBuffer::accepts(
                         new PossiblyNullPropertyAssignmentValue(
-                            $var_id . ' with non-nullable declared type \'' . $class_property_type .
-                                '\' cannot be assigned nullable type \'' . $assignment_value_type . '\'',
+                            $varId . ' with non-nullable declared type \'' . $classPropertyType .
+                                '\' cannot be assigned nullable type \'' . $assignmentValueType . '\'',
                             new CodeLocation(
-                                $statements_checker->getSource(),
-                                $assignment_value ?: $stmt,
-                                $context->include_location
+                                $statementsChecker->getSource(),
+                                $assignmentValue ?: $stmt,
+                                $context->includeLocation
                             ),
-                            $property_ids[0]
+                            $propertyIds[0]
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 }
 
-                if (!$assignment_value_type->ignore_falsable_issues
-                    && $assignment_value_type->isFalsable()
-                    && !$class_property_type->hasBool()
+                if (!$assignmentValueType->ignoreFalsableIssues
+                    && $assignmentValueType->isFalsable()
+                    && !$classPropertyType->hasBool()
                 ) {
                     if (IssueBuffer::accepts(
                         new PossiblyFalsePropertyAssignmentValue(
-                            $var_id . ' with non-falsable declared type \'' . $class_property_type .
-                                '\' cannot be assigned possibly false type \'' . $assignment_value_type . '\'',
+                            $varId . ' with non-falsable declared type \'' . $classPropertyType .
+                                '\' cannot be assigned possibly false type \'' . $assignmentValueType . '\'',
                             new CodeLocation(
-                                $statements_checker->getSource(),
-                                $assignment_value ?: $stmt,
-                                $context->include_location
+                                $statementsChecker->getSource(),
+                                $assignmentValue ?: $stmt,
+                                $context->includeLocation
                             ),
-                            $property_ids[0]
+                            $propertyIds[0]
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
@@ -603,39 +603,39 @@ class PropertyAssignmentChecker
             }
         }
 
-        if ($invalid_assignment_value_types) {
-            $invalid_class_property_type = $invalid_assignment_value_types[0];
+        if ($invalidAssignmentValueTypes) {
+            $invalidClassPropertyType = $invalidAssignmentValueTypes[0];
 
-            if (!$has_valid_assignment_value_type) {
+            if (!$hasValidAssignmentValueType) {
                 if (IssueBuffer::accepts(
                     new InvalidPropertyAssignmentValue(
-                        $var_id . ' with declared type \'' . $invalid_class_property_type .
-                            '\' cannot be assigned type \'' . $assignment_value_type->getId() . '\'',
+                        $varId . ' with declared type \'' . $invalidClassPropertyType .
+                            '\' cannot be assigned type \'' . $assignmentValueType->getId() . '\'',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt,
-                            $context->include_location
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt,
+                            $context->includeLocation
                         ),
-                        $property_ids[0]
+                        $propertyIds[0]
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
             } else {
                 if (IssueBuffer::accepts(
                     new PossiblyInvalidPropertyAssignmentValue(
-                        $var_id . ' with declared type \'' . $invalid_class_property_type .
+                        $varId . ' with declared type \'' . $invalidClassPropertyType .
                             '\' cannot be assigned possibly different type \'' .
-                            $assignment_value_type->getId() . '\'',
+                            $assignmentValueType->getId() . '\'',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt,
-                            $context->include_location
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt,
+                            $context->includeLocation
                         ),
-                        $property_ids[0]
+                        $propertyIds[0]
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
@@ -646,48 +646,48 @@ class PropertyAssignmentChecker
     }
 
     /**
-     * @param   StatementsChecker                         $statements_checker
+     * @param   StatementsChecker                         $statementsChecker
      * @param   PhpParser\Node\Expr\StaticPropertyFetch   $stmt
-     * @param   PhpParser\Node\Expr|null                  $assignment_value
-     * @param   Type\Union                                $assignment_value_type
+     * @param   PhpParser\Node\Expr|null                  $assignmentValue
+     * @param   Type\Union                                $assignmentValueType
      * @param   Context                                   $context
      *
      * @return  false|null
      */
     public static function analyzeStatic(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\StaticPropertyFetch $stmt,
-        $assignment_value,
-        Type\Union $assignment_value_type,
+        $assignmentValue,
+        Type\Union $assignmentValueType,
         Context $context
     ) {
-        $var_id = ExpressionChecker::getVarId(
+        $varId = ExpressionChecker::getVarId(
             $stmt,
-            $statements_checker->getFQCLN(),
-            $statements_checker
+            $statementsChecker->getFQCLN(),
+            $statementsChecker
         );
 
-        $fq_class_name = (string)$stmt->class->inferredType;
+        $fqClassName = (string)$stmt->class->inferredType;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
-        $prop_name = $stmt->name;
+        $propName = $stmt->name;
 
-        if (!$prop_name instanceof PhpParser\Node\Identifier) {
+        if (!$propName instanceof PhpParser\Node\Identifier) {
             return;
         }
 
-        $property_id = $fq_class_name . '::$' . $prop_name;
+        $propertyId = $fqClassName . '::$' . $propName;
 
-        if (!$codebase->properties->propertyExists($property_id)) {
+        if (!$codebase->properties->propertyExists($propertyId)) {
             if (IssueBuffer::accepts(
                 new UndefinedPropertyAssignment(
-                    'Static property ' . $property_id . ' is not defined',
-                    new CodeLocation($statements_checker->getSource(), $stmt),
-                    $property_id
+                    'Static property ' . $propertyId . ' is not defined',
+                    new CodeLocation($statementsChecker->getSource(), $stmt),
+                    $propertyId
                 ),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSuppressedIssues()
             )) {
                 return false;
             }
@@ -696,163 +696,163 @@ class PropertyAssignmentChecker
         }
 
         if (ClassLikeChecker::checkPropertyVisibility(
-            $property_id,
+            $propertyId,
             $context->self,
-            $statements_checker->getSource(),
-            new CodeLocation($statements_checker->getSource(), $stmt),
-            $statements_checker->getSuppressedIssues()
+            $statementsChecker->getSource(),
+            new CodeLocation($statementsChecker->getSource(), $stmt),
+            $statementsChecker->getSuppressedIssues()
         ) === false) {
             return false;
         }
 
-        $declaring_property_class = $codebase->properties->getDeclaringClassForProperty(
-            $fq_class_name . '::$' . $prop_name->name
+        $declaringPropertyClass = $codebase->properties->getDeclaringClassForProperty(
+            $fqClassName . '::$' . $propName->name
         );
 
-        $class_storage = $project_checker->classlike_storage_provider->get((string)$declaring_property_class);
+        $classStorage = $projectChecker->classlikeStorageProvider->get((string)$declaringPropertyClass);
 
-        $property_storage = $class_storage->properties[$prop_name->name];
+        $propertyStorage = $classStorage->properties[$propName->name];
 
-        if ($var_id) {
-            $context->vars_in_scope[$var_id] = $assignment_value_type;
+        if ($varId) {
+            $context->varsInScope[$varId] = $assignmentValueType;
         }
 
-        $class_property_type = $property_storage->type;
+        $classPropertyType = $propertyStorage->type;
 
-        if ($class_property_type === false) {
-            $class_property_type = Type::getMixed();
+        if ($classPropertyType === false) {
+            $classPropertyType = Type::getMixed();
 
-            if (!$assignment_value_type->isMixed()) {
-                if ($property_storage->suggested_type) {
-                    $property_storage->suggested_type = Type::combineUnionTypes(
-                        $assignment_value_type,
-                        $property_storage->suggested_type
+            if (!$assignmentValueType->isMixed()) {
+                if ($propertyStorage->suggestedType) {
+                    $propertyStorage->suggestedType = Type::combineUnionTypes(
+                        $assignmentValueType,
+                        $propertyStorage->suggestedType
                     );
                 } else {
-                    $property_storage->suggested_type = Type::combineUnionTypes(
+                    $propertyStorage->suggestedType = Type::combineUnionTypes(
                         Type::getNull(),
-                        $assignment_value_type
+                        $assignmentValueType
                     );
                 }
             }
         } else {
-            $class_property_type = clone $class_property_type;
+            $classPropertyType = clone $classPropertyType;
         }
 
-        if ($assignment_value_type->isMixed()) {
+        if ($assignmentValueType->isMixed()) {
             return null;
         }
 
-        if ($class_property_type->isMixed()) {
+        if ($classPropertyType->isMixed()) {
             return null;
         }
 
-        $class_property_type = ExpressionChecker::fleshOutType(
-            $project_checker,
-            $class_property_type,
-            $fq_class_name,
-            $fq_class_name
+        $classPropertyType = ExpressionChecker::fleshOutType(
+            $projectChecker,
+            $classPropertyType,
+            $fqClassName,
+            $fqClassName
         );
 
-        $type_match_found = TypeChecker::isContainedBy(
-            $project_checker->codebase,
-            $assignment_value_type,
-            $class_property_type,
+        $typeMatchFound = TypeChecker::isContainedBy(
+            $projectChecker->codebase,
+            $assignmentValueType,
+            $classPropertyType,
             true,
             true,
-            $has_scalar_match,
-            $type_coerced,
-            $type_coerced_from_mixed,
-            $to_string_cast
+            $hasScalarMatch,
+            $typeCoerced,
+            $typeCoercedFromMixed,
+            $toStringCast
         );
 
-        if ($type_coerced) {
-            if ($type_coerced_from_mixed) {
+        if ($typeCoerced) {
+            if ($typeCoercedFromMixed) {
                 if (IssueBuffer::accepts(
                     new MixedTypeCoercion(
-                        $var_id . ' expects \'' . $class_property_type . '\', '
-                            . ' parent type `' . $assignment_value_type . '` provided',
+                        $varId . ' expects \'' . $classPropertyType . '\', '
+                            . ' parent type `' . $assignmentValueType . '` provided',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt,
-                            $context->include_location
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt,
+                            $context->includeLocation
                         )
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // keep soldiering on
                 }
             } else {
                 if (IssueBuffer::accepts(
                     new TypeCoercion(
-                        $var_id . ' expects \'' . $class_property_type . '\', '
-                            . ' parent type \'' . $assignment_value_type . '\' provided',
+                        $varId . ' expects \'' . $classPropertyType . '\', '
+                            . ' parent type \'' . $assignmentValueType . '\' provided',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt,
-                            $context->include_location
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt,
+                            $context->includeLocation
                         )
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // keep soldiering on
                 }
             }
         }
 
-        if ($to_string_cast) {
+        if ($toStringCast) {
             if (IssueBuffer::accepts(
                 new ImplicitToStringCast(
-                    $var_id . ' expects \'' . $class_property_type . '\', '
-                        . '\'' . $assignment_value_type . '\' provided with a __toString method',
+                    $varId . ' expects \'' . $classPropertyType . '\', '
+                        . '\'' . $assignmentValueType . '\' provided with a __toString method',
                     new CodeLocation(
-                        $statements_checker->getSource(),
-                        $assignment_value ?: $stmt,
-                        $context->include_location
+                        $statementsChecker->getSource(),
+                        $assignmentValue ?: $stmt,
+                        $context->includeLocation
                     )
                 ),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSuppressedIssues()
             )) {
                 // fall through
             }
         }
 
-        if (!$type_match_found && !$type_coerced) {
-            if (TypeChecker::canBeContainedBy($codebase, $assignment_value_type, $class_property_type)) {
+        if (!$typeMatchFound && !$typeCoerced) {
+            if (TypeChecker::canBeContainedBy($codebase, $assignmentValueType, $classPropertyType)) {
                 if (IssueBuffer::accepts(
                     new PossiblyInvalidPropertyAssignmentValue(
-                        $var_id . ' with declared type \'' . $class_property_type . '\' cannot be assigned type \'' .
-                            $assignment_value_type . '\'',
+                        $varId . ' with declared type \'' . $classPropertyType . '\' cannot be assigned type \'' .
+                            $assignmentValueType . '\'',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt
                         ),
-                        $property_id
+                        $propertyId
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
             } else {
                 if (IssueBuffer::accepts(
                     new InvalidPropertyAssignmentValue(
-                        $var_id . ' with declared type \'' . $class_property_type . '\' cannot be assigned type \'' .
-                            $assignment_value_type . '\'',
+                        $varId . ' with declared type \'' . $classPropertyType . '\' cannot be assigned type \'' .
+                            $assignmentValueType . '\'',
                         new CodeLocation(
-                            $statements_checker->getSource(),
-                            $assignment_value ?: $stmt
+                            $statementsChecker->getSource(),
+                            $assignmentValue ?: $stmt
                         ),
-                        $property_id
+                        $propertyId
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
             }
         }
 
-        if ($var_id) {
-            $context->vars_in_scope[$var_id] = $assignment_value_type;
+        if ($varId) {
+            $context->varsInScope[$varId] = $assignmentValueType;
         }
 
         return null;

@@ -16,14 +16,14 @@ class JsonOutputTest extends TestCase
         // `TestCase::setUp()` creates its own ProjectChecker and Config instance, but we don't want to do that in this
         // case, so don't run a `parent::setUp()` call here.
         FileChecker::clearCache();
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
 
         $config = new TestConfig();
-        $config->throw_exception = false;
+        $config->throwException = false;
 
-        $this->project_checker = new ProjectChecker(
+        $this->projectChecker = new ProjectChecker(
             $config,
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider(),
@@ -32,7 +32,7 @@ class JsonOutputTest extends TestCase
             ProjectChecker::TYPE_JSON
         );
 
-        $this->project_checker->getCodebase()->reportUnusedCode();
+        $this->projectChecker->getCodebase()->reportUnusedCode();
     }
 
     /**
@@ -40,24 +40,24 @@ class JsonOutputTest extends TestCase
      *
      * @param string $code
      * @param string $message
-     * @param int $line_number
+     * @param int $lineNumber
      * @param string $error
      *
      * @return void
      */
-    public function testJsonOutputErrors($code, $message, $line_number, $error)
+    public function testJsonOutputErrors($code, $message, $lineNumber, $error)
     {
         $this->addFile('somefile.php', $code);
         $this->analyzeFile('somefile.php', new Context());
-        $issue_data = IssueBuffer::getIssuesData()[0];
+        $issueData = IssueBuffer::getIssuesData()[0];
 
-        $this->assertSame('somefile.php', $issue_data['file_path']);
-        $this->assertSame('error', $issue_data['severity']);
-        $this->assertSame($message, $issue_data['message']);
-        $this->assertSame($line_number, $issue_data['line_from']);
+        $this->assertSame('somefile.php', $issueData['file_path']);
+        $this->assertSame('error', $issueData['severity']);
+        $this->assertSame($message, $issueData['message']);
+        $this->assertSame($lineNumber, $issueData['line_from']);
         $this->assertSame(
             $error,
-            substr($code, $issue_data['from'], $issue_data['to'] - $issue_data['from'])
+            substr($code, $issueData['from'], $issueData['to'] - $issueData['from'])
         );
     }
 
@@ -66,7 +66,7 @@ class JsonOutputTest extends TestCase
      */
     public function testJsonOutputForGetPsalmDotOrg()
     {
-        $file_contents = '<?php
+        $fileContents = '<?php
 function psalmCanVerify(int $your_code): ?string {
   return $as_you . "type";
 }
@@ -84,14 +84,14 @@ echo $a;';
 
         $this->addFile(
             'somefile.php',
-            $file_contents
+            $fileContents
         );
 
-        $this->project_checker->getCodebase()->classlikes->checkClassReferences();
+        $this->projectChecker->getCodebase()->classlikes->checkClassReferences();
 
         $this->analyzeFile('somefile.php', new Context());
 
-        $issue_data = IssueBuffer::getIssuesData();
+        $issueData = IssueBuffer::getIssuesData();
         $this->assertSame(
             [
                 [
@@ -182,7 +182,7 @@ echo $a;';
                     'column_to' => 8,
                 ],
             ],
-            $issue_data
+            $issueData
         );
     }
 

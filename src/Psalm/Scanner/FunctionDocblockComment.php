@@ -6,7 +6,7 @@ class FunctionDocblockComment
     /**
      * @var string|null
      */
-    public $return_type = null;
+    public $returnType = null;
 
     /**
      * @var array<int, array{name:string, type:string, line_number: int}>
@@ -37,14 +37,14 @@ class FunctionDocblockComment
      *
      * @var bool
      */
-    public $ignore_nullable_return = false;
+    public $ignoreNullableReturn = false;
 
     /**
      * Whether or not to ignore the nullability of this function's return type
      *
      * @var bool
      */
-    public $ignore_falsable_return = false;
+    public $ignoreFalsableReturn = false;
 
     /**
      * @var array<int, string>
@@ -57,17 +57,17 @@ class FunctionDocblockComment
     public $throws = [];
 
     /** @var int */
-    public $return_type_line_number;
+    public $returnTypeLineNumber;
 
     /**
      * @var array<int, array<int, string>>
      */
-    public $template_type_names = [];
+    public $templateTypeNames = [];
 
     /**
      * @var array<int, array{template_type: string, param_name: string, line_number?: int}>
      */
-    public $template_typeofs = [];
+    public $templateTypeofs = [];
 
     /**
      * @var array<int, array{type: string, param_name: string}>
@@ -77,10 +77,10 @@ class FunctionDocblockComment
     /**
      * @var array<int, array{type: string, param_name: string}>
      */
-    public $if_true_assertions = [];
+    public $ifTrueAssertions = [];
 
     /**
      * @var array<int, array{type: string, param_name: string}>
      */
-    public $if_false_assertions = [];
+    public $ifFalseAssertions = [];
 }

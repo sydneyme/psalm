@@ -8,21 +8,21 @@ class ProjectFileFilter extends FileFilter
     /**
      * @var ProjectFileFilter|null
      */
-    private $file_filter = null;
+    private $fileFilter = null;
 
     /**
      * @param  SimpleXMLElement $e
-     * @param  string           $base_dir
+     * @param  string           $baseDir
      * @param  bool             $inclusive
      *
      * @return static
      */
     public static function loadFromXMLElement(
         SimpleXMLElement $e,
-        $base_dir,
+        $baseDir,
         $inclusive
     ) {
-        $filter = parent::loadFromXMLElement($e, $base_dir, $inclusive);
+        $filter = parent::loadFromXMLElement($e, $baseDir, $inclusive);
 
         if (isset($e->ignoreFiles)) {
             if (!$inclusive) {
@@ -30,39 +30,39 @@ class ProjectFileFilter extends FileFilter
             }
 
             /** @var \SimpleXMLElement $e->ignoreFiles */
-            $filter->file_filter = static::loadFromXMLElement($e->ignoreFiles, $base_dir, false);
+            $filter->fileFilter = static::loadFromXMLElement($e->ignoreFiles, $baseDir, false);
         }
 
         return $filter;
     }
 
     /**
-     * @param  string  $file_name
-     * @param  bool $case_sensitive
+     * @param  string  $fileName
+     * @param  bool $caseSensitive
      *
      * @return bool
      */
-    public function allows($file_name, $case_sensitive = false)
+    public function allows($fileName, $caseSensitive = false)
     {
-        if ($this->inclusive && $this->file_filter) {
-            if (!$this->file_filter->allows($file_name, $case_sensitive)) {
+        if ($this->inclusive && $this->fileFilter) {
+            if (!$this->fileFilter->allows($fileName, $caseSensitive)) {
                 return false;
             }
         }
 
-        return parent::allows($file_name, $case_sensitive);
+        return parent::allows($fileName, $caseSensitive);
     }
 
     /**
-     * @param  string  $file_name
-     * @param  bool $case_sensitive
+     * @param  string  $fileName
+     * @param  bool $caseSensitive
      *
      * @return bool
      */
-    public function forbids($file_name, $case_sensitive = false)
+    public function forbids($fileName, $caseSensitive = false)
     {
-        if ($this->inclusive && $this->file_filter) {
-            if (!$this->file_filter->allows($file_name, $case_sensitive)) {
+        if ($this->inclusive && $this->fileFilter) {
+            if (!$this->fileFilter->allows($fileName, $caseSensitive)) {
                 return true;
             }
         }
@@ -71,20 +71,20 @@ class ProjectFileFilter extends FileFilter
     }
 
     /**
-     * @param  string $file_name
-     * @param  bool   $case_sensitive
+     * @param  string $fileName
+     * @param  bool   $caseSensitive
      *
      * @return bool
      */
-    public function reportTypeStats($file_name, $case_sensitive = false)
+    public function reportTypeStats($fileName, $caseSensitive = false)
     {
-        foreach ($this->ignore_type_stats as $exclude_dir => $_) {
-            if ($case_sensitive) {
-                if (strpos($file_name, $exclude_dir) === 0) {
+        foreach ($this->ignoreTypeStats as $excludeDir => $_) {
+            if ($caseSensitive) {
+                if (strpos($fileName, $excludeDir) === 0) {
                     return false;
                 }
             } else {
-                if (stripos($file_name, $exclude_dir) === 0) {
+                if (stripos($fileName, $excludeDir) === 0) {
                     return false;
                 }
             }

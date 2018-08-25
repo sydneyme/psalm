@@ -17,47 +17,47 @@ class StringChecker extends \Psalm\Plugin
     /**
      * Called after an expression has been checked
      *
-     * @param  StatementsChecker    $statements_checker
+     * @param  StatementsChecker    $statementsChecker
      * @param  PhpParser\Node\Expr  $stmt
      * @param  Context              $context
-     * @param  CodeLocation         $code_location
-     * @param  string[]             $suppressed_issues
-     * @param  FileManipulation[]   $file_replacements
+     * @param  CodeLocation         $codeLocation
+     * @param  string[]             $suppressedIssues
+     * @param  FileManipulation[]   $fileReplacements
      *
      * @return null|false
      */
     public static function afterExpressionCheck(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr $stmt,
         Context $context,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        array &$file_replacements = []
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        array &$fileReplacements = []
     ) {
         if ($stmt instanceof \PhpParser\Node\Scalar\String_) {
             // Replace "Psalm" with your namespace
-            $class_or_class_method = '/^\\\?Psalm(\\\[A-Z][A-Za-z0-9]+)+(::[A-Za-z0-9]+)?$/';
+            $classOrClassMethod = '/^\\\?Psalm(\\\[A-Z][A-Za-z0-9]+)+(::[A-Za-z0-9]+)?$/';
 
-            if (preg_match($class_or_class_method, $stmt->value)) {
-                $fq_class_name = preg_split('/[:]/', $stmt->value)[0];
+            if (preg_match($classOrClassMethod, $stmt->value)) {
+                $fqClassName = preg_split('/[:]/', $stmt->value)[0];
 
-                $project_checker = $statements_checker->getFileChecker()->project_checker;
+                $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
                 if (Checker\ClassChecker::checkFullyQualifiedClassLikeName(
-                    $statements_checker,
-                    $fq_class_name,
-                    $code_location,
-                    $suppressed_issues
+                    $statementsChecker,
+                    $fqClassName,
+                    $codeLocation,
+                    $suppressedIssues
                 ) === false
                 ) {
                     return false;
                 }
 
-                if ($fq_class_name !== $stmt->value) {
+                if ($fqClassName !== $stmt->value) {
                     if (Checker\MethodChecker::checkMethodExists(
-                        $project_checker,
+                        $projectChecker,
                         $stmt->value,
-                        $code_location,
-                        $suppressed_issues
+                        $codeLocation,
+                        $suppressedIssues
                     )
                     ) {
                         return false;

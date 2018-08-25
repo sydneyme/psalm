@@ -6,7 +6,7 @@ class PropertyMap
     /**
      * @var array<string, array<string, string>>|null
      */
-    private static $property_map;
+    private static $propertyMap;
 
     /**
      * Gets the method/function call map
@@ -17,30 +17,30 @@ class PropertyMap
      */
     public static function getPropertyMap()
     {
-        if (self::$property_map !== null) {
-            return self::$property_map;
+        if (self::$propertyMap !== null) {
+            return self::$propertyMap;
         }
 
         /** @var array<string, array<string, string>> */
-        $property_map = require_once(__DIR__ . '/../PropertyMap.php');
+        $propertyMap = require_once(__DIR__ . '/../PropertyMap.php');
 
-        self::$property_map = [];
+        self::$propertyMap = [];
 
-        foreach ($property_map as $key => $value) {
-            $cased_key = strtolower($key);
-            self::$property_map[$cased_key] = $value;
+        foreach ($propertyMap as $key => $value) {
+            $casedKey = strtolower($key);
+            self::$propertyMap[$casedKey] = $value;
         }
 
-        return self::$property_map;
+        return self::$propertyMap;
     }
 
     /**
-     * @param   string $class_name
+     * @param   string $className
      *
      * @return  bool
      */
-    public static function inPropertyMap($class_name)
+    public static function inPropertyMap($className)
     {
-        return isset(self::getPropertyMap()[strtolower($class_name)]);
+        return isset(self::getPropertyMap()[strtolower($className)]);
     }
 }

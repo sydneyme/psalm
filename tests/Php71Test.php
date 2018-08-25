@@ -148,17 +148,17 @@ class Php71Test extends TestCase
                         ["id" => 2, "name" => "Fred"],
                     ];
 
-                    $last_id = null;
-                    $last_name = null;
+                    $lastId = null;
+                    $lastName = null;
 
                     // list() style
                     foreach ($data as list("id" => $id, "name" => $name)) {
-                        $last_id = $id;
-                        $last_name = $name;
+                        $lastId = $id;
+                        $lastName = $name;
                     }',
                 'assertions' => [
-                    '$last_id' => 'int|null',
-                    '$last_name' => 'string|null',
+                    '$lastId' => 'int|null',
+                    '$lastName' => 'string|null',
                 ],
             ],
             'arrayDestructuringInForeachWithKeys' => [
@@ -168,17 +168,17 @@ class Php71Test extends TestCase
                         ["id" => 2, "name" => "Fred"],
                     ];
 
-                    $last_id = null;
-                    $last_name = null;
+                    $lastId = null;
+                    $lastName = null;
 
                     // [] style
                     foreach ($data as ["id" => $id, "name" => $name]) {
-                        $last_id = $id;
-                        $last_name = $name;
+                        $lastId = $id;
+                        $lastName = $name;
                     }',
                 'assertions' => [
-                    '$last_id' => 'int|null',
-                    '$last_name' => 'string|null',
+                    '$lastId' => 'int|null',
+                    '$lastName' => 'string|null',
                 ],
             ],
             'iterableArg' => [

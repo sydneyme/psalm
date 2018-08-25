@@ -21,7 +21,7 @@ class Reflection
     /**
      * @var ClassLikeStorageProvider
      */
-    private $storage_provider;
+    private $storageProvider;
 
     /**
      * @var Codebase
@@ -31,168 +31,168 @@ class Reflection
     /**
      * @var array<string, FunctionLikeStorage>
      */
-    private static $builtin_functions = [];
+    private static $builtinFunctions = [];
 
-    public function __construct(ClassLikeStorageProvider $storage_provider, Codebase $codebase)
+    public function __construct(ClassLikeStorageProvider $storageProvider, Codebase $codebase)
     {
-        $this->storage_provider = $storage_provider;
+        $this->storageProvider = $storageProvider;
         $this->codebase = $codebase;
-        self::$builtin_functions = [];
+        self::$builtinFunctions = [];
     }
 
     /**
      * @return void
      */
-    public function registerClass(\ReflectionClass $reflected_class)
+    public function registerClass(\ReflectionClass $reflectedClass)
     {
-        $class_name = $reflected_class->name;
+        $className = $reflectedClass->name;
 
-        if ($class_name === 'LibXMLError') {
-            $class_name = 'libXMLError';
+        if ($className === 'LibXMLError') {
+            $className = 'libXMLError';
         }
 
-        $class_name_lower = strtolower($class_name);
+        $classNameLower = strtolower($className);
 
         try {
-            $this->storage_provider->get($class_name_lower);
+            $this->storageProvider->get($classNameLower);
 
             return;
         } catch (\Exception $e) {
             // this is fine
         }
 
-        $reflected_parent_class = $reflected_class->getParentClass();
+        $reflectedParentClass = $reflectedClass->getParentClass();
 
-        $storage = $this->storage_provider->create($class_name);
-        $storage->abstract = $reflected_class->isAbstract();
+        $storage = $this->storageProvider->create($className);
+        $storage->abstract = $reflectedClass->isAbstract();
 
-        if ($reflected_parent_class) {
-            $parent_class_name = $reflected_parent_class->getName();
-            $this->registerClass($reflected_parent_class);
+        if ($reflectedParentClass) {
+            $parentClassName = $reflectedParentClass->getName();
+            $this->registerClass($reflectedParentClass);
 
-            $parent_storage = $this->storage_provider->get($parent_class_name);
+            $parentStorage = $this->storageProvider->get($parentClassName);
 
-            $this->registerInheritedMethods($class_name, $parent_class_name);
-            $this->registerInheritedProperties($class_name, $parent_class_name);
+            $this->registerInheritedMethods($className, $parentClassName);
+            $this->registerInheritedProperties($className, $parentClassName);
 
-            $storage->class_implements = $parent_storage->class_implements;
+            $storage->classImplements = $parentStorage->classImplements;
 
-            $storage->public_class_constants = $parent_storage->public_class_constants;
-            $storage->protected_class_constants = $parent_storage->protected_class_constants;
-            $parent_class_name_lc = strtolower($parent_class_name);
-            $storage->parent_classes = array_merge(
-                [$parent_class_name_lc => $parent_class_name_lc],
-                $parent_storage->parent_classes
+            $storage->publicClassConstants = $parentStorage->publicClassConstants;
+            $storage->protectedClassConstants = $parentStorage->protectedClassConstants;
+            $parentClassNameLc = strtolower($parentClassName);
+            $storage->parentClasses = array_merge(
+                [$parentClassNameLc => $parentClassNameLc],
+                $parentStorage->parentClasses
             );
 
-            $storage->used_traits = $parent_storage->used_traits;
+            $storage->usedTraits = $parentStorage->usedTraits;
         }
 
-        $class_properties = $reflected_class->getProperties();
+        $classProperties = $reflectedClass->getProperties();
 
-        $public_mapped_properties = PropertyMap::inPropertyMap($class_name)
-            ? PropertyMap::getPropertyMap()[strtolower($class_name)]
+        $publicMappedProperties = PropertyMap::inPropertyMap($className)
+            ? PropertyMap::getPropertyMap()[strtolower($className)]
             : [];
 
-        /** @var \ReflectionProperty $class_property */
-        foreach ($class_properties as $class_property) {
-            $property_name = $class_property->getName();
-            $storage->properties[$property_name] = new PropertyStorage();
+        /** @var \ReflectionProperty $classProperty */
+        foreach ($classProperties as $classProperty) {
+            $propertyName = $classProperty->getName();
+            $storage->properties[$propertyName] = new PropertyStorage();
 
-            $storage->properties[$property_name]->type = Type::getMixed();
+            $storage->properties[$propertyName]->type = Type::getMixed();
 
-            if ($class_property->isStatic()) {
-                $storage->properties[$property_name]->is_static = true;
+            if ($classProperty->isStatic()) {
+                $storage->properties[$propertyName]->isStatic = true;
             }
 
-            if ($class_property->isPublic()) {
-                $storage->properties[$property_name]->visibility = ClassLikeChecker::VISIBILITY_PUBLIC;
-            } elseif ($class_property->isProtected()) {
-                $storage->properties[$property_name]->visibility = ClassLikeChecker::VISIBILITY_PROTECTED;
-            } elseif ($class_property->isPrivate()) {
-                $storage->properties[$property_name]->visibility = ClassLikeChecker::VISIBILITY_PRIVATE;
+            if ($classProperty->isPublic()) {
+                $storage->properties[$propertyName]->visibility = ClassLikeChecker::VISIBILITY_PUBLIC;
+            } elseif ($classProperty->isProtected()) {
+                $storage->properties[$propertyName]->visibility = ClassLikeChecker::VISIBILITY_PROTECTED;
+            } elseif ($classProperty->isPrivate()) {
+                $storage->properties[$propertyName]->visibility = ClassLikeChecker::VISIBILITY_PRIVATE;
             }
 
-            $property_id = (string)$class_property->class . '::$' . $property_name;
+            $propertyId = (string)$classProperty->class . '::$' . $propertyName;
 
-            $storage->declaring_property_ids[$property_name] = (string)$class_property->class;
-            $storage->appearing_property_ids[$property_name] = $property_id;
+            $storage->declaringPropertyIds[$propertyName] = (string)$classProperty->class;
+            $storage->appearingPropertyIds[$propertyName] = $propertyId;
 
-            if (!$class_property->isPrivate()) {
-                $storage->inheritable_property_ids[$property_name] = $property_id;
+            if (!$classProperty->isPrivate()) {
+                $storage->inheritablePropertyIds[$propertyName] = $propertyId;
             }
         }
 
         // have to do this separately as there can be new properties here
-        foreach ($public_mapped_properties as $property_name => $type) {
-            if (!isset($storage->properties[$property_name])) {
-                $storage->properties[$property_name] = new PropertyStorage();
-                $storage->properties[$property_name]->visibility = ClassLikeChecker::VISIBILITY_PUBLIC;
+        foreach ($publicMappedProperties as $propertyName => $type) {
+            if (!isset($storage->properties[$propertyName])) {
+                $storage->properties[$propertyName] = new PropertyStorage();
+                $storage->properties[$propertyName]->visibility = ClassLikeChecker::VISIBILITY_PUBLIC;
 
-                $property_id = $class_name . '::$' . $property_name;
+                $propertyId = $className . '::$' . $propertyName;
 
-                $storage->declaring_property_ids[$property_name] = $class_name;
-                $storage->appearing_property_ids[$property_name] = $property_id;
-                $storage->inheritable_property_ids[$property_name] = $property_id;
+                $storage->declaringPropertyIds[$propertyName] = $className;
+                $storage->appearingPropertyIds[$propertyName] = $propertyId;
+                $storage->inheritablePropertyIds[$propertyName] = $propertyId;
             }
 
-            $storage->properties[$property_name]->type = Type::parseString($type);
+            $storage->properties[$propertyName]->type = Type::parseString($type);
         }
 
         /** @var array<string, int|string|float|null|array> */
-        $class_constants = $reflected_class->getConstants();
+        $classConstants = $reflectedClass->getConstants();
 
-        foreach ($class_constants as $name => $value) {
-            $storage->public_class_constants[$name] = ClassLikeChecker::getTypeFromValue($value);
+        foreach ($classConstants as $name => $value) {
+            $storage->publicClassConstants[$name] = ClassLikeChecker::getTypeFromValue($value);
         }
 
-        if ($reflected_class->isInterface()) {
-            $this->codebase->classlikes->addFullyQualifiedInterfaceName($class_name);
-        } elseif ($reflected_class->isTrait()) {
-            $this->codebase->classlikes->addFullyQualifiedTraitName($class_name);
+        if ($reflectedClass->isInterface()) {
+            $this->codebase->classlikes->addFullyQualifiedInterfaceName($className);
+        } elseif ($reflectedClass->isTrait()) {
+            $this->codebase->classlikes->addFullyQualifiedTraitName($className);
         } else {
-            $this->codebase->classlikes->addFullyQualifiedClassName($class_name);
+            $this->codebase->classlikes->addFullyQualifiedClassName($className);
         }
 
-        $reflection_methods = $reflected_class->getMethods(
+        $reflectionMethods = $reflectedClass->getMethods(
             (int) (\ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED)
         );
 
-        if ($class_name_lower === 'generator') {
-            $storage->template_types = ['TKey' => Type::getMixed(), 'TValue' => Type::getMixed()];
+        if ($classNameLower === 'generator') {
+            $storage->templateTypes = ['TKey' => Type::getMixed(), 'TValue' => Type::getMixed()];
         }
 
-        $interfaces = $reflected_class->getInterfaces();
+        $interfaces = $reflectedClass->getInterfaces();
 
         /** @var \ReflectionClass $interface */
         foreach ($interfaces as $interface) {
-            $interface_name = $interface->getName();
+            $interfaceName = $interface->getName();
             $this->registerClass($interface);
 
-            if ($reflected_class->isInterface()) {
-                $storage->parent_interfaces[strtolower($interface_name)] = $interface_name;
+            if ($reflectedClass->isInterface()) {
+                $storage->parentInterfaces[strtolower($interfaceName)] = $interfaceName;
             } else {
-                $storage->class_implements[strtolower($interface_name)] = $interface_name;
+                $storage->classImplements[strtolower($interfaceName)] = $interfaceName;
             }
         }
 
-        /** @var \ReflectionMethod $reflection_method */
-        foreach ($reflection_methods as $reflection_method) {
-            $method_reflection_class = $reflection_method->getDeclaringClass();
+        /** @var \ReflectionMethod $reflectionMethod */
+        foreach ($reflectionMethods as $reflectionMethod) {
+            $methodReflectionClass = $reflectionMethod->getDeclaringClass();
 
-            $this->registerClass($method_reflection_class);
+            $this->registerClass($methodReflectionClass);
 
-            $this->extractReflectionMethodInfo($reflection_method);
+            $this->extractReflectionMethodInfo($reflectionMethod);
 
-            if ($reflection_method->class !== $class_name) {
+            if ($reflectionMethod->class !== $className) {
                 $this->codebase->methods->setDeclaringMethodId(
-                    $class_name . '::' . strtolower($reflection_method->name),
-                    $reflection_method->class . '::' . strtolower($reflection_method->name)
+                    $className . '::' . strtolower($reflectionMethod->name),
+                    $reflectionMethod->class . '::' . strtolower($reflectionMethod->name)
                 );
 
                 $this->codebase->methods->setAppearingMethodId(
-                    $class_name . '::' . strtolower($reflection_method->name),
-                    $reflection_method->class . '::' . strtolower($reflection_method->name)
+                    $className . '::' . strtolower($reflectionMethod->name),
+                    $reflectionMethod->class . '::' . strtolower($reflectionMethod->name)
                 );
 
                 continue;
@@ -207,46 +207,46 @@ class Reflection
      */
     public function extractReflectionMethodInfo(\ReflectionMethod $method)
     {
-        $method_name = strtolower($method->getName());
+        $methodName = strtolower($method->getName());
 
-        $class_storage = $this->storage_provider->get($method->class);
+        $classStorage = $this->storageProvider->get($method->class);
 
-        if (isset($class_storage->methods[strtolower($method_name)])) {
+        if (isset($classStorage->methods[strtolower($methodName)])) {
             return;
         }
 
-        $method_id = $method->class . '::' . $method_name;
+        $methodId = $method->class . '::' . $methodName;
 
-        $storage = $class_storage->methods[strtolower($method_name)] = new MethodStorage();
+        $storage = $classStorage->methods[strtolower($methodName)] = new MethodStorage();
 
-        $storage->cased_name = $method->name;
+        $storage->casedName = $method->name;
 
         if (strtolower((string)$method->name) === strtolower((string)$method->class)) {
             $this->codebase->methods->setDeclaringMethodId(
                 $method->class . '::__construct',
-                $method->class . '::' . $method_name
+                $method->class . '::' . $methodName
             );
             $this->codebase->methods->setAppearingMethodId(
                 $method->class . '::__construct',
-                $method->class . '::' . $method_name
+                $method->class . '::' . $methodName
             );
         }
 
-        $declaring_class = $method->getDeclaringClass();
+        $declaringClass = $method->getDeclaringClass();
 
-        $storage->is_static = $method->isStatic();
+        $storage->isStatic = $method->isStatic();
         $storage->abstract = $method->isAbstract();
 
-        $class_storage->declaring_method_ids[$method_name] =
-            $declaring_class->name . '::' . strtolower((string)$method->getName());
+        $classStorage->declaringMethodIds[$methodName] =
+            $declaringClass->name . '::' . strtolower((string)$method->getName());
 
-        $class_storage->inheritable_method_ids[$method_name] = $class_storage->declaring_method_ids[$method_name];
-        $class_storage->appearing_method_ids[$method_name] = $class_storage->declaring_method_ids[$method_name];
-        $class_storage->overridden_method_ids[$method_name] = [];
+        $classStorage->inheritableMethodIds[$methodName] = $classStorage->declaringMethodIds[$methodName];
+        $classStorage->appearingMethodIds[$methodName] = $classStorage->declaringMethodIds[$methodName];
+        $classStorage->overriddenMethodIds[$methodName] = [];
 
         try {
-            $storage->return_type = CallMap::getReturnTypeFromCallMap($method_id);
-            $storage->return_type->queueClassLikesForScanning($this->codebase);
+            $storage->returnType = CallMap::getReturnTypeFromCallMap($methodId);
+            $storage->returnType->queueClassLikesForScanning($this->codebase);
         } catch (\InvalidArgumentException $e) {
             // do nothing
         }
@@ -255,34 +255,34 @@ class Reflection
             ? ClassLikeChecker::VISIBILITY_PRIVATE
             : ($method->isProtected() ? ClassLikeChecker::VISIBILITY_PROTECTED : ClassLikeChecker::VISIBILITY_PUBLIC);
 
-        $possible_params = CallMap::getParamsFromCallMap($method_id);
+        $possibleParams = CallMap::getParamsFromCallMap($methodId);
 
-        if ($possible_params === null) {
+        if ($possibleParams === null) {
             $params = $method->getParameters();
 
             $storage->params = [];
 
             /** @var \ReflectionParameter $param */
             foreach ($params as $param) {
-                $param_array = $this->getReflectionParamData($param);
-                $storage->params[] = $param_array;
-                $storage->param_types[$param->name] = $param_array->type;
+                $paramArray = $this->getReflectionParamData($param);
+                $storage->params[] = $paramArray;
+                $storage->paramTypes[$param->name] = $paramArray->type;
             }
         } else {
-            foreach ($possible_params[0] as $param) {
+            foreach ($possibleParams[0] as $param) {
                 if ($param->type) {
                     $param->type->queueClassLikesForScanning($this->codebase);
                 }
             }
 
-            $storage->params = $possible_params[0];
+            $storage->params = $possibleParams[0];
         }
 
-        $storage->required_param_count = 0;
+        $storage->requiredParamCount = 0;
 
         foreach ($storage->params as $i => $param) {
-            if (!$param->is_optional) {
-                $storage->required_param_count = $i + 1;
+            if (!$param->isOptional) {
+                $storage->requiredParamCount = $i + 1;
             }
         }
     }
@@ -294,85 +294,85 @@ class Reflection
      */
     private function getReflectionParamData(\ReflectionParameter $param)
     {
-        $param_type_string = null;
+        $paramTypeString = null;
 
         if ($param->isArray()) {
-            $param_type_string = 'array';
+            $paramTypeString = 'array';
         } else {
             try {
-                $param_class = $param->getClass();
+                $paramClass = $param->getClass();
             } catch (\ReflectionException $e) {
-                $param_class = null;
+                $paramClass = null;
             }
 
-            if ($param_class) {
-                $param_type_string = (string)$param_class->getName();
+            if ($paramClass) {
+                $paramTypeString = (string)$paramClass->getName();
             }
         }
 
-        $is_nullable = false;
+        $isNullable = false;
 
-        $is_optional = (bool)$param->isOptional();
+        $isOptional = (bool)$param->isOptional();
 
         try {
-            $is_nullable = $param->getDefaultValue() === null;
+            $isNullable = $param->getDefaultValue() === null;
 
-            if ($param_type_string && $is_nullable) {
-                $param_type_string .= '|null';
+            if ($paramTypeString && $isNullable) {
+                $paramTypeString .= '|null';
             }
         } catch (\ReflectionException $e) {
             // do nothing
         }
 
-        $param_name = (string)$param->getName();
-        $param_type = $param_type_string ? Type::parseString($param_type_string) : Type::getMixed();
+        $paramName = (string)$param->getName();
+        $paramType = $paramTypeString ? Type::parseString($paramTypeString) : Type::getMixed();
 
         return new FunctionLikeParameter(
-            $param_name,
+            $paramName,
             (bool)$param->isPassedByReference(),
-            $param_type,
+            $paramType,
             null,
             null,
-            $is_optional,
-            $is_nullable,
+            $isOptional,
+            $isNullable,
             $param->isVariadic()
         );
     }
 
     /**
-     * @param  string $function_id
+     * @param  string $functionId
      *
      * @return false|null
      */
-    public function registerFunction($function_id)
+    public function registerFunction($functionId)
     {
         try {
-            $reflection_function = new \ReflectionFunction($function_id);
+            $reflectionFunction = new \ReflectionFunction($functionId);
 
-            $storage = self::$builtin_functions[$function_id] = new FunctionLikeStorage();
+            $storage = self::$builtinFunctions[$functionId] = new FunctionLikeStorage();
 
-            $reflection_params = $reflection_function->getParameters();
+            $reflectionParams = $reflectionFunction->getParameters();
 
             /** @var \ReflectionParameter $param */
-            foreach ($reflection_params as $param) {
-                $param_obj = $this->getReflectionParamData($param);
-                $storage->params[] = $param_obj;
+            foreach ($reflectionParams as $param) {
+                $paramObj = $this->getReflectionParamData($param);
+                $storage->params[] = $paramObj;
             }
 
-            $storage->required_param_count = 0;
+            $storage->requiredParamCount = 0;
 
             foreach ($storage->params as $i => $param) {
-                if (!$param->is_optional) {
-                    $storage->required_param_count = $i + 1;
+                if (!$param->isOptional) {
+                    $storage->requiredParamCount = $i + 1;
                 }
             }
 
-            $storage->cased_name = $reflection_function->getName();
+            $storage->casedName = $reflectionFunction->getName();
 
             if (version_compare(PHP_VERSION, '7.0.0dev', '>=')
-                && $reflection_return_type = $reflection_function->getReturnType()
+                && $reflectionReturnType = $reflectionFunction->getReturnType()
             ) {
-                $storage->return_type = Type::parseString((string)$reflection_return_type);
+                $storage->returnType = Type::parseString((string)$reflectionReturnType);
             }
         } catch (\ReflectionException $e) {
             return false;
@@ -380,103 +380,103 @@ class Reflection
     }
 
     /**
-     * @param string $fq_class_name
-     * @param string $parent_class
+     * @param string $fqClassName
+     * @param string $parentClass
      *
      * @return void
      */
     private function registerInheritedMethods(
-        $fq_class_name,
-        $parent_class
+        $fqClassName,
+        $parentClass
     ) {
-        $parent_storage = $this->storage_provider->get($parent_class);
-        $storage = $this->storage_provider->get($fq_class_name);
+        $parentStorage = $this->storageProvider->get($parentClass);
+        $storage = $this->storageProvider->get($fqClassName);
 
         // register where they appear (can never be in a trait)
-        foreach ($parent_storage->appearing_method_ids as $method_name => $appearing_method_id) {
-            $storage->appearing_method_ids[$method_name] = $appearing_method_id;
+        foreach ($parentStorage->appearingMethodIds as $methodName => $appearingMethodId) {
+            $storage->appearingMethodIds[$methodName] = $appearingMethodId;
         }
 
         // register where they're declared
-        foreach ($parent_storage->inheritable_method_ids as $method_name => $declaring_method_id) {
-            $storage->declaring_method_ids[$method_name] = $declaring_method_id;
-            $storage->inheritable_method_ids[$method_name] = $declaring_method_id;
+        foreach ($parentStorage->inheritableMethodIds as $methodName => $declaringMethodId) {
+            $storage->declaringMethodIds[$methodName] = $declaringMethodId;
+            $storage->inheritableMethodIds[$methodName] = $declaringMethodId;
 
-            $storage->overridden_method_ids[$method_name][] = $declaring_method_id;
+            $storage->overriddenMethodIds[$methodName][] = $declaringMethodId;
         }
     }
 
     /**
-     * @param string $fq_class_name
-     * @param string $parent_class
+     * @param string $fqClassName
+     * @param string $parentClass
      *
      * @return void
      */
     private function registerInheritedProperties(
-        $fq_class_name,
-        $parent_class
+        $fqClassName,
+        $parentClass
     ) {
-        $parent_storage = $this->storage_provider->get($parent_class);
-        $storage = $this->storage_provider->get($fq_class_name);
+        $parentStorage = $this->storageProvider->get($parentClass);
+        $storage = $this->storageProvider->get($fqClassName);
 
         // register where they appear (can never be in a trait)
-        foreach ($parent_storage->appearing_property_ids as $property_name => $appearing_property_id) {
-            if (!$parent_storage->is_trait
-                && isset($parent_storage->properties[$property_name])
-                && $parent_storage->properties[$property_name]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
+        foreach ($parentStorage->appearingPropertyIds as $propertyName => $appearingPropertyId) {
+            if (!$parentStorage->isTrait
+                && isset($parentStorage->properties[$propertyName])
+                && $parentStorage->properties[$propertyName]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
             ) {
                 continue;
             }
 
-            $storage->appearing_property_ids[$property_name] = $appearing_property_id;
+            $storage->appearingPropertyIds[$propertyName] = $appearingPropertyId;
         }
 
         // register where they're declared
-        foreach ($parent_storage->declaring_property_ids as $property_name => $declaring_property_class) {
-            if (!$parent_storage->is_trait
-                && isset($parent_storage->properties[$property_name])
-                && $parent_storage->properties[$property_name]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
+        foreach ($parentStorage->declaringPropertyIds as $propertyName => $declaringPropertyClass) {
+            if (!$parentStorage->isTrait
+                && isset($parentStorage->properties[$propertyName])
+                && $parentStorage->properties[$propertyName]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
             ) {
                 continue;
             }
 
-            $storage->declaring_property_ids[$property_name] = $declaring_property_class;
+            $storage->declaringPropertyIds[$propertyName] = $declaringPropertyClass;
         }
 
         // register where they're declared
-        foreach ($parent_storage->inheritable_property_ids as $property_name => $inheritable_property_id) {
-            if (!$parent_storage->is_trait
-                && isset($parent_storage->properties[$property_name])
-                && $parent_storage->properties[$property_name]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
+        foreach ($parentStorage->inheritablePropertyIds as $propertyName => $inheritablePropertyId) {
+            if (!$parentStorage->isTrait
+                && isset($parentStorage->properties[$propertyName])
+                && $parentStorage->properties[$propertyName]->visibility === ClassLikeChecker::VISIBILITY_PRIVATE
             ) {
                 continue;
             }
 
-            $storage->inheritable_property_ids[$property_name] = $inheritable_property_id;
+            $storage->inheritablePropertyIds[$propertyName] = $inheritablePropertyId;
         }
     }
 
     /**
-     * @param  string  $function_id
+     * @param  string  $functionId
      *
      * @return bool
      */
-    public function hasFunction($function_id)
+    public function hasFunction($functionId)
     {
-        return isset(self::$builtin_functions[$function_id]);
+        return isset(self::$builtinFunctions[$functionId]);
     }
 
     /**
-     * @param  string  $function_id
+     * @param  string  $functionId
      *
      * @return FunctionLikeStorage
      */
-    public function getFunctionStorage($function_id)
+    public function getFunctionStorage($functionId)
     {
-        if (isset(self::$builtin_functions[$function_id])) {
-            return self::$builtin_functions[$function_id];
+        if (isset(self::$builtinFunctions[$functionId])) {
+            return self::$builtinFunctions[$functionId];
         }
 
-        throw new \UnexpectedValueException('Expecting to have a function for ' . $function_id);
+        throw new \UnexpectedValueException('Expecting to have a function for ' . $functionId);
     }
 }

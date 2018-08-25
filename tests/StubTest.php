@@ -32,7 +32,7 @@ class StubTest extends TestCase
     public function setUp()
     {
         FileChecker::clearCache();
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
     }
 
     /**
@@ -42,17 +42,17 @@ class StubTest extends TestCase
      */
     private function getProjectCheckerWithConfig(Config $config)
     {
-        $project_checker = new \Psalm\Checker\ProjectChecker(
+        $projectChecker = new \Psalm\Checker\ProjectChecker(
             $config,
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider()
         );
 
-        $config->visitComposerAutoloadFiles($project_checker, false);
+        $config->visitComposerAutoloadFiles($projectChecker, false);
 
-        return $project_checker;
+        return $projectChecker;
     }
 
     /**
@@ -63,7 +63,7 @@ class StubTest extends TestCase
      */
     public function testNonexistentStubFile()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             Config::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -85,7 +85,7 @@ class StubTest extends TestCase
      */
     public function testStubFile()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -101,10 +101,10 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 $a = new SystemClass();
                 echo SystemClass::HELLO;
@@ -113,7 +113,7 @@ class StubTest extends TestCase
                 $c = SystemClass::bar(5, "hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -121,7 +121,7 @@ class StubTest extends TestCase
      */
     public function testNamespacedStubClass()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -137,10 +137,10 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 $a = new Foo\SystemClass();
                 echo Foo\SystemClass::HELLO;
@@ -151,7 +151,7 @@ class StubTest extends TestCase
                 echo Foo\BAR;'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -159,7 +159,7 @@ class StubTest extends TestCase
      */
     public function testStubFunction()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -175,15 +175,15 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 echo barBar("hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -191,7 +191,7 @@ class StubTest extends TestCase
      */
     public function testPolyfilledFunction()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -205,16 +205,16 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 $a = random_bytes(16);
                 $b = new_random_bytes(16);'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -222,7 +222,7 @@ class StubTest extends TestCase
      */
     public function testStubFunctionWithFunctionExists()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -238,16 +238,16 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 function_exists("fooBar");
                 echo barBar("hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -255,7 +255,7 @@ class StubTest extends TestCase
      */
     public function testNamespacedStubFunctionWithFunctionExists()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -271,17 +271,17 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 namespace A;
                 function_exists("fooBar");
                 echo barBar("hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -292,7 +292,7 @@ class StubTest extends TestCase
      */
     public function testNoStubFunction()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -304,15 +304,15 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 echo barBar("hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -320,7 +320,7 @@ class StubTest extends TestCase
      */
     public function testNamespacedStubFunction()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -336,15 +336,15 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 echo Foo\barBar("hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -352,7 +352,7 @@ class StubTest extends TestCase
      */
     public function testConditionalNamespacedStubFunction()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -368,15 +368,15 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 echo Foo\barBar("hello");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -384,7 +384,7 @@ class StubTest extends TestCase
      */
     public function testStubFileWithExistingClassDefinition()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -400,15 +400,15 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 $a = new LogicException(5);'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -416,7 +416,7 @@ class StubTest extends TestCase
      */
     public function testStubFileWithPartialClassDefinitionWithMoreMethods()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -432,10 +432,10 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 namespace Foo;
 
@@ -457,7 +457,7 @@ class StubTest extends TestCase
                 (new PartiallyStubbedClass())->bar(5);'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -468,7 +468,7 @@ class StubTest extends TestCase
      */
     public function testStubFileWithPartialClassDefinitionWithCoercion()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -484,10 +484,10 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 namespace Foo;
 
@@ -504,7 +504,7 @@ class StubTest extends TestCase
                 (new PartiallyStubbedClass())->foo("dasda");'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 
     /**
@@ -515,7 +515,7 @@ class StubTest extends TestCase
      */
     public function testStubFileWithPartialClassDefinitionGeneralReturnType()
     {
-        $this->project_checker = $this->getProjectCheckerWithConfig(
+        $this->projectChecker = $this->getProjectCheckerWithConfig(
             TestConfig::loadFromXML(
                 dirname(__DIR__),
                 '<?xml version="1.0"?>
@@ -531,10 +531,10 @@ class StubTest extends TestCase
             )
         );
 
-        $file_path = getcwd() . '/src/somefile.php';
+        $filePath = getcwd() . '/src/somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             '<?php
                 namespace Foo;
 
@@ -549,6 +549,6 @@ class StubTest extends TestCase
                 }'
         );
 
-        $this->analyzeFile($file_path, new Context());
+        $this->analyzeFile($filePath, new Context());
     }
 }

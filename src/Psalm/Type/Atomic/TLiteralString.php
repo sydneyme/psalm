@@ -42,32 +42,32 @@ class TLiteralString extends TString
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return string|null
      */
     public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     ) {
-        return $php_major_version >= 7 ? 'string' : null;
+        return $phpMajorVersion >= 7 ? 'string' : null;
     }
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  bool          $use_phpdoc_format
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  bool          $usePhpdocFormat
      *
      * @return string
      */
-    public function toNamespacedString($namespace, array $aliased_classes, $this_class, $use_phpdoc_format)
+    public function toNamespacedString($namespace, array $aliasedClasses, $thisClass, $usePhpdocFormat)
     {
         return 'string';
     }

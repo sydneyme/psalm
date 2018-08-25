@@ -10,11 +10,11 @@ class InterfaceChecker extends ClassLikeChecker
     /**
      * @param PhpParser\Node\Stmt\Interface_ $interface
      * @param StatementsSource               $source
-     * @param string                         $fq_interface_name
+     * @param string                         $fqInterfaceName
      */
-    public function __construct(PhpParser\Node\Stmt\Interface_ $interface, StatementsSource $source, $fq_interface_name)
+    public function __construct(PhpParser\Node\Stmt\Interface_ $interface, StatementsSource $source, $fqInterfaceName)
     {
-        parent::__construct($interface, $source, $fq_interface_name);
+        parent::__construct($interface, $source, $fqInterfaceName);
     }
 
     /**
@@ -27,19 +27,19 @@ class InterfaceChecker extends ClassLikeChecker
         }
 
         if ($this->class->extends) {
-            foreach ($this->class->extends as $extended_interface) {
-                $extended_interface_name = self::getFQCLNFromNameObject(
-                    $extended_interface,
+            foreach ($this->class->extends as $extendedInterface) {
+                $extendedInterfaceName = self::getFQCLNFromNameObject(
+                    $extendedInterface,
                     $this->getAliases()
                 );
 
-                $parent_reference_location = new CodeLocation($this, $extended_interface);
+                $parentReferenceLocation = new CodeLocation($this, $extendedInterface);
 
-                $project_checker = $this->file_checker->project_checker;
+                $projectChecker = $this->fileChecker->projectChecker;
 
-                if (!$project_checker->codebase->classOrInterfaceExists(
-                    $extended_interface_name,
-                    $parent_reference_location
+                if (!$projectChecker->codebase->classOrInterfaceExists(
+                    $extendedInterfaceName,
+                    $parentReferenceLocation
                 )) {
                     // we should not normally get here
                     return;

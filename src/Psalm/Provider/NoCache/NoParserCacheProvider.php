@@ -6,26 +6,26 @@ use PhpParser;
 class NoParserCacheProvider extends \Psalm\Provider\ParserCacheProvider
 {
     /**
-     * @param  int      $file_modified_time
-     * @param  string   $file_content_hash
-     * @param  string   $file_cache_key
+     * @param  int      $fileModifiedTime
+     * @param  string   $fileContentHash
+     * @param  string   $fileCacheKey
      *
      * @return array<int, PhpParser\Node\Stmt>|null
      */
-    public function loadStatementsFromCache($file_modified_time, $file_content_hash, $file_cache_key)
+    public function loadStatementsFromCache($fileModifiedTime, $fileContentHash, $fileCacheKey)
     {
         return null;
     }
 
     /**
-     * @param  string                           $file_cache_key
-     * @param  string                           $file_content_hash
+     * @param  string                           $fileCacheKey
+     * @param  string                           $fileContentHash
      * @param  array<int, PhpParser\Node\Stmt>  $stmts
-     * @param  bool                             $touch_only
+     * @param  bool                             $touchOnly
      *
      * @return void
      */
-    public function saveStatementsToCache($file_cache_key, $file_content_hash, array $stmts, $touch_only)
+    public function saveStatementsToCache($fileCacheKey, $fileContentHash, array $stmts, $touchOnly)
     {
     }
 }

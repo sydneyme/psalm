@@ -86,48 +86,48 @@ if (isset($options['root'])) {
     $options['r'] = $options['root'];
 }
 
-$current_dir = (string)getcwd() . DIRECTORY_SEPARATOR;
+$currentDir = (string)getcwd() . DIRECTORY_SEPARATOR;
 
 if (isset($options['r']) && is_string($options['r'])) {
-    $root_path = realpath($options['r']);
+    $rootPath = realpath($options['r']);
 
-    if (!$root_path) {
-        die('Could not locate root directory ' . $current_dir . DIRECTORY_SEPARATOR . $options['r'] . PHP_EOL);
+    if (!$rootPath) {
+        die('Could not locate root directory ' . $currentDir . DIRECTORY_SEPARATOR . $options['r'] . PHP_EOL);
     }
 
-    $current_dir = $root_path . DIRECTORY_SEPARATOR;
+    $currentDir = $rootPath . DIRECTORY_SEPARATOR;
 }
 
-$vendor_dir = getVendorDir($current_dir);
+$vendorDir = getVendorDir($currentDir);
 
-$first_autoloader = requireAutoloaders($current_dir, isset($options['r']), $vendor_dir);
+$firstAutoloader = requireAutoloaders($currentDir, isset($options['r']), $vendorDir);
 
 // If XDebug is enabled, restart without it
 (new \Composer\XdebugHandler\XdebugHandler('PSALTER'))->check();
 
-$paths_to_check = getPathsToCheck(isset($options['f']) ? $options['f'] : null);
+$pathsToCheck = getPathsToCheck(isset($options['f']) ? $options['f'] : null);
 
-if ($paths_to_check && count($paths_to_check) > 1) {
+if ($pathsToCheck && count($pathsToCheck) > 1) {
     die('Psalter can currently only be run on one path at a time' . PHP_EOL);
 }
 
-$path_to_config = isset($options['c']) && is_string($options['c']) ? realpath($options['c']) : null;
+$pathToConfig = isset($options['c']) && is_string($options['c']) ? realpath($options['c']) : null;
 
-if ($path_to_config === false) {
+if ($pathToConfig === false) {
     /** @psalm-suppress InvalidCast */
     die('Could not resolve path to config ' . (string)$options['c'] . PHP_EOL);
 }
 
 // initialise custom config, if passed
-if ($path_to_config) {
-    $config = Config::loadFromXMLFile($path_to_config, $current_dir);
+if ($pathToConfig) {
+    $config = Config::loadFromXMLFile($pathToConfig, $currentDir);
 } else {
-    $config = Config::getConfigForPath($current_dir, $current_dir, ProjectChecker::TYPE_CONSOLE);
+    $config = Config::getConfigForPath($currentDir, $currentDir, ProjectChecker::TYPE_CONSOLE);
 }
 
-$config->setComposerClassLoader($first_autoloader);
+$config->setComposerClassLoader($firstAutoloader);
 
-$project_checker = new ProjectChecker(
+$projectChecker = new ProjectChecker(
     $config,
     new Psalm\Provider\FileProvider(),
     new Psalm\Provider\ParserCacheProvider(),
@@ -140,7 +140,7 @@ $project_checker = new ProjectChecker(
     array_key_exists('debug', $options)
 );
 
-$config->visitComposerAutoloadFiles($project_checker);
+$config->visitComposerAutoloadFiles($projectChecker);
 
 if (array_key_exists('issues', $options)) {
     if (!is_string($options['issues']) || !$options['issues']) {
@@ -149,24 +149,24 @@ if (array_key_exists('issues', $options)) {
 
     $issues = explode(',', $options['issues']);
 
-    $keyed_issues = [];
+    $keyedIssues = [];
 
     foreach ($issues as $issue) {
-        $keyed_issues[$issue] = true;
+        $keyedIssues[$issue] = true;
     }
 } else {
-    $keyed_issues = [];
+    $keyedIssues = [];
 }
 
-$php_major_version = PHP_MAJOR_VERSION;
-$php_minor_version = PHP_MINOR_VERSION;
+$phpMajorVersion = PHP_MAJOR_VERSION;
+$phpMinorVersion = PHP_MINOR_VERSION;
 
 if (isset($options['php-version'])) {
     if (!is_string($options['php-version']) || !preg_match('/^(5\.[456]|7\.[012])$/', $options['php-version'])) {
         die('Expecting a version number in the format x.y' . PHP_EOL);
     }
 
-    list($php_major_version, $php_minor_version) = explode('.', $options['php-version']);
+    list($phpMajorVersion, $phpMinorVersion) = explode('.', $options['php-version']);
 }
 
 $plugins = [];
@@ -179,31 +179,31 @@ if (isset($options['plugin'])) {
     }
 }
 
-/** @var string $plugin_path */
-foreach ($plugins as $plugin_path) {
-    Config::getInstance()->addPluginPath($current_dir . DIRECTORY_SEPARATOR . $plugin_path);
+/** @var string $pluginPath */
+foreach ($plugins as $pluginPath) {
+    Config::getInstance()->addPluginPath($currentDir . DIRECTORY_SEPARATOR . $pluginPath);
 }
 
-$project_checker->alterCodeAfterCompletion(
-    (int) $php_major_version,
-    (int) $php_minor_version,
+$projectChecker->alterCodeAfterCompletion(
+    (int) $phpMajorVersion,
+    (int) $phpMinorVersion,
     array_key_exists('dry-run', $options),
     array_key_exists('safe-types', $options)
 );
-$project_checker->setIssuesToFix($keyed_issues);
+$projectChecker->setIssuesToFix($keyedIssues);
 
-$start_time = (float) microtime(true);
+$startTime = (float) microtime(true);
 
-if ($paths_to_check === null) {
-    $project_checker->check($current_dir);
-} elseif ($paths_to_check) {
-    foreach ($paths_to_check as $path_to_check) {
-        if (is_dir($path_to_check)) {
-            $project_checker->checkDir($path_to_check);
+if ($pathsToCheck === null) {
+    $projectChecker->check($currentDir);
+} elseif ($pathsToCheck) {
+    foreach ($pathsToCheck as $pathToCheck) {
+        if (is_dir($pathToCheck)) {
+            $projectChecker->checkDir($pathToCheck);
         } else {
-            $project_checker->checkFile($path_to_check);
+            $projectChecker->checkFile($pathToCheck);
         }
     }
 }
 
-IssueBuffer::finish($project_checker, false, $start_time);
+IssueBuffer::finish($projectChecker, false, $startTime);

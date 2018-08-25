@@ -19,44 +19,44 @@ use Psalm\Type\Reconciler;
 class SwitchChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PhpParser\Node\Stmt\Switch_     $stmt
      * @param   Context                         $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Stmt\Switch_ $stmt,
         Context $context
     ) {
-        if (ExpressionChecker::analyze($statements_checker, $stmt->cond, $context) === false) {
+        if (ExpressionChecker::analyze($statementsChecker, $stmt->cond, $context) === false) {
             return false;
         }
 
-        $switch_var_id = ExpressionChecker::getArrayVarId(
+        $switchVarId = ExpressionChecker::getArrayVarId(
             $stmt->cond,
             null,
-            $statements_checker
+            $statementsChecker
         );
 
-        $original_context = clone $context;
+        $originalContext = clone $context;
 
-        $new_vars_in_scope = null;
+        $newVarsInScope = null;
 
-        $new_vars_possibly_in_scope = [];
+        $newVarsPossiblyInScope = [];
 
-        $redefined_vars = null;
-        $possibly_redefined_vars = null;
+        $redefinedVars = null;
+        $possiblyRedefinedVars = null;
 
         // the last statement always breaks, by default
-        $last_case_exit_type = 'break';
+        $lastCaseExitType = 'break';
 
-        $case_exit_types = new \SplFixedArray(count($stmt->cases));
+        $caseExitTypes = new \SplFixedArray(count($stmt->cases));
 
-        $has_default = false;
+        $hasDefault = false;
 
-        $case_action_map = [];
+        $caseActionMap = [];
 
         $config = \Psalm\Config::getInstance();
 
@@ -64,75 +64,75 @@ class SwitchChecker
         for ($i = count($stmt->cases) - 1; $i >= 0; --$i) {
             $case = $stmt->cases[$i];
 
-            $case_actions = $case_action_map[$i] = ScopeChecker::getFinalControlActions(
+            $caseActions = $caseActionMap[$i] = ScopeChecker::getFinalControlActions(
                 $case->stmts,
-                $config->exit_functions,
+                $config->exitFunctions,
                 true
             );
 
-            if (!in_array(ScopeChecker::ACTION_NONE, $case_actions, true)) {
-                if ($case_actions === [ScopeChecker::ACTION_END]) {
-                    $last_case_exit_type = 'return_throw';
-                } elseif ($case_actions === [ScopeChecker::ACTION_CONTINUE]) {
-                    $last_case_exit_type = 'continue';
-                } elseif (in_array(ScopeChecker::ACTION_LEAVE_SWITCH, $case_actions, true)) {
-                    $last_case_exit_type = 'break';
+            if (!in_array(ScopeChecker::ACTION_NONE, $caseActions, true)) {
+                if ($caseActions === [ScopeChecker::ACTION_END]) {
+                    $lastCaseExitType = 'return_throw';
+                } elseif ($caseActions === [ScopeChecker::ACTION_CONTINUE]) {
+                    $lastCaseExitType = 'continue';
+                } elseif (in_array(ScopeChecker::ACTION_LEAVE_SWITCH, $caseActions, true)) {
+                    $lastCaseExitType = 'break';
                 }
             }
 
-            $case_exit_types[$i] = $last_case_exit_type;
+            $caseExitTypes[$i] = $lastCaseExitType;
         }
 
-        $leftover_statements = [];
-        $leftover_case_equality_expr = null;
-        $negated_clauses = [];
+        $leftoverStatements = [];
+        $leftoverCaseEqualityExpr = null;
+        $negatedClauses = [];
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
 
-        $new_unreferenced_vars = [];
-        $new_assigned_var_ids = null;
-        $new_possibly_assigned_var_ids = [];
+        $newUnreferencedVars = [];
+        $newAssignedVarIds = null;
+        $newPossiblyAssignedVarIds = [];
 
         for ($i = 0, $l = count($stmt->cases); $i < $l; $i++) {
             $case = $stmt->cases[$i];
 
             /** @var string */
-            $case_exit_type = $case_exit_types[$i];
+            $caseExitType = $caseExitTypes[$i];
 
-            $case_actions = $case_action_map[$i];
+            $caseActions = $caseActionMap[$i];
 
             // has a return/throw at end
-            $has_ending_statements = $case_actions === [ScopeChecker::ACTION_END];
-            $has_leaving_statements = $has_ending_statements
-                || (count($case_actions) && !in_array(ScopeChecker::ACTION_NONE, $case_actions, true));
+            $hasEndingStatements = $caseActions === [ScopeChecker::ACTION_END];
+            $hasLeavingStatements = $hasEndingStatements
+                || (count($caseActions) && !in_array(ScopeChecker::ACTION_NONE, $caseActions, true));
 
-            $case_context = clone $original_context;
-            if ($project_checker->alter_code) {
-                $case_context->branch_point = $case_context->branch_point ?: (int) $stmt->getAttribute('startFilePos');
+            $caseContext = clone $originalContext;
+            if ($projectChecker->alterCode) {
+                $caseContext->branchPoint = $caseContext->branchPoint ?: (int) $stmt->getAttribute('startFilePos');
             }
-            $case_context->parent_context = $context;
-            $case_context->switch_scope = new SwitchScope();
+            $caseContext->parentContext = $context;
+            $caseContext->switchScope = new SwitchScope();
 
-            $case_equality_expr = null;
+            $caseEqualityExpr = null;
 
             if ($case->cond) {
-                if (ExpressionChecker::analyze($statements_checker, $case->cond, $case_context) === false) {
+                if (ExpressionChecker::analyze($statementsChecker, $case->cond, $caseContext) === false) {
                     return false;
                 }
 
-                $switch_condition = clone $stmt->cond;
+                $switchCondition = clone $stmt->cond;
 
-                if ($switch_condition instanceof PhpParser\Node\Expr\Variable
-                    && is_string($switch_condition->name)
-                    && isset($context->vars_in_scope['$' . $switch_condition->name])
+                if ($switchCondition instanceof PhpParser\Node\Expr\Variable
+                    && is_string($switchCondition->name)
+                    && isset($context->varsInScope['$' . $switchCondition->name])
                 ) {
-                    $switch_var_type = $context->vars_in_scope['$' . $switch_condition->name];
+                    $switchVarType = $context->varsInScope['$' . $switchCondition->name];
 
-                    $type_statements = [];
+                    $typeStatements = [];
 
-                    foreach ($switch_var_type->getTypes() as $type) {
+                    foreach ($switchVarType->getTypes() as $type) {
                         if ($type instanceof Type\Atomic\GetClassT) {
-                            $type_statements[] = new PhpParser\Node\Expr\FuncCall(
+                            $typeStatements[] = new PhpParser\Node\Expr\FuncCall(
                                 new PhpParser\Node\Name(['get_class']),
                                 [
                                     new PhpParser\Node\Arg(
@@ -141,7 +141,7 @@ class SwitchChecker
                                 ]
                             );
                         } elseif ($type instanceof Type\Atomic\GetTypeT) {
-                            $type_statements[] = new PhpParser\Node\Expr\FuncCall(
+                            $typeStatements[] = new PhpParser\Node\Expr\FuncCall(
                                 new PhpParser\Node\Name(['gettype']),
                                 [
                                     new PhpParser\Node\Arg(
@@ -150,48 +150,48 @@ class SwitchChecker
                                 ]
                             );
                         } else {
-                            $type_statements = null;
+                            $typeStatements = null;
                             break;
                         }
                     }
 
-                    if ($type_statements && count($type_statements) === 1) {
-                        $switch_condition = $type_statements[0];
+                    if ($typeStatements && count($typeStatements) === 1) {
+                        $switchCondition = $typeStatements[0];
                     }
                 }
 
-                if (isset($switch_condition->inferredType)
+                if (isset($switchCondition->inferredType)
                     && isset($case->cond->inferredType)
-                    && (($switch_condition->inferredType->isString() && $case->cond->inferredType->isString())
-                        || ($switch_condition->inferredType->isInt() && $case->cond->inferredType->isInt())
-                        || ($switch_condition->inferredType->isFloat() && $case->cond->inferredType->isFloat())
+                    && (($switchCondition->inferredType->isString() && $case->cond->inferredType->isString())
+                        || ($switchCondition->inferredType->isInt() && $case->cond->inferredType->isInt())
+                        || ($switchCondition->inferredType->isFloat() && $case->cond->inferredType->isFloat())
                     )
                 ) {
-                    $case_equality_expr = new PhpParser\Node\Expr\BinaryOp\Identical(
-                        $switch_condition,
+                    $caseEqualityExpr = new PhpParser\Node\Expr\BinaryOp\Identical(
+                        $switchCondition,
                         $case->cond,
                         $case->cond->getAttributes()
                     );
                 } else {
-                    $case_equality_expr = new PhpParser\Node\Expr\BinaryOp\Equal(
-                        $switch_condition,
+                    $caseEqualityExpr = new PhpParser\Node\Expr\BinaryOp\Equal(
+                        $switchCondition,
                         $case->cond,
                         $case->cond->getAttributes()
                     );
                 }
             }
 
-            $case_stmts = $case->stmts;
+            $caseStmts = $case->stmts;
 
-            $case_stmts = array_merge($leftover_statements, $case_stmts);
+            $caseStmts = array_merge($leftoverStatements, $caseStmts);
 
             if (!$case->cond) {
-                $has_default = true;
+                $hasDefault = true;
             }
 
-            if (!$has_leaving_statements && $i !== $l - 1) {
-                if (!$case_equality_expr) {
-                    $case_equality_expr = new PhpParser\Node\Expr\FuncCall(
+            if (!$hasLeavingStatements && $i !== $l - 1) {
+                if (!$caseEqualityExpr) {
+                    $caseEqualityExpr = new PhpParser\Node\Expr\FuncCall(
                         new PhpParser\Node\Name\FullyQualified(['rand']),
                         [
                             new PhpParser\Node\Arg(new PhpParser\Node\Scalar\LNumber(0)),
@@ -201,29 +201,29 @@ class SwitchChecker
                     );
                 }
 
-                $leftover_case_equality_expr = $leftover_case_equality_expr
+                $leftoverCaseEqualityExpr = $leftoverCaseEqualityExpr
                     ? new PhpParser\Node\Expr\BinaryOp\BooleanOr(
-                        $leftover_case_equality_expr,
-                        $case_equality_expr,
+                        $leftoverCaseEqualityExpr,
+                        $caseEqualityExpr,
                         $case->cond ? $case->cond->getAttributes() : $case->getAttributes()
                     )
-                    : $case_equality_expr;
+                    : $caseEqualityExpr;
 
-                $case_if_stmt = new PhpParser\Node\Stmt\If_(
-                    $leftover_case_equality_expr,
-                    ['stmts' => $case_stmts]
+                $caseIfStmt = new PhpParser\Node\Stmt\If_(
+                    $leftoverCaseEqualityExpr,
+                    ['stmts' => $caseStmts]
                 );
 
-                $leftover_statements = [$case_if_stmt];
+                $leftoverStatements = [$caseIfStmt];
 
                 continue;
             }
 
-            if ($leftover_case_equality_expr) {
-                $case_or_default_equality_expr = $case_equality_expr;
+            if ($leftoverCaseEqualityExpr) {
+                $caseOrDefaultEqualityExpr = $caseEqualityExpr;
 
-                if (!$case_or_default_equality_expr) {
-                    $case_or_default_equality_expr = new PhpParser\Node\Expr\FuncCall(
+                if (!$caseOrDefaultEqualityExpr) {
+                    $caseOrDefaultEqualityExpr = new PhpParser\Node\Expr\FuncCall(
                         new PhpParser\Node\Name\FullyQualified(['rand']),
                         [
                             new PhpParser\Node\Arg(new PhpParser\Node\Scalar\LNumber(0)),
@@ -233,137 +233,137 @@ class SwitchChecker
                     );
                 }
 
-                $case_equality_expr = new PhpParser\Node\Expr\BinaryOp\BooleanOr(
-                    $leftover_case_equality_expr,
-                    $case_or_default_equality_expr,
-                    $case_or_default_equality_expr->getAttributes()
+                $caseEqualityExpr = new PhpParser\Node\Expr\BinaryOp\BooleanOr(
+                    $leftoverCaseEqualityExpr,
+                    $caseOrDefaultEqualityExpr,
+                    $caseOrDefaultEqualityExpr->getAttributes()
                 );
             }
 
-            $case_context->inside_case = true;
+            $caseContext->insideCase = true;
 
-            $leftover_statements = [];
-            $leftover_case_equality_expr = null;
+            $leftoverStatements = [];
+            $leftoverCaseEqualityExpr = null;
 
-            $case_clauses = [];
+            $caseClauses = [];
 
-            if ($case_equality_expr) {
-                $case_clauses = Algebra::getFormula(
-                    $case_equality_expr,
+            if ($caseEqualityExpr) {
+                $caseClauses = Algebra::getFormula(
+                    $caseEqualityExpr,
                     $context->self,
-                    $statements_checker
+                    $statementsChecker
                 );
             }
 
-            if ($negated_clauses) {
-                $entry_clauses = Algebra::simplifyCNF(array_merge($original_context->clauses, $negated_clauses));
+            if ($negatedClauses) {
+                $entryClauses = Algebra::simplifyCNF(array_merge($originalContext->clauses, $negatedClauses));
             } else {
-                $entry_clauses = $original_context->clauses;
+                $entryClauses = $originalContext->clauses;
             }
 
-            if ($case_clauses && $case->cond) {
+            if ($caseClauses && $case->cond) {
                 // this will see whether any of the clauses in set A conflict with the clauses in set B
                 AlgebraChecker::checkForParadox(
-                    $entry_clauses,
-                    $case_clauses,
-                    $statements_checker,
+                    $entryClauses,
+                    $caseClauses,
+                    $statementsChecker,
                     $case->cond,
                     []
                 );
 
-                $case_context->clauses = Algebra::simplifyCNF(array_merge($entry_clauses, $case_clauses));
+                $caseContext->clauses = Algebra::simplifyCNF(array_merge($entryClauses, $caseClauses));
             } else {
-                $case_context->clauses = $entry_clauses;
+                $caseContext->clauses = $entryClauses;
             }
 
-            $reconcilable_if_types = Algebra::getTruthsFromFormula($case_context->clauses);
+            $reconcilableIfTypes = Algebra::getTruthsFromFormula($caseContext->clauses);
 
             // if the if has an || in the conditional, we cannot easily reason about it
-            if ($reconcilable_if_types) {
-                $changed_var_ids = [];
+            if ($reconcilableIfTypes) {
+                $changedVarIds = [];
 
-                $suppressed_issues = $statements_checker->getSuppressedIssues();
+                $suppressedIssues = $statementsChecker->getSuppressedIssues();
 
-                if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-                    $statements_checker->addSuppressedIssues(['RedundantCondition']);
+                if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+                    $statementsChecker->addSuppressedIssues(['RedundantCondition']);
                 }
 
-                if (!in_array('RedundantConditionGivenDocblockType', $suppressed_issues, true)) {
-                    $statements_checker->addSuppressedIssues(['RedundantConditionGivenDocblockType']);
+                if (!in_array('RedundantConditionGivenDocblockType', $suppressedIssues, true)) {
+                    $statementsChecker->addSuppressedIssues(['RedundantConditionGivenDocblockType']);
                 }
 
-                $case_vars_in_scope_reconciled =
+                $caseVarsInScopeReconciled =
                     Reconciler::reconcileKeyedTypes(
-                        $reconcilable_if_types,
-                        $case_context->vars_in_scope,
-                        $changed_var_ids,
-                        $case->cond && $switch_var_id ? [$switch_var_id => true] : [],
-                        $statements_checker,
+                        $reconcilableIfTypes,
+                        $caseContext->varsInScope,
+                        $changedVarIds,
+                        $case->cond && $switchVarId ? [$switchVarId => true] : [],
+                        $statementsChecker,
                         new CodeLocation(
-                            $statements_checker->getSource(),
+                            $statementsChecker->getSource(),
                             $case->cond ? $case->cond : $case,
-                            $context->include_location
+                            $context->includeLocation
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     );
 
-                if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-                    $statements_checker->removeSuppressedIssues(['RedundantCondition']);
+                if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+                    $statementsChecker->removeSuppressedIssues(['RedundantCondition']);
                 }
 
-                if (!in_array('RedundantConditionGivenDocblockType', $suppressed_issues, true)) {
-                    $statements_checker->removeSuppressedIssues(['RedundantConditionGivenDocblockType']);
+                if (!in_array('RedundantConditionGivenDocblockType', $suppressedIssues, true)) {
+                    $statementsChecker->removeSuppressedIssues(['RedundantConditionGivenDocblockType']);
                 }
 
-                $case_context->vars_in_scope = $case_vars_in_scope_reconciled;
-                foreach ($reconcilable_if_types as $var_id => $_) {
-                    $case_context->vars_possibly_in_scope[$var_id] = true;
+                $caseContext->varsInScope = $caseVarsInScopeReconciled;
+                foreach ($reconcilableIfTypes as $varId => $_) {
+                    $caseContext->varsPossiblyInScope[$varId] = true;
                 }
 
-                if ($changed_var_ids) {
-                    $case_context->removeReconciledClauses($changed_var_ids);
+                if ($changedVarIds) {
+                    $caseContext->removeReconciledClauses($changedVarIds);
                 }
             }
 
-            if ($case_clauses) {
-                $negated_clauses = array_merge(
-                    $negated_clauses,
-                    Algebra::negateFormula($case_clauses)
+            if ($caseClauses) {
+                $negatedClauses = array_merge(
+                    $negatedClauses,
+                    Algebra::negateFormula($caseClauses)
                 );
             }
 
-            $pre_possibly_assigned_var_ids = $case_context->possibly_assigned_var_ids;
-            $case_context->possibly_assigned_var_ids = [];
+            $prePossiblyAssignedVarIds = $caseContext->possiblyAssignedVarIds;
+            $caseContext->possiblyAssignedVarIds = [];
 
-            $pre_assigned_var_ids = $case_context->assigned_var_ids;
-            $case_context->assigned_var_ids = [];
+            $preAssignedVarIds = $caseContext->assignedVarIds;
+            $caseContext->assignedVarIds = [];
 
-            $statements_checker->analyze($case_stmts, $case_context);
-
-            /** @var array<string, bool> */
-            $new_case_assigned_var_ids = $case_context->assigned_var_ids;
-            $case_context->assigned_var_ids = $pre_assigned_var_ids + $new_case_assigned_var_ids;
+            $statementsChecker->analyze($caseStmts, $caseContext);
 
             /** @var array<string, bool> */
-            $new_case_possibly_assigned_var_ids = $case_context->possibly_assigned_var_ids;
-            $case_context->possibly_assigned_var_ids =
-                $pre_possibly_assigned_var_ids + $new_case_possibly_assigned_var_ids;
+            $newCaseAssignedVarIds = $caseContext->assignedVarIds;
+            $caseContext->assignedVarIds = $preAssignedVarIds + $newCaseAssignedVarIds;
 
-            $context->referenced_var_ids = array_merge(
-                $context->referenced_var_ids,
-                $case_context->referenced_var_ids
+            /** @var array<string, bool> */
+            $newCasePossiblyAssignedVarIds = $caseContext->possiblyAssignedVarIds;
+            $caseContext->possiblyAssignedVarIds =
+                $prePossiblyAssignedVarIds + $newCasePossiblyAssignedVarIds;
+
+            $context->referencedVarIds = array_merge(
+                $context->referencedVarIds,
+                $caseContext->referencedVarIds
             );
 
-            if ($case_exit_type !== 'return_throw') {
+            if ($caseExitType !== 'return_throw') {
                 if (!$case->cond
-                    && $switch_var_id
-                    && isset($case_context->vars_in_scope[$switch_var_id])
-                    && $case_context->vars_in_scope[$switch_var_id]->isEmpty()
+                    && $switchVarId
+                    && isset($caseContext->varsInScope[$switchVarId])
+                    && $caseContext->varsInScope[$switchVarId]->isEmpty()
                 ) {
                     if (IssueBuffer::accepts(
                         new ParadoxicalCondition(
                             'All possible case statements have been met, default is impossible here',
-                            new CodeLocation($statements_checker->getSource(), $case)
+                            new CodeLocation($statementsChecker->getSource(), $case)
                         )
                     )) {
                         return false;
@@ -371,143 +371,143 @@ class SwitchChecker
                 }
 
                 $vars = array_diff_key(
-                    $case_context->vars_possibly_in_scope,
-                    $original_context->vars_possibly_in_scope
+                    $caseContext->varsPossiblyInScope,
+                    $originalContext->varsPossiblyInScope
                 );
 
                 // if we're leaving this block, add vars to outer for loop scope
-                if ($case_exit_type === 'continue') {
-                    if ($context->loop_scope) {
-                        $context->loop_scope->vars_possibly_in_scope = array_merge(
+                if ($caseExitType === 'continue') {
+                    if ($context->loopScope) {
+                        $context->loopScope->varsPossiblyInScope = array_merge(
                             $vars,
-                            $context->loop_scope->vars_possibly_in_scope
+                            $context->loopScope->varsPossiblyInScope
                         );
                     } else {
                         if (IssueBuffer::accepts(
                             new ContinueOutsideLoop(
                                 'Continue called when not in loop',
-                                new CodeLocation($statements_checker->getSource(), $case)
+                                new CodeLocation($statementsChecker->getSource(), $case)
                             )
                         )) {
                             return false;
                         }
                     }
                 } else {
-                    $case_redefined_vars = $case_context->getRedefinedVars($original_context->vars_in_scope);
+                    $caseRedefinedVars = $caseContext->getRedefinedVars($originalContext->varsInScope);
 
-                    if ($possibly_redefined_vars === null) {
-                        $possibly_redefined_vars = $case_redefined_vars;
+                    if ($possiblyRedefinedVars === null) {
+                        $possiblyRedefinedVars = $caseRedefinedVars;
                     } else {
-                        foreach ($case_redefined_vars as $var_id => $type) {
-                            if (!isset($possibly_redefined_vars[$var_id])) {
-                                $possibly_redefined_vars[$var_id] = $type;
+                        foreach ($caseRedefinedVars as $varId => $type) {
+                            if (!isset($possiblyRedefinedVars[$varId])) {
+                                $possiblyRedefinedVars[$varId] = $type;
                             } else {
-                                $possibly_redefined_vars[$var_id] = Type::combineUnionTypes(
+                                $possiblyRedefinedVars[$varId] = Type::combineUnionTypes(
                                     $type,
-                                    $possibly_redefined_vars[$var_id]
+                                    $possiblyRedefinedVars[$varId]
                                 );
                             }
                         }
                     }
 
-                    if ($redefined_vars === null) {
-                        $redefined_vars = $case_redefined_vars;
+                    if ($redefinedVars === null) {
+                        $redefinedVars = $caseRedefinedVars;
                     } else {
-                        foreach ($redefined_vars as $var_id => $type) {
-                            if (!isset($case_redefined_vars[$var_id])) {
-                                unset($redefined_vars[$var_id]);
+                        foreach ($redefinedVars as $varId => $type) {
+                            if (!isset($caseRedefinedVars[$varId])) {
+                                unset($redefinedVars[$varId]);
                             } else {
-                                $redefined_vars[$var_id] = Type::combineUnionTypes(
+                                $redefinedVars[$varId] = Type::combineUnionTypes(
                                     $type,
-                                    $case_redefined_vars[$var_id]
+                                    $caseRedefinedVars[$varId]
                                 );
                             }
                         }
                     }
 
-                    $context_new_vars = array_diff_key($case_context->vars_in_scope, $context->vars_in_scope);
+                    $contextNewVars = array_diff_key($caseContext->varsInScope, $context->varsInScope);
 
-                    if ($new_vars_in_scope === null) {
-                        $new_vars_in_scope = $context_new_vars;
-                        $new_vars_possibly_in_scope = array_diff_key(
-                            $case_context->vars_possibly_in_scope,
-                            $context->vars_possibly_in_scope
+                    if ($newVarsInScope === null) {
+                        $newVarsInScope = $contextNewVars;
+                        $newVarsPossiblyInScope = array_diff_key(
+                            $caseContext->varsPossiblyInScope,
+                            $context->varsPossiblyInScope
                         );
                     } else {
-                        foreach ($new_vars_in_scope as $new_var => $type) {
-                            if (!$case_context->hasVariable($new_var, $statements_checker)) {
-                                unset($new_vars_in_scope[$new_var]);
+                        foreach ($newVarsInScope as $newVar => $type) {
+                            if (!$caseContext->hasVariable($newVar, $statementsChecker)) {
+                                unset($newVarsInScope[$newVar]);
                             } else {
-                                $new_vars_in_scope[$new_var] =
-                                    Type::combineUnionTypes($case_context->vars_in_scope[$new_var], $type);
+                                $newVarsInScope[$newVar] =
+                                    Type::combineUnionTypes($caseContext->varsInScope[$newVar], $type);
                             }
                         }
 
-                        $new_vars_possibly_in_scope = array_merge(
+                        $newVarsPossiblyInScope = array_merge(
                             array_diff_key(
-                                $case_context->vars_possibly_in_scope,
-                                $context->vars_possibly_in_scope
+                                $caseContext->varsPossiblyInScope,
+                                $context->varsPossiblyInScope
                             ),
-                            $new_vars_possibly_in_scope
+                            $newVarsPossiblyInScope
                         );
                     }
                 }
 
-                if ($context->collect_exceptions) {
-                    $context->possibly_thrown_exceptions += $case_context->possibly_thrown_exceptions;
+                if ($context->collectExceptions) {
+                    $context->possiblyThrownExceptions += $caseContext->possiblyThrownExceptions;
                 }
 
-                if ($context->collect_references) {
-                    $new_possibly_assigned_var_ids =
-                        $new_possibly_assigned_var_ids + $new_case_possibly_assigned_var_ids;
+                if ($context->collectReferences) {
+                    $newPossiblyAssignedVarIds =
+                        $newPossiblyAssignedVarIds + $newCasePossiblyAssignedVarIds;
 
-                    if ($new_assigned_var_ids === null) {
-                        $new_assigned_var_ids = $new_case_assigned_var_ids;
+                    if ($newAssignedVarIds === null) {
+                        $newAssignedVarIds = $newCaseAssignedVarIds;
                     } else {
-                        $new_assigned_var_ids = array_intersect_key($new_assigned_var_ids, $new_case_assigned_var_ids);
+                        $newAssignedVarIds = array_intersect_key($newAssignedVarIds, $newCaseAssignedVarIds);
                     }
 
-                    foreach ($case_context->unreferenced_vars as $var_id => $locations) {
-                        if (!isset($original_context->unreferenced_vars[$var_id])) {
-                            if (isset($new_unreferenced_vars[$var_id])) {
-                                $new_unreferenced_vars[$var_id] += $locations;
+                    foreach ($caseContext->unreferencedVars as $varId => $locations) {
+                        if (!isset($originalContext->unreferencedVars[$varId])) {
+                            if (isset($newUnreferencedVars[$varId])) {
+                                $newUnreferencedVars[$varId] += $locations;
                             } else {
-                                $new_unreferenced_vars[$var_id] = $locations;
+                                $newUnreferencedVars[$varId] = $locations;
                             }
                         } else {
-                            $new_locations = array_diff_key(
+                            $newLocations = array_diff_key(
                                 $locations,
-                                $original_context->unreferenced_vars[$var_id]
+                                $originalContext->unreferencedVars[$varId]
                             );
 
-                            if ($new_locations) {
-                                if (isset($new_unreferenced_vars[$var_id])) {
-                                    $new_unreferenced_vars[$var_id] += $locations;
+                            if ($newLocations) {
+                                if (isset($newUnreferencedVars[$varId])) {
+                                    $newUnreferencedVars[$varId] += $locations;
                                 } else {
-                                    $new_unreferenced_vars[$var_id] = $locations;
+                                    $newUnreferencedVars[$varId] = $locations;
                                 }
                             }
                         }
                     }
 
-                    foreach ($case_context->switch_scope->unreferenced_vars as $var_id => $locations) {
-                        if (!isset($original_context->unreferenced_vars[$var_id])) {
-                            if (isset($new_unreferenced_vars[$var_id])) {
-                                $new_unreferenced_vars[$var_id] += $locations;
+                    foreach ($caseContext->switchScope->unreferencedVars as $varId => $locations) {
+                        if (!isset($originalContext->unreferencedVars[$varId])) {
+                            if (isset($newUnreferencedVars[$varId])) {
+                                $newUnreferencedVars[$varId] += $locations;
                             } else {
-                                $new_unreferenced_vars[$var_id] = $locations;
+                                $newUnreferencedVars[$varId] = $locations;
                             }
                         } else {
-                            $new_locations = array_diff_key(
+                            $newLocations = array_diff_key(
                                 $locations,
-                                $original_context->unreferenced_vars[$var_id]
+                                $originalContext->unreferencedVars[$varId]
                             );
 
-                            if ($new_locations) {
-                                if (isset($new_unreferenced_vars[$var_id])) {
-                                    $new_unreferenced_vars[$var_id] += $locations;
+                            if ($newLocations) {
+                                if (isset($newUnreferencedVars[$varId])) {
+                                    $newUnreferencedVars[$varId] += $locations;
                                 } else {
-                                    $new_unreferenced_vars[$var_id] = $locations;
+                                    $newUnreferencedVars[$varId] = $locations;
                                 }
                             }
                         }
@@ -516,85 +516,85 @@ class SwitchChecker
             }
         }
 
-        $all_options_matched = $has_default;
+        $allOptionsMatched = $hasDefault;
 
-        if (!$has_default && $negated_clauses && $switch_var_id) {
-            $entry_clauses = Algebra::simplifyCNF(array_merge($original_context->clauses, $negated_clauses));
+        if (!$hasDefault && $negatedClauses && $switchVarId) {
+            $entryClauses = Algebra::simplifyCNF(array_merge($originalContext->clauses, $negatedClauses));
 
-            $reconcilable_if_types = Algebra::getTruthsFromFormula($entry_clauses);
+            $reconcilableIfTypes = Algebra::getTruthsFromFormula($entryClauses);
 
             // if the if has an || in the conditional, we cannot easily reason about it
-            if ($reconcilable_if_types && isset($reconcilable_if_types[$switch_var_id])) {
-                $changed_var_ids = [];
+            if ($reconcilableIfTypes && isset($reconcilableIfTypes[$switchVarId])) {
+                $changedVarIds = [];
 
-                $case_vars_in_scope_reconciled =
+                $caseVarsInScopeReconciled =
                     Reconciler::reconcileKeyedTypes(
-                        $reconcilable_if_types,
-                        $original_context->vars_in_scope,
-                        $changed_var_ids,
+                        $reconcilableIfTypes,
+                        $originalContext->varsInScope,
+                        $changedVarIds,
                         [],
-                        $statements_checker
+                        $statementsChecker
                     );
 
-                if (isset($case_vars_in_scope_reconciled[$switch_var_id])
-                    && $case_vars_in_scope_reconciled[$switch_var_id]->isEmpty()
+                if (isset($caseVarsInScopeReconciled[$switchVarId])
+                    && $caseVarsInScopeReconciled[$switchVarId]->isEmpty()
                 ) {
-                    $all_options_matched = true;
+                    $allOptionsMatched = true;
                 }
             }
         }
 
         // only update vars if there is a default or all possible cases accounted for
         // if the default has a throw/return/continue, that should be handled above
-        if ($all_options_matched) {
-            if ($new_vars_in_scope) {
-                $context->vars_in_scope = array_merge($context->vars_in_scope, $new_vars_in_scope);
+        if ($allOptionsMatched) {
+            if ($newVarsInScope) {
+                $context->varsInScope = array_merge($context->varsInScope, $newVarsInScope);
             }
 
-            if ($redefined_vars) {
-                $context->vars_in_scope = array_merge($context->vars_in_scope, $redefined_vars);
+            if ($redefinedVars) {
+                $context->varsInScope = array_merge($context->varsInScope, $redefinedVars);
             }
 
-            if ($possibly_redefined_vars) {
-                foreach ($possibly_redefined_vars as $var_id => $type) {
-                    if (!isset($redefined_vars[$var_id]) && !isset($new_vars_in_scope[$var_id])) {
-                        $context->vars_in_scope[$var_id]
-                            = Type::combineUnionTypes($type, $context->vars_in_scope[$var_id]);
+            if ($possiblyRedefinedVars) {
+                foreach ($possiblyRedefinedVars as $varId => $type) {
+                    if (!isset($redefinedVars[$varId]) && !isset($newVarsInScope[$varId])) {
+                        $context->varsInScope[$varId]
+                            = Type::combineUnionTypes($type, $context->varsInScope[$varId]);
                     }
                 }
             }
 
             /** @psalm-suppress UndefinedPropertyAssignment */
             $stmt->allMatched = true;
-        } elseif ($possibly_redefined_vars) {
-            foreach ($possibly_redefined_vars as $var_id => $type) {
-                $context->vars_in_scope[$var_id] = Type::combineUnionTypes($type, $context->vars_in_scope[$var_id]);
+        } elseif ($possiblyRedefinedVars) {
+            foreach ($possiblyRedefinedVars as $varId => $type) {
+                $context->varsInScope[$varId] = Type::combineUnionTypes($type, $context->varsInScope[$varId]);
             }
         }
 
-        if ($new_assigned_var_ids) {
-            $context->assigned_var_ids += $new_assigned_var_ids;
+        if ($newAssignedVarIds) {
+            $context->assignedVarIds += $newAssignedVarIds;
         }
 
-        if ($context->collect_references) {
-            foreach ($new_unreferenced_vars as $var_id => $locations) {
-                if (($all_options_matched && isset($new_assigned_var_ids[$var_id]))
-                    || !isset($context->vars_in_scope[$var_id])
+        if ($context->collectReferences) {
+            foreach ($newUnreferencedVars as $varId => $locations) {
+                if (($allOptionsMatched && isset($newAssignedVarIds[$varId]))
+                    || !isset($context->varsInScope[$varId])
                 ) {
-                    $context->unreferenced_vars[$var_id] = $locations;
-                } elseif (isset($new_possibly_assigned_var_ids[$var_id])) {
-                    if (!isset($context->unreferenced_vars[$var_id])) {
-                        $context->unreferenced_vars[$var_id] = $locations;
+                    $context->unreferencedVars[$varId] = $locations;
+                } elseif (isset($newPossiblyAssignedVarIds[$varId])) {
+                    if (!isset($context->unreferencedVars[$varId])) {
+                        $context->unreferencedVars[$varId] = $locations;
                     } else {
-                        $context->unreferenced_vars[$var_id] += $locations;
+                        $context->unreferencedVars[$varId] += $locations;
                     }
                 } else {
-                    $statements_checker->registerVariableUses($locations);
+                    $statementsChecker->registerVariableUses($locations);
                 }
             }
         }
 
-        $context->vars_possibly_in_scope = array_merge($context->vars_possibly_in_scope, $new_vars_possibly_in_scope);
+        $context->varsPossiblyInScope = array_merge($context->varsPossiblyInScope, $newVarsPossiblyInScope);
 
         return null;
     }

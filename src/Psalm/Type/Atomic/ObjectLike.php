@@ -19,7 +19,7 @@ class ObjectLike extends \Psalm\Type\Atomic
     /**
      * @var array<string, bool>|null
      */
-    public $class_strings = null;
+    public $classStrings = null;
 
     /**
      * @var bool - whether or not the objectlike has been created from an explicit array
@@ -30,12 +30,12 @@ class ObjectLike extends \Psalm\Type\Atomic
      * Constructs a new instance of a generic type
      *
      * @param array<string|int, Union> $properties
-     * @param array<string, bool> $class_strings
+     * @param array<string, bool> $classStrings
      */
-    public function __construct(array $properties, array $class_strings = null)
+    public function __construct(array $properties, array $classStrings = null)
     {
         $this->properties = $properties;
-        $this->class_strings = $class_strings;
+        $this->classStrings = $classStrings;
     }
 
     public function __toString()
@@ -51,7 +51,7 @@ class ObjectLike extends \Psalm\Type\Atomic
                          * @return string
                          */
                         function ($name, Union $type) {
-                            return $name . ($type->possibly_undefined ? '?' : '') . ':' . $type;
+                            return $name . ($type->possiblyUndefined ? '?' : '') . ':' . $type;
                         },
                         array_keys($this->properties),
                         $this->properties
@@ -73,7 +73,7 @@ class ObjectLike extends \Psalm\Type\Atomic
                          * @return string
                          */
                         function ($name, Union $type) {
-                            return $name . ($type->possibly_undefined ? '?' : '') . ':' . $type->getId();
+                            return $name . ($type->possiblyUndefined ? '?' : '') . ':' . $type->getId();
                         },
                         array_keys($this->properties),
                         $this->properties
@@ -84,20 +84,20 @@ class ObjectLike extends \Psalm\Type\Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  bool          $use_phpdoc_format
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  bool          $usePhpdocFormat
      *
      * @return string
      */
-    public function toNamespacedString($namespace, array $aliased_classes, $this_class, $use_phpdoc_format)
+    public function toNamespacedString($namespace, array $aliasedClasses, $thisClass, $usePhpdocFormat)
     {
-        if ($use_phpdoc_format) {
+        if ($usePhpdocFormat) {
             return $this->getGenericArrayType()->toNamespacedString(
                 $namespace,
-                $aliased_classes,
-                $this_class,
-                $use_phpdoc_format
+                $aliasedClasses,
+                $thisClass,
+                $usePhpdocFormat
             );
         }
 
@@ -116,15 +116,15 @@ class ObjectLike extends \Psalm\Type\Atomic
                             Union $type
                         ) use (
                             $namespace,
-                            $aliased_classes,
-                            $this_class,
-                            $use_phpdoc_format
+                            $aliasedClasses,
+                            $thisClass,
+                            $usePhpdocFormat
                         ) {
-                            return $name . ($type->possibly_undefined ? '?' : '') . ':' . $type->toNamespacedString(
+                            return $name . ($type->possiblyUndefined ? '?' : '') . ':' . $type->toNamespacedString(
                                 $namespace,
-                                $aliased_classes,
-                                $this_class,
-                                $use_phpdoc_format
+                                $aliasedClasses,
+                                $thisClass,
+                                $usePhpdocFormat
                             );
                         },
                         array_keys($this->properties),
@@ -136,14 +136,14 @@ class ObjectLike extends \Psalm\Type\Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return string
      */
-    public function toPhpString($namespace, array $aliased_classes, $this_class, $php_major_version, $php_minor_version)
+    public function toPhpString($namespace, array $aliasedClasses, $thisClass, $phpMajorVersion, $phpMinorVersion)
     {
         return $this->getKey();
     }
@@ -158,19 +158,19 @@ class ObjectLike extends \Psalm\Type\Atomic
      */
     public function getGenericKeyType()
     {
-        $key_types = [];
+        $keyTypes = [];
 
         foreach ($this->properties as $key => $_) {
             if (is_int($key)) {
-                $key_types[] = new Type\Atomic\TLiteralInt($key);
-            } elseif (isset($this->class_strings[$key])) {
-                $key_types[] = new Type\Atomic\TLiteralClassString($key);
+                $keyTypes[] = new Type\Atomic\TLiteralInt($key);
+            } elseif (isset($this->classStrings[$key])) {
+                $keyTypes[] = new Type\Atomic\TLiteralClassString($key);
             } else {
-                $key_types[] = new Type\Atomic\TLiteralString($key);
+                $keyTypes[] = new Type\Atomic\TLiteralString($key);
             }
         }
 
-        return TypeCombination::combineTypes($key_types);
+        return TypeCombination::combineTypes($keyTypes);
     }
 
     /**
@@ -178,23 +178,23 @@ class ObjectLike extends \Psalm\Type\Atomic
      */
     public function getGenericValueType()
     {
-        $value_type = null;
+        $valueType = null;
 
         foreach ($this->properties as $property) {
-            if ($value_type === null) {
-                $value_type = clone $property;
+            if ($valueType === null) {
+                $valueType = clone $property;
             } else {
-                $value_type = Type::combineUnionTypes($property, $value_type);
+                $valueType = Type::combineUnionTypes($property, $valueType);
             }
         }
 
-        if (!$value_type) {
-            throw new \UnexpectedValueException('$value_type should not be null here');
+        if (!$valueType) {
+            throw new \UnexpectedValueException('$valueType should not be null here');
         }
 
-        $value_type->possibly_undefined = false;
+        $valueType->possiblyUndefined = false;
 
-        return $value_type;
+        return $valueType;
     }
 
     /**
@@ -202,38 +202,38 @@ class ObjectLike extends \Psalm\Type\Atomic
      */
     public function getGenericArrayType()
     {
-        $key_types = [];
-        $value_type = null;
+        $keyTypes = [];
+        $valueType = null;
 
         foreach ($this->properties as $key => $property) {
             if (is_int($key)) {
-                $key_types[] = new Type\Atomic\TLiteralInt($key);
-            } elseif (isset($this->class_strings[$key])) {
-                $key_types[] = new Type\Atomic\TLiteralClassString($key);
+                $keyTypes[] = new Type\Atomic\TLiteralInt($key);
+            } elseif (isset($this->classStrings[$key])) {
+                $keyTypes[] = new Type\Atomic\TLiteralClassString($key);
             } else {
-                $key_types[] = new Type\Atomic\TLiteralString($key);
+                $keyTypes[] = new Type\Atomic\TLiteralString($key);
             }
 
-            if ($value_type === null) {
-                $value_type = clone $property;
+            if ($valueType === null) {
+                $valueType = clone $property;
             } else {
-                $value_type = Type::combineUnionTypes($property, $value_type);
+                $valueType = Type::combineUnionTypes($property, $valueType);
             }
         }
 
-        if (!$value_type) {
-            throw new \UnexpectedValueException('$value_type should not be null here');
+        if (!$valueType) {
+            throw new \UnexpectedValueException('$valueType should not be null here');
         }
 
-        $value_type->possibly_undefined = false;
+        $valueType->possiblyUndefined = false;
 
-        $array_type = new TArray([TypeCombination::combineTypes($key_types), $value_type]);
+        $arrayType = new TArray([TypeCombination::combineTypes($keyTypes), $valueType]);
 
         if ($this->sealed) {
-            $array_type->count = count($this->properties);
+            $arrayType->count = count($this->properties);
         }
 
-        return $array_type;
+        return $arrayType;
     }
 
     public function __clone()
@@ -253,36 +253,36 @@ class ObjectLike extends \Psalm\Type\Atomic
 
     public function setFromDocblock()
     {
-        $this->from_docblock = true;
+        $this->fromDocblock = true;
 
-        foreach ($this->properties as $property_type) {
-            $property_type->setFromDocblock();
+        foreach ($this->properties as $propertyType) {
+            $propertyType->setFromDocblock();
         }
     }
 
     /**
      * @return bool
      */
-    public function equals(Atomic $other_type)
+    public function equals(Atomic $otherType)
     {
-        if (!$other_type instanceof self) {
+        if (!$otherType instanceof self) {
             return false;
         }
 
-        if (count($this->properties) !== count($other_type->properties)) {
+        if (count($this->properties) !== count($otherType->properties)) {
             return false;
         }
 
-        if ($this->sealed !== $other_type->sealed) {
+        if ($this->sealed !== $otherType->sealed) {
             return false;
         }
 
-        foreach ($this->properties as $property_name => $property_type) {
-            if (!isset($other_type->properties[$property_name])) {
+        foreach ($this->properties as $propertyName => $propertyType) {
+            if (!isset($otherType->properties[$propertyName])) {
                 return false;
             }
 
-            if (!$property_type->equals($other_type->properties[$property_name])) {
+            if (!$propertyType->equals($otherType->properties[$propertyName])) {
                 return false;
             }
         }

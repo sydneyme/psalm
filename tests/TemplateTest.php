@@ -47,28 +47,28 @@ class TemplateTest extends TestCase
 
                     /** @var Foo<A> */
                     $afoo = new Foo($at);
-                    $afoo_bar = $afoo->bar();
+                    $afooBar = $afoo->bar();
 
                     $bfoo = new Foo(B::class);
-                    $bfoo_bar = $bfoo->bar();
+                    $bfooBar = $bfoo->bar();
 
                     // this shouldn’t cause a problem as it’s a docbblock type
-                    if (!($bfoo_bar instanceof B)) {}
+                    if (!($bfooBar instanceof B)) {}
 
                     $cfoo = new Foo("C");
-                    $cfoo_bar = $cfoo->bar();
+                    $cfooBar = $cfoo->bar();
 
                     $dt = "D";
                     $dfoo = new Foo($dt);',
                 'assertions' => [
                     '$afoo' => 'Foo<A>',
-                    '$afoo_bar' => 'A',
+                    '$afooBar' => 'A',
 
                     '$bfoo' => 'Foo<B>',
-                    '$bfoo_bar' => 'B',
+                    '$bfooBar' => 'B',
 
                     '$cfoo' => 'Foo<C>',
-                    '$cfoo_bar' => 'C',
+                    '$cfooBar' => 'C',
 
                     '$dfoo' => 'Foo<mixed>',
                 ],
@@ -177,16 +177,16 @@ class TemplateTest extends TestCase
                     }
 
                     $efoo = new Foo(Exception::class)
-                    $efoo_bar = $efoo->bar();
+                    $efooBar = $efoo->bar();
 
                     $ffoo = new Foo("LogicException");
-                    $ffoo_bar = $ffoo->bar();',
+                    $ffooBar = $ffoo->bar();',
                 'assertions' => [
                     '$efoo' => 'Foo<Exception>',
-                    '$efoo_bar' => 'Exception',
+                    '$efooBar' => 'Exception',
 
                     '$ffoo' => 'Foo<LogicException>',
-                    '$ffoo_bar' => 'LogicException',
+                    '$ffooBar' => 'LogicException',
                 ],
                 'error_levels' => ['MixedReturnStatement', 'LessSpecificReturnStatement'],
             ],
@@ -228,10 +228,10 @@ class TemplateTest extends TestCase
                     }
 
                     $afoo = new Foo(new A());
-                    $afoo_bar = $afoo->bar();',
+                    $afooBar = $afoo->bar();',
                 'assertions' => [
                     '$afoo' => 'Foo<A>',
-                    '$afoo_bar' => 'A',
+                    '$afooBar' => 'A',
                 ],
                 'error_levels' => ['MixedOperand'],
             ],

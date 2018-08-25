@@ -134,10 +134,10 @@ class ClassTest extends TestCase
                         /**
                          * @param string $message
                          * @param int $code
-                         * @param Throwable|null $previous_exception
+                         * @param Throwable|null $previousException
                          */
-                        public function __construct($message, $code, $previous_exception) {
-                            parent::__construct($message, $code, $previous_exception);
+                        public function __construct($message, $code, $previousException) {
+                            parent::__construct($message, $code, $previousException);
                         }
                     }',
             ],
@@ -164,10 +164,10 @@ class ClassTest extends TestCase
                         return mt_rand(0, 1) === 1 ? Foo::class : null;
                     }
 
-                    $foo_class = getFooClass();
+                    $fooClass = getFooClass();
 
-                    if (is_string($foo_class) && is_a($foo_class, Foo::class, true)) {
-                        $foo = new $foo_class();
+                    if (is_string($fooClass) && is_a($fooClass, Foo::class, true)) {
+                        $foo = new $fooClass();
                         $foo->bar();
                     }',
             ],

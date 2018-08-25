@@ -16,20 +16,20 @@ trait CallableTrait
     /**
      * @var Union|null
      */
-    public $return_type;
+    public $returnType;
 
     /**
      * Constructs a new instance of a generic type
      *
      * @param string                            $value
      * @param array<int, FunctionLikeParameter> $params
-     * @param Union                             $return_type
+     * @param Union                             $returnType
      */
-    public function __construct($value = 'callable', array $params = null, Union $return_type = null)
+    public function __construct($value = 'callable', array $params = null, Union $returnType = null)
     {
         $this->value = $value;
         $this->params = $params;
-        $this->return_type = $return_type;
+        $this->returnType = $returnType;
     }
 
     public function __clone()
@@ -40,91 +40,91 @@ trait CallableTrait
             }
         }
 
-        $this->return_type = $this->return_type ? clone $this->return_type : null;
+        $this->returnType = $this->returnType ? clone $this->returnType : null;
     }
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  bool          $use_phpdoc_format
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  bool          $usePhpdocFormat
      *
      * @return string
      */
-    public function toNamespacedString($namespace, array $aliased_classes, $this_class, $use_phpdoc_format)
+    public function toNamespacedString($namespace, array $aliasedClasses, $thisClass, $usePhpdocFormat)
     {
-        if ($use_phpdoc_format) {
+        if ($usePhpdocFormat) {
             if ($this instanceof TNamedObject) {
-                return parent::toNamespacedString($namespace, $aliased_classes, $this_class, true);
+                return parent::toNamespacedString($namespace, $aliasedClasses, $thisClass, true);
             }
 
             return $this->value;
         }
 
-        $param_string = '';
-        $return_type_string = '';
+        $paramString = '';
+        $returnTypeString = '';
 
         if ($this->params !== null) {
-            $param_string = '(' . implode(
+            $paramString = '(' . implode(
                 ', ',
                 array_map(
                     /**
                      * @return string
                      */
-                    function (FunctionLikeParameter $param) use ($namespace, $aliased_classes, $this_class) {
+                    function (FunctionLikeParameter $param) use ($namespace, $aliasedClasses, $thisClass) {
                         if (!$param->type) {
                             throw new \UnexpectedValueException('Param type must not be null');
                         }
 
-                        $type_string = $param->type->toNamespacedString(
+                        $typeString = $param->type->toNamespacedString(
                             $namespace,
-                            $aliased_classes,
-                            $this_class,
+                            $aliasedClasses,
+                            $thisClass,
                             false
                         );
 
-                        return ($param->is_variadic ? '...' : '') . $type_string . ($param->is_optional ? '=' : '');
+                        return ($param->isVariadic ? '...' : '') . $typeString . ($param->isOptional ? '=' : '');
                     },
                     $this->params
                 )
             ) . ')';
         }
 
-        if ($this->return_type !== null) {
-            $return_type_multiple = count($this->return_type->getTypes()) > 1;
+        if ($this->returnType !== null) {
+            $returnTypeMultiple = count($this->returnType->getTypes()) > 1;
 
-            $return_type_string = ':' . ($return_type_multiple ? '(' : '') . $this->return_type->toNamespacedString(
+            $returnTypeString = ':' . ($returnTypeMultiple ? '(' : '') . $this->returnType->toNamespacedString(
                 $namespace,
-                $aliased_classes,
-                $this_class,
+                $aliasedClasses,
+                $thisClass,
                 false
-            ) . ($return_type_multiple ? ')' : '');
+            ) . ($returnTypeMultiple ? ')' : '');
         }
 
         if ($this instanceof TNamedObject) {
-            return parent::toNamespacedString($namespace, $aliased_classes, $this_class, true)
-                . $param_string . $return_type_string;
+            return parent::toNamespacedString($namespace, $aliasedClasses, $thisClass, true)
+                . $paramString . $returnTypeString;
         }
 
-        return 'callable' . $param_string . $return_type_string;
+        return 'callable' . $paramString . $returnTypeString;
     }
 
     public function getId()
     {
-        $param_string = '';
-        $return_type_string = '';
+        $paramString = '';
+        $returnTypeString = '';
 
         if ($this->params !== null) {
-            $param_string = '(' . implode(', ', $this->params) . ')';
+            $paramString = '(' . implode(', ', $this->params) . ')';
         }
 
-        if ($this->return_type !== null) {
-            $return_type_multiple = count($this->return_type->getTypes()) > 1;
-            $return_type_string = ':' . ($return_type_multiple ? '(' : '')
-                . $this->return_type . ($return_type_multiple ? ')' : '');
+        if ($this->returnType !== null) {
+            $returnTypeMultiple = count($this->returnType->getTypes()) > 1;
+            $returnTypeString = ':' . ($returnTypeMultiple ? '(' : '')
+                . $this->returnType . ($returnTypeMultiple ? ')' : '');
         }
 
-        return $this->value . $param_string . $return_type_string;
+        return $this->value . $paramString . $returnTypeString;
     }
 
     public function __toString()
@@ -133,26 +133,26 @@ trait CallableTrait
     }
 
     /**
-     * @param  array<string, Union>     $template_types
-     * @param  array<string, Union>     $generic_params
-     * @param  Atomic|null              $input_type
+     * @param  array<string, Union>     $templateTypes
+     * @param  array<string, Union>     $genericParams
+     * @param  Atomic|null              $inputType
      *
      * @return void
      */
     public function replaceTemplateTypesWithStandins(
-        array $template_types,
-        array &$generic_params,
+        array $templateTypes,
+        array &$genericParams,
         Codebase $codebase = null,
-        Atomic $input_type = null
+        Atomic $inputType = null
     ) {
         if ($this->params) {
             foreach ($this->params as $offset => $param) {
-                $input_param_type = null;
+                $inputParamType = null;
 
-                if ($input_type instanceof Atomic\Fn
-                    && isset($input_type->params[$offset])
+                if ($inputType instanceof Atomic\Fn
+                    && isset($inputType->params[$offset])
                 ) {
-                    $input_param_type = $input_type->params[$offset]->type;
+                    $inputParamType = $inputType->params[$offset]->type;
                 }
 
                 if (!$param->type) {
@@ -160,33 +160,33 @@ trait CallableTrait
                 }
 
                 $param->type->replaceTemplateTypesWithStandins(
-                    $template_types,
-                    $generic_params,
+                    $templateTypes,
+                    $genericParams,
                     $codebase,
-                    $input_param_type
+                    $inputParamType
                 );
             }
         }
 
-        if (($input_type instanceof Atomic\TCallable || $input_type instanceof Atomic\Fn)
-            && $this->return_type
-            && $input_type->return_type
+        if (($inputType instanceof Atomic\TCallable || $inputType instanceof Atomic\Fn)
+            && $this->returnType
+            && $inputType->returnType
         ) {
-            $this->return_type->replaceTemplateTypesWithStandins(
-                $template_types,
-                $generic_params,
+            $this->returnType->replaceTemplateTypesWithStandins(
+                $templateTypes,
+                $genericParams,
                 $codebase,
-                $input_type->return_type
+                $inputType->returnType
             );
         }
     }
 
     /**
-     * @param  array<string, Union>     $template_types
+     * @param  array<string, Union>     $templateTypes
      *
      * @return void
      */
-    public function replaceTemplateTypesWithArgTypes(array $template_types)
+    public function replaceTemplateTypesWithArgTypes(array $templateTypes)
     {
         if ($this->params) {
             foreach ($this->params as $param) {
@@ -194,12 +194,12 @@ trait CallableTrait
                     continue;
                 }
 
-                $param->type->replaceTemplateTypesWithArgTypes($template_types);
+                $param->type->replaceTemplateTypesWithArgTypes($templateTypes);
             }
         }
 
-        if ($this->return_type) {
-            $this->return_type->replaceTemplateTypesWithArgTypes($template_types);
+        if ($this->returnType) {
+            $this->returnType->replaceTemplateTypesWithArgTypes($templateTypes);
         }
     }
 }

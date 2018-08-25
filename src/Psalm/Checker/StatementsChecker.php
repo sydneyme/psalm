@@ -44,39 +44,39 @@ class StatementsChecker extends SourceChecker implements StatementsSource
     /**
      * @var FileChecker
      */
-    protected $file_checker;
+    protected $fileChecker;
 
     /**
      * @var array<string, CodeLocation>
      */
-    private $all_vars = [];
+    private $allVars = [];
 
     /**
      * @var array<string, int>
      */
-    private $var_branch_points = [];
+    private $varBranchPoints = [];
 
     /**
      * Possibly undefined variables should be initialised if we're altering code
      *
      * @var array<string, int>|null
      */
-    private $vars_to_initialize;
+    private $varsToInitialize;
 
     /**
      * @var array<string, FunctionChecker>
      */
-    private $function_checkers = [];
+    private $functionCheckers = [];
 
     /**
      * @var array<string, array{0: string, 1: CodeLocation}>
      */
-    private $unused_var_locations = [];
+    private $unusedVarLocations = [];
 
     /**
      * @var array<string, bool>
      */
-    private $used_var_locations = [];
+    private $usedVarLocations = [];
 
     /**
      * @param StatementsSource $source
@@ -84,7 +84,7 @@ class StatementsChecker extends SourceChecker implements StatementsSource
     public function __construct(StatementsSource $source)
     {
         $this->source = $source;
-        $this->file_checker = $source->getFileChecker();
+        $this->fileChecker = $source->getFileChecker();
     }
 
     /**
@@ -92,31 +92,31 @@ class StatementsChecker extends SourceChecker implements StatementsSource
      *
      * @param  array<PhpParser\Node\Stmt>   $stmts
      * @param  Context                                          $context
-     * @param  Context|null                                     $global_context
-     * @param  bool                                             $root_scope
+     * @param  Context|null                                     $globalContext
+     * @param  bool                                             $rootScope
      *
      * @return null|false
      */
     public function analyze(
         array $stmts,
         Context $context,
-        Context $global_context = null,
-        $root_scope = false
+        Context $globalContext = null,
+        $rootScope = false
     ) {
-        $has_returned = false;
+        $hasReturned = false;
 
         // hoist functions to the top
         foreach ($stmts as $stmt) {
             if ($stmt instanceof PhpParser\Node\Stmt\Function_) {
-                $function_checker = new FunctionChecker($stmt, $this->source);
-                $this->function_checkers[strtolower($stmt->name->name)] = $function_checker;
+                $functionChecker = new FunctionChecker($stmt, $this->source);
+                $this->functionCheckers[strtolower($stmt->name->name)] = $functionChecker;
             }
         }
 
-        $project_checker = $this->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $this->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
-        if ($codebase->config->hoist_constants) {
+        if ($codebase->config->hoistConstants) {
             foreach ($stmts as $stmt) {
                 if ($stmt instanceof PhpParser\Node\Stmt\Const_) {
                     foreach ($stmt->consts as $const) {
@@ -134,10 +134,10 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                     && isset($stmt->expr->args[1])
                     && $stmt->expr->args[0]->value instanceof PhpParser\Node\Scalar\String_
                 ) {
-                    $const_name = $stmt->expr->args[0]->value->value;
+                    $constName = $stmt->expr->args[0]->value->value;
 
                     $this->setConstType(
-                        $const_name,
+                        $constName,
                         self::getSimpleType($codebase, $stmt->expr->args[1]->value, $this->getAliases(), $this)
                             ?: Type::getMixed(),
                         $context
@@ -146,19 +146,19 @@ class StatementsChecker extends SourceChecker implements StatementsSource
             }
         }
 
-        $original_context = null;
+        $originalContext = null;
 
-        if ($context->loop_scope) {
-            $original_context = clone $context;
+        if ($context->loopScope) {
+            $originalContext = clone $context;
         }
 
-        $plugin_classes = $codebase->config->after_statement_checks;
+        $pluginClasses = $codebase->config->afterStatementChecks;
 
         foreach ($stmts as $stmt) {
-            if ($has_returned && !($stmt instanceof PhpParser\Node\Stmt\Nop) &&
+            if ($hasReturned && !($stmt instanceof PhpParser\Node\Stmt\Nop) &&
                 !($stmt instanceof PhpParser\Node\Stmt\InlineHTML)
             ) {
-                if ($context->collect_references) {
+                if ($context->collectReferences) {
                     if (IssueBuffer::accepts(
                         new UnevaluatedCode(
                             'Expressions after return/throw/continue',
@@ -172,17 +172,17 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 break;
             }
 
-            if ($project_checker->debug_lines) {
+            if ($projectChecker->debugLines) {
                 echo $this->getFilePath() . ':' . $stmt->getLine() . "\n";
             }
 
             /*
-            if (isset($context->vars_in_scope['$array']) && !$stmt instanceof PhpParser\Node\Stmt\Nop) {
-                var_dump($stmt->getLine(), $context->vars_in_scope['$array']);
+            if (isset($context->varsInScope['$array']) && !$stmt instanceof PhpParser\Node\Stmt\Nop) {
+                var_dump($stmt->getLine(), $context->varsInScope['$array']);
             }
             */
 
-            $new_issues = null;
+            $newIssues = null;
 
             if ($docblock = $stmt->getDocComment()) {
                 $comments = CommentChecker::parseDocComment((string)$docblock);
@@ -202,9 +202,9 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                     );
 
                     if ($suppressed) {
-                        $new_issues = array_diff($suppressed, $this->source->getSuppressedIssues());
+                        $newIssues = array_diff($suppressed, $this->source->getSuppressedIssues());
                         /** @psalm-suppress MixedTypeCoercion */
-                        $this->addSuppressedIssues($new_issues);
+                        $this->addSuppressedIssues($newIssues);
                     }
                 }
             }
@@ -234,19 +234,19 @@ class StatementsChecker extends SourceChecker implements StatementsSource
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Const_) {
                 $this->analyzeConstAssignment($stmt, $context);
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Unset_) {
-                $context->inside_unset = true;
+                $context->insideUnset = true;
 
                 foreach ($stmt->vars as $var) {
                     ExpressionChecker::analyze($this, $var, $context);
 
-                    $var_id = ExpressionChecker::getArrayVarId(
+                    $varId = ExpressionChecker::getArrayVarId(
                         $var,
                         $this->getFQCLN(),
                         $this
                     );
 
-                    if ($var_id) {
-                        $context->remove($var_id);
+                    if ($varId) {
+                        $context->remove($varId);
 
                         if ($var instanceof PhpParser\Node\Expr\ArrayDimFetch
                             && $var->dim
@@ -254,23 +254,23 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                                 || $var->dim instanceof PhpParser\Node\Scalar\LNumber
                             )
                         ) {
-                            $root_var_id = ExpressionChecker::getArrayVarId(
+                            $rootVarId = ExpressionChecker::getArrayVarId(
                                 $var->var,
                                 $this->getFQCLN(),
                                 $this
                             );
 
-                            if ($root_var_id && isset($context->vars_in_scope[$root_var_id])) {
-                                $root_type = clone $context->vars_in_scope[$root_var_id];
+                            if ($rootVarId && isset($context->varsInScope[$rootVarId])) {
+                                $rootType = clone $context->varsInScope[$rootVarId];
 
-                                foreach ($root_type->getTypes() as $atomic_root_type) {
-                                    if ($atomic_root_type instanceof Type\Atomic\ObjectLike) {
-                                        if (isset($atomic_root_type->properties[$var->dim->value])) {
-                                            unset($atomic_root_type->properties[$var->dim->value]);
+                                foreach ($rootType->getTypes() as $atomicRootType) {
+                                    if ($atomicRootType instanceof Type\Atomic\ObjectLike) {
+                                        if (isset($atomicRootType->properties[$var->dim->value])) {
+                                            unset($atomicRootType->properties[$var->dim->value]);
                                         }
 
-                                        if (!$atomic_root_type->properties) {
-                                            $root_type->addType(
+                                        if (!$atomicRootType->properties) {
+                                            $rootType->addType(
                                                 new Type\Atomic\TArray([
                                                     new Type\Union([new Type\Atomic\TEmpty]),
                                                     new Type\Union([new Type\Atomic\TEmpty]),
@@ -280,72 +280,72 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                                     }
                                 }
 
-                                $context->vars_in_scope[$root_var_id] = $root_type;
+                                $context->varsInScope[$rootVarId] = $rootType;
                             }
                         }
                     }
                 }
 
-                $context->inside_unset = false;
+                $context->insideUnset = false;
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Return_) {
-                $has_returned = true;
-                ReturnChecker::analyze($this, $project_checker, $stmt, $context);
+                $hasReturned = true;
+                ReturnChecker::analyze($this, $projectChecker, $stmt, $context);
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Throw_) {
-                $has_returned = true;
+                $hasReturned = true;
                 ThrowChecker::analyze($this, $stmt, $context);
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Switch_) {
                 SwitchChecker::analyze($this, $stmt, $context);
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Break_) {
-                $loop_scope = $context->loop_scope;
-                if ($loop_scope && $original_context) {
-                    $loop_scope->final_actions[] = ScopeChecker::ACTION_BREAK;
+                $loopScope = $context->loopScope;
+                if ($loopScope && $originalContext) {
+                    $loopScope->finalActions[] = ScopeChecker::ACTION_BREAK;
 
-                    $redefined_vars = $context->getRedefinedVars($loop_scope->loop_parent_context->vars_in_scope);
+                    $redefinedVars = $context->getRedefinedVars($loopScope->loopParentContext->varsInScope);
 
-                    if ($loop_scope->possibly_redefined_loop_parent_vars === null) {
-                        $loop_scope->possibly_redefined_loop_parent_vars = $redefined_vars;
+                    if ($loopScope->possiblyRedefinedLoopParentVars === null) {
+                        $loopScope->possiblyRedefinedLoopParentVars = $redefinedVars;
                     } else {
-                        foreach ($redefined_vars as $var => $type) {
+                        foreach ($redefinedVars as $var => $type) {
                             if ($type->isMixed()) {
-                                $loop_scope->possibly_redefined_loop_parent_vars[$var] = $type;
-                            } elseif (isset($loop_scope->possibly_redefined_loop_parent_vars[$var])) {
-                                $loop_scope->possibly_redefined_loop_parent_vars[$var] = Type::combineUnionTypes(
+                                $loopScope->possiblyRedefinedLoopParentVars[$var] = $type;
+                            } elseif (isset($loopScope->possiblyRedefinedLoopParentVars[$var])) {
+                                $loopScope->possiblyRedefinedLoopParentVars[$var] = Type::combineUnionTypes(
                                     $type,
-                                    $loop_scope->possibly_redefined_loop_parent_vars[$var]
+                                    $loopScope->possiblyRedefinedLoopParentVars[$var]
                                 );
                             } else {
-                                $loop_scope->possibly_redefined_loop_parent_vars[$var] = $type;
+                                $loopScope->possiblyRedefinedLoopParentVars[$var] = $type;
                             }
                         }
                     }
 
-                    if ($context->collect_references && (!$context->switch_scope || $stmt->num)) {
-                        foreach ($context->unreferenced_vars as $var_id => $locations) {
-                            if (isset($loop_scope->unreferenced_vars[$var_id])) {
-                                $loop_scope->unreferenced_vars[$var_id] += $locations;
+                    if ($context->collectReferences && (!$context->switchScope || $stmt->num)) {
+                        foreach ($context->unreferencedVars as $varId => $locations) {
+                            if (isset($loopScope->unreferencedVars[$varId])) {
+                                $loopScope->unreferencedVars[$varId] += $locations;
                             } else {
-                                $loop_scope->unreferenced_vars[$var_id] = $locations;
+                                $loopScope->unreferencedVars[$varId] = $locations;
                             }
                         }
                     }
                 }
 
-                $switch_scope = $context->switch_scope;
-                if ($switch_scope && $context->collect_references) {
-                    foreach ($context->unreferenced_vars as $var_id => $locations) {
-                        if (isset($switch_scope->unreferenced_vars[$var_id])) {
-                            $switch_scope->unreferenced_vars[$var_id] += $locations;
+                $switchScope = $context->switchScope;
+                if ($switchScope && $context->collectReferences) {
+                    foreach ($context->unreferencedVars as $varId => $locations) {
+                        if (isset($switchScope->unreferencedVars[$varId])) {
+                            $switchScope->unreferencedVars[$varId] += $locations;
                         } else {
-                            $switch_scope->unreferenced_vars[$var_id] = $locations;
+                            $switchScope->unreferencedVars[$varId] = $locations;
                         }
                     }
                 }
 
-                $has_returned = true;
+                $hasReturned = true;
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Continue_) {
-                $loop_scope = $context->loop_scope;
-                if ($loop_scope === null) {
-                    if (!$context->inside_case) {
+                $loopScope = $context->loopScope;
+                if ($loopScope === null) {
+                    if (!$context->insideCase) {
                         if (IssueBuffer::accepts(
                             new ContinueOutsideLoop(
                                 'Continue call outside loop context',
@@ -356,62 +356,62 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                             return false;
                         }
                     }
-                } elseif ($original_context) {
-                    $loop_scope->final_actions[] = ScopeChecker::ACTION_CONTINUE;
+                } elseif ($originalContext) {
+                    $loopScope->finalActions[] = ScopeChecker::ACTION_CONTINUE;
 
-                    $redefined_vars = $context->getRedefinedVars($original_context->vars_in_scope);
+                    $redefinedVars = $context->getRedefinedVars($originalContext->varsInScope);
 
-                    if ($loop_scope->redefined_loop_vars === null) {
-                        $loop_scope->redefined_loop_vars = $redefined_vars;
+                    if ($loopScope->redefinedLoopVars === null) {
+                        $loopScope->redefinedLoopVars = $redefinedVars;
                     } else {
-                        foreach ($loop_scope->redefined_loop_vars as $redefined_var => $type) {
-                            if (!isset($redefined_vars[$redefined_var])) {
-                                unset($loop_scope->redefined_loop_vars[$redefined_var]);
+                        foreach ($loopScope->redefinedLoopVars as $redefinedVar => $type) {
+                            if (!isset($redefinedVars[$redefinedVar])) {
+                                unset($loopScope->redefinedLoopVars[$redefinedVar]);
                             } else {
-                                $loop_scope->redefined_loop_vars[$redefined_var] = Type::combineUnionTypes(
-                                    $redefined_vars[$redefined_var],
+                                $loopScope->redefinedLoopVars[$redefinedVar] = Type::combineUnionTypes(
+                                    $redefinedVars[$redefinedVar],
                                     $type
                                 );
                             }
                         }
                     }
 
-                    foreach ($redefined_vars as $var => $type) {
+                    foreach ($redefinedVars as $var => $type) {
                         if ($type->isMixed()) {
-                            $loop_scope->possibly_redefined_loop_vars[$var] = $type;
-                        } elseif (isset($loop_scope->possibly_redefined_loop_vars[$var])) {
-                            $loop_scope->possibly_redefined_loop_vars[$var] = Type::combineUnionTypes(
+                            $loopScope->possiblyRedefinedLoopVars[$var] = $type;
+                        } elseif (isset($loopScope->possiblyRedefinedLoopVars[$var])) {
+                            $loopScope->possiblyRedefinedLoopVars[$var] = Type::combineUnionTypes(
                                 $type,
-                                $loop_scope->possibly_redefined_loop_vars[$var]
+                                $loopScope->possiblyRedefinedLoopVars[$var]
                             );
                         } else {
-                            $loop_scope->possibly_redefined_loop_vars[$var] = $type;
+                            $loopScope->possiblyRedefinedLoopVars[$var] = $type;
                         }
                     }
 
-                    if ($context->collect_references && (!$context->switch_scope || $stmt->num)) {
-                        foreach ($context->unreferenced_vars as $var_id => $locations) {
-                            if (isset($loop_scope->possibly_unreferenced_vars[$var_id])) {
-                                $loop_scope->possibly_unreferenced_vars[$var_id] += $locations;
+                    if ($context->collectReferences && (!$context->switchScope || $stmt->num)) {
+                        foreach ($context->unreferencedVars as $varId => $locations) {
+                            if (isset($loopScope->possiblyUnreferencedVars[$varId])) {
+                                $loopScope->possiblyUnreferencedVars[$varId] += $locations;
                             } else {
-                                $loop_scope->possibly_unreferenced_vars[$var_id] = $locations;
+                                $loopScope->possiblyUnreferencedVars[$varId] = $locations;
                             }
                         }
                     }
                 }
 
-                $switch_scope = $context->switch_scope;
-                if ($switch_scope && $context->collect_references) {
-                    foreach ($context->unreferenced_vars as $var_id => $locations) {
-                        if (isset($switch_scope->unreferenced_vars[$var_id])) {
-                            $switch_scope->unreferenced_vars[$var_id] += $locations;
+                $switchScope = $context->switchScope;
+                if ($switchScope && $context->collectReferences) {
+                    foreach ($context->unreferencedVars as $varId => $locations) {
+                        if (isset($switchScope->unreferencedVars[$varId])) {
+                            $switchScope->unreferencedVars[$varId] += $locations;
                         } else {
-                            $switch_scope->unreferenced_vars[$var_id] = $locations;
+                            $switchScope->unreferencedVars[$varId] = $locations;
                         }
                     }
                 }
 
-                $has_returned = true;
+                $hasReturned = true;
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Static_) {
                 $this->analyzeStatic($stmt, $context);
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Echo_) {
@@ -434,59 +434,59 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                     }
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Function_) {
-                foreach ($stmt->stmts as $function_stmt) {
-                    if ($function_stmt instanceof PhpParser\Node\Stmt\Global_) {
-                        foreach ($function_stmt->vars as $var) {
+                foreach ($stmt->stmts as $functionStmt) {
+                    if ($functionStmt instanceof PhpParser\Node\Stmt\Global_) {
+                        foreach ($functionStmt->vars as $var) {
                             if ($var instanceof PhpParser\Node\Expr\Variable) {
                                 if (is_string($var->name)) {
-                                    $var_id = '$' . $var->name;
+                                    $varId = '$' . $var->name;
 
                                     // registers variable in global context
-                                    $context->hasVariable($var_id, $this);
+                                    $context->hasVariable($varId, $this);
                                 }
                             }
                         }
-                    } elseif (!$function_stmt instanceof PhpParser\Node\Stmt\Nop) {
+                    } elseif (!$functionStmt instanceof PhpParser\Node\Stmt\Nop) {
                         break;
                     }
                 }
 
-                if (!$project_checker->codebase->register_stub_files
-                    && !$project_checker->codebase->register_autoload_files
+                if (!$projectChecker->codebase->registerStubFiles
+                    && !$projectChecker->codebase->registerAutoloadFiles
                 ) {
-                    $function_id = strtolower($stmt->name->name);
-                    $function_context = new Context($context->self);
+                    $functionId = strtolower($stmt->name->name);
+                    $functionContext = new Context($context->self);
                     $config = Config::getInstance();
-                    $function_context->collect_references = $project_checker->codebase->collect_references;
-                    $function_context->collect_exceptions = $config->check_for_throws_docblock;
-                    $this->function_checkers[$function_id]->analyze($function_context, $context);
+                    $functionContext->collectReferences = $projectChecker->codebase->collectReferences;
+                    $functionContext->collectExceptions = $config->checkForThrowsDocblock;
+                    $this->functionCheckers[$functionId]->analyze($functionContext, $context);
 
                     if ($config->reportIssueInFile('InvalidReturnType', $this->getFilePath())) {
-                        $method_id = $this->function_checkers[$function_id]->getMethodId();
+                        $methodId = $this->functionCheckers[$functionId]->getMethodId();
 
-                        $function_storage = $codebase->functions->getStorage(
+                        $functionStorage = $codebase->functions->getStorage(
                             $this,
-                            $method_id
+                            $methodId
                         );
 
-                        $return_type = $function_storage->return_type;
-                        $return_type_location = $function_storage->return_type_location;
+                        $returnType = $functionStorage->returnType;
+                        $returnTypeLocation = $functionStorage->returnTypeLocation;
 
-                        $this->function_checkers[$function_id]->verifyReturnType(
-                            $return_type,
+                        $this->functionCheckers[$functionId]->verifyReturnType(
+                            $returnType,
                             $this->getFQCLN(),
-                            $return_type_location
+                            $returnTypeLocation
                         );
                     }
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Expression) {
-                if (ExpressionChecker::analyze($this, $stmt->expr, $context, false, $global_context) === false) {
+                if (ExpressionChecker::analyze($this, $stmt->expr, $context, false, $globalContext) === false) {
                     return false;
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\InlineHTML) {
                 // do nothing
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Global_) {
-                if (!$context->collect_initializations && !$global_context) {
+                if (!$context->collectInitializations && !$globalContext) {
                     if (IssueBuffer::accepts(
                         new InvalidGlobal(
                             'Cannot use global scope here',
@@ -499,36 +499,36 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 }
 
                 $source = $this->getSource();
-                $function_storage = $source instanceof FunctionLikeChecker
+                $functionStorage = $source instanceof FunctionLikeChecker
                     ? $source->getFunctionLikeStorage($this)
                     : null;
 
                 foreach ($stmt->vars as $var) {
                     if ($var instanceof PhpParser\Node\Expr\Variable) {
                         if (is_string($var->name)) {
-                            $var_id = '$' . $var->name;
+                            $varId = '$' . $var->name;
 
                             if ($var->name === 'argv' || $var->name === 'argc') {
                                 if ($var->name === 'argv') {
-                                    $context->vars_in_scope[$var_id] = new Type\Union([
+                                    $context->varsInScope[$varId] = new Type\Union([
                                         new Type\Atomic\TArray([
                                             Type::getInt(),
                                             Type::getString(),
                                         ]),
                                     ]);
                                 } else {
-                                    $context->vars_in_scope[$var_id] = Type::getInt();
+                                    $context->varsInScope[$varId] = Type::getInt();
                                 }
-                            } elseif (isset($function_storage->global_types[$var_id])) {
-                                $context->vars_in_scope[$var_id] = clone $function_storage->global_types[$var_id];
-                                $context->vars_possibly_in_scope[$var_id] = true;
+                            } elseif (isset($functionStorage->globalTypes[$varId])) {
+                                $context->varsInScope[$varId] = clone $functionStorage->globalTypes[$varId];
+                                $context->varsPossiblyInScope[$varId] = true;
                             } else {
-                                $context->vars_in_scope[$var_id] =
-                                    $global_context && $global_context->hasVariable($var_id, $this)
-                                        ? clone $global_context->vars_in_scope[$var_id]
+                                $context->varsInScope[$varId] =
+                                    $globalContext && $globalContext->hasVariable($varId, $this)
+                                        ? clone $globalContext->varsInScope[$varId]
                                         : Type::getMixed();
 
-                                $context->vars_possibly_in_scope[$var_id] = true;
+                                $context->varsPossiblyInScope[$varId] = true;
                             }
                         }
                     }
@@ -555,14 +555,14 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                     }
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\ClassConst) {
-                $const_visibility = \ReflectionProperty::IS_PUBLIC;
+                $constVisibility = \ReflectionProperty::IS_PUBLIC;
 
                 if ($stmt->isProtected()) {
-                    $const_visibility = \ReflectionProperty::IS_PROTECTED;
+                    $constVisibility = \ReflectionProperty::IS_PROTECTED;
                 }
 
                 if ($stmt->isPrivate()) {
-                    $const_visibility = \ReflectionProperty::IS_PRIVATE;
+                    $constVisibility = \ReflectionProperty::IS_PRIVATE;
                 }
 
                 foreach ($stmt->consts as $const) {
@@ -573,24 +573,24 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                             (string)$this->getFQCLN(),
                             $const->name->name,
                             $const->value->inferredType,
-                            $const_visibility
+                            $constVisibility
                         );
                     }
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Class_) {
                 try {
-                    $class_checker = new ClassChecker($stmt, $this->source, $stmt->name ? $stmt->name->name : null);
-                    $class_checker->analyze(null, $global_context);
+                    $classChecker = new ClassChecker($stmt, $this->source, $stmt->name ? $stmt->name->name : null);
+                    $classChecker->analyze(null, $globalContext);
                 } catch (\InvalidArgumentException $e) {
                     // disregard this exception, we'll likely see it elsewhere in the form
                     // of an issue
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Nop) {
                 if ((string)$stmt->getDocComment()) {
-                    $var_comments = [];
+                    $varComments = [];
 
                     try {
-                        $var_comments = CommentChecker::getTypeFromComment(
+                        $varComments = CommentChecker::getTypeFromComment(
                             (string)$stmt->getDocComment(),
                             $this->getSource(),
                             $this->getSource()->getAliases()
@@ -606,18 +606,18 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                         }
                     }
 
-                    foreach ($var_comments as $var_comment) {
-                        if (!$var_comment->var_id) {
+                    foreach ($varComments as $varComment) {
+                        if (!$varComment->varId) {
                             continue;
                         }
 
-                        $comment_type = ExpressionChecker::fleshOutType(
-                            $project_checker,
-                            $var_comment->type,
+                        $commentType = ExpressionChecker::fleshOutType(
+                            $projectChecker,
+                            $varComment->type,
                             $context->self
                         );
 
-                        $context->vars_in_scope[$var_comment->var_id] = $comment_type;
+                        $context->varsInScope[$varComment->varId] = $commentType;
                     }
                 }
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Goto_) {
@@ -638,59 +638,59 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 }
             }
 
-            if ($context->loop_scope
-                && $context->loop_scope->final_actions
-                && !in_array(ScopeChecker::ACTION_NONE, $context->loop_scope->final_actions, true)
+            if ($context->loopScope
+                && $context->loopScope->finalActions
+                && !in_array(ScopeChecker::ACTION_NONE, $context->loopScope->finalActions, true)
             ) {
-                //$has_returned = true;
+                //$hasReturned = true;
             }
 
-            if ($plugin_classes) {
-                $file_manipulations = [];
-                $code_location = new CodeLocation($this->source, $stmt);
+            if ($pluginClasses) {
+                $fileManipulations = [];
+                $codeLocation = new CodeLocation($this->source, $stmt);
 
-                foreach ($plugin_classes as $plugin_fq_class_name) {
-                    if ($plugin_fq_class_name::afterStatementCheck(
+                foreach ($pluginClasses as $pluginFqClassName) {
+                    if ($pluginFqClassName::afterStatementCheck(
                         $this,
                         $stmt,
                         $context,
-                        $code_location,
+                        $codeLocation,
                         $this->getSuppressedIssues(),
-                        $file_manipulations
+                        $fileManipulations
                     ) === false) {
                         return false;
                     }
                 }
 
-                if ($file_manipulations) {
+                if ($fileManipulations) {
                     /** @psalm-suppress MixedTypeCoercion */
-                    FileManipulationBuffer::add($this->getFilePath(), $file_manipulations);
+                    FileManipulationBuffer::add($this->getFilePath(), $fileManipulations);
                 }
             }
 
-            if ($new_issues) {
+            if ($newIssues) {
                 /** @psalm-suppress MixedTypeCoercion */
-                $this->removeSuppressedIssues($new_issues);
+                $this->removeSuppressedIssues($newIssues);
             }
         }
 
-        if ($root_scope
-            && $context->collect_references
-            && !$context->collect_initializations
-            && $project_checker->codebase->find_unused_code
-            && $context->check_variables
+        if ($rootScope
+            && $context->collectReferences
+            && !$context->collectInitializations
+            && $projectChecker->codebase->findUnusedCode
+            && $context->checkVariables
         ) {
             $this->checkUnreferencedVars();
         }
 
-        if ($project_checker->alter_code && $root_scope && $this->vars_to_initialize) {
-            $file_contents = $project_checker->codebase->getFileContents($this->getFilePath());
+        if ($projectChecker->alterCode && $rootScope && $this->varsToInitialize) {
+            $fileContents = $projectChecker->codebase->getFileContents($this->getFilePath());
 
-            foreach ($this->vars_to_initialize as $var_id => $branch_point) {
-                $newline_pos = (int)strrpos($file_contents, "\n", $branch_point - strlen($file_contents)) + 1;
-                $indentation = substr($file_contents, $newline_pos, $branch_point - $newline_pos);
+            foreach ($this->varsToInitialize as $varId => $branchPoint) {
+                $newlinePos = (int)strrpos($fileContents, "\n", $branchPoint - strlen($fileContents)) + 1;
+                $indentation = substr($fileContents, $newlinePos, $branchPoint - $newlinePos);
                 FileManipulationBuffer::add($this->getFilePath(), [
-                    new FileManipulation($branch_point, $branch_point, $var_id . ' = null;' . "\n" . $indentation),
+                    new FileManipulation($branchPoint, $branchPoint, $varId . ' = null;' . "\n" . $indentation),
                 ]);
             }
         }
@@ -704,18 +704,18 @@ class StatementsChecker extends SourceChecker implements StatementsSource
     public function checkUnreferencedVars()
     {
         $source = $this->getSource();
-        $function_storage = $source instanceof FunctionLikeChecker ? $source->getFunctionLikeStorage($this) : null;
+        $functionStorage = $source instanceof FunctionLikeChecker ? $source->getFunctionLikeStorage($this) : null;
 
-        foreach ($this->unused_var_locations as $hash => list($var_id, $original_location)) {
-            if ($var_id === '$_' || isset($this->used_var_locations[$hash])) {
+        foreach ($this->unusedVarLocations as $hash => list($varId, $originalLocation)) {
+            if ($varId === '$_' || isset($this->usedVarLocations[$hash])) {
                 continue;
             }
 
-            if (!$function_storage || !array_key_exists(substr($var_id, 1), $function_storage->param_types)) {
+            if (!$functionStorage || !array_key_exists(substr($varId, 1), $functionStorage->paramTypes)) {
                 if (IssueBuffer::accepts(
                     new UnusedVariable(
-                        'Variable ' . $var_id . ' is never referenced',
-                        $original_location
+                        'Variable ' . $varId . ' is never referenced',
+                        $originalLocation
                     ),
                     $this->getSuppressedIssues()
                 )) {
@@ -740,27 +740,27 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 }
             }
 
-            if ($context->check_variables) {
+            if ($context->checkVariables) {
                 if (!is_string($var->var->name)) {
                     continue;
                 }
 
-                $var_id = '$' . $var->var->name;
+                $varId = '$' . $var->var->name;
 
-                $context->vars_in_scope[$var_id] = Type::getMixed();
-                $context->vars_possibly_in_scope[$var_id] = true;
-                $context->assigned_var_ids[$var_id] = true;
+                $context->varsInScope[$varId] = Type::getMixed();
+                $context->varsPossiblyInScope[$varId] = true;
+                $context->assignedVarIds[$varId] = true;
 
                 $location = new CodeLocation($this, $stmt);
 
-                if ($context->collect_references) {
-                    $context->unreferenced_vars[$var_id] = [$location->getHash() => $location];
+                if ($context->collectReferences) {
+                    $context->unreferencedVars[$varId] = [$location->getHash() => $location];
                 }
 
                 $this->registerVariable(
-                    $var_id,
+                    $varId,
                     $location,
-                    $context->branch_point
+                    $context->branchPoint
                 );
             }
         }
@@ -770,8 +770,8 @@ class StatementsChecker extends SourceChecker implements StatementsSource
 
     /**
      * @param   PhpParser\Node\Expr $stmt
-     * @param   ?array<string, Type\Union> $existing_class_constants
-     * @param   string $fq_classlike_name
+     * @param   ?array<string, Type\Union> $existingClassConstants
+     * @param   string $fqClasslikeName
      *
      * @return  Type\Union|null
      */
@@ -779,9 +779,9 @@ class StatementsChecker extends SourceChecker implements StatementsSource
         \Psalm\Codebase $codebase,
         PhpParser\Node\Expr $stmt,
         \Psalm\Aliases $aliases,
-        \Psalm\FileSource $file_source = null,
-        array $existing_class_constants = null,
-        $fq_classlike_name = null
+        \Psalm\FileSource $fileSource = null,
+        array $existingClassConstants = null,
+        $fqClasslikeName = null
     ) {
         if ($stmt instanceof PhpParser\Node\Expr\BinaryOp) {
             if ($stmt instanceof PhpParser\Node\Expr\BinaryOp\Concat) {
@@ -816,17 +816,17 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 $codebase,
                 $stmt->left,
                 $aliases,
-                $file_source,
-                $existing_class_constants,
-                $fq_classlike_name
+                $fileSource,
+                $existingClassConstants,
+                $fqClasslikeName
             );
             $stmt->right->inferredType = self::getSimpleType(
                 $codebase,
                 $stmt->right,
                 $aliases,
-                $file_source,
-                $existing_class_constants,
-                $fq_classlike_name
+                $fileSource,
+                $existingClassConstants,
+                $fqClasslikeName
             );
 
             if (!$stmt->left->inferredType || !$stmt->right->inferredType) {
@@ -840,15 +840,15 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 $stmt instanceof PhpParser\Node\Expr\BinaryOp\Pow
             ) {
                 BinaryOpChecker::analyzeNonDivArithmenticOp(
-                    $file_source instanceof StatementsSource ? $file_source : null,
+                    $fileSource instanceof StatementsSource ? $fileSource : null,
                     $stmt->left,
                     $stmt->right,
                     $stmt,
-                    $result_type
+                    $resultType
                 );
 
-                if ($result_type) {
-                    return $result_type;
+                if ($resultType) {
+                    return $resultType;
                 }
 
                 return null;
@@ -877,44 +877,44 @@ class StatementsChecker extends SourceChecker implements StatementsSource
         if ($stmt instanceof PhpParser\Node\Expr\ClassConstFetch) {
             if ($stmt->class instanceof PhpParser\Node\Name
                 && $stmt->name instanceof PhpParser\Node\Identifier
-                && $fq_classlike_name
+                && $fqClasslikeName
                 && $stmt->class->parts !== ['static']
                 && $stmt->class->parts !== ['parent']
             ) {
-                if (isset($existing_class_constants[$stmt->name->name])) {
+                if (isset($existingClassConstants[$stmt->name->name])) {
                     if ($stmt->class->parts === ['self']) {
-                        return clone $existing_class_constants[$stmt->name->name];
+                        return clone $existingClassConstants[$stmt->name->name];
                     }
                 }
 
                 if ($stmt->class->parts === ['self']) {
-                    $const_fq_class_name = $fq_classlike_name;
+                    $constFqClassName = $fqClasslikeName;
                 } else {
-                    $const_fq_class_name = ClassLikeChecker::getFQCLNFromNameObject(
+                    $constFqClassName = ClassLikeChecker::getFQCLNFromNameObject(
                         $stmt->class,
                         $aliases
                     );
                 }
 
-                if (strtolower($const_fq_class_name) === strtolower($fq_classlike_name)
-                    && isset($existing_class_constants[$stmt->name->name])
+                if (strtolower($constFqClassName) === strtolower($fqClasslikeName)
+                    && isset($existingClassConstants[$stmt->name->name])
                 ) {
-                    return clone $existing_class_constants[$stmt->name->name];
+                    return clone $existingClassConstants[$stmt->name->name];
                 }
 
                 if (strtolower($stmt->name->name) === 'class') {
-                    return Type::getClassString($const_fq_class_name);
+                    return Type::getClassString($constFqClassName);
                 }
 
-                if ($existing_class_constants === null) {
+                if ($existingClassConstants === null) {
                     try {
-                        $foreign_class_constants = $codebase->classlikes->getConstantsForClass(
-                            $const_fq_class_name,
+                        $foreignClassConstants = $codebase->classlikes->getConstantsForClass(
+                            $constFqClassName,
                             \ReflectionProperty::IS_PRIVATE
                         );
 
-                        if (isset($foreign_class_constants[$stmt->name->name])) {
-                            return clone $foreign_class_constants[$stmt->name->name];
+                        if (isset($foreignClassConstants[$stmt->name->name])) {
+                            return clone $foreignClassConstants[$stmt->name->name];
                         }
 
                         return null;
@@ -948,54 +948,54 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                 return Type::getEmptyArray();
             }
 
-            $item_key_type = null;
-            $item_value_type = null;
+            $itemKeyType = null;
+            $itemValueType = null;
 
-            $property_types = [];
-            $class_strings = [];
+            $propertyTypes = [];
+            $classStrings = [];
 
-            $can_create_objectlike = true;
+            $canCreateObjectlike = true;
 
-            foreach ($stmt->items as $int_offset => $item) {
+            foreach ($stmt->items as $intOffset => $item) {
                 if ($item === null) {
                     continue;
                 }
 
                 if ($item->key) {
-                    $single_item_key_type = self::getSimpleType(
+                    $singleItemKeyType = self::getSimpleType(
                         $codebase,
                         $item->key,
                         $aliases,
-                        $file_source,
-                        $existing_class_constants,
-                        $fq_classlike_name
+                        $fileSource,
+                        $existingClassConstants,
+                        $fqClasslikeName
                     );
 
-                    if ($single_item_key_type) {
-                        if ($item_key_type) {
-                            $item_key_type = Type::combineUnionTypes($single_item_key_type, $item_key_type);
+                    if ($singleItemKeyType) {
+                        if ($itemKeyType) {
+                            $itemKeyType = Type::combineUnionTypes($singleItemKeyType, $itemKeyType);
                         } else {
-                            $item_key_type = $single_item_key_type;
+                            $itemKeyType = $singleItemKeyType;
                         }
                     }
                 } else {
-                    $item_key_type = Type::getInt();
+                    $itemKeyType = Type::getInt();
                 }
 
-                if ($item_value_type && !$can_create_objectlike) {
+                if ($itemValueType && !$canCreateObjectlike) {
                     continue;
                 }
 
-                $single_item_value_type = self::getSimpleType(
+                $singleItemValueType = self::getSimpleType(
                     $codebase,
                     $item->value,
                     $aliases,
-                    $file_source,
-                    $existing_class_constants,
-                    $fq_classlike_name
+                    $fileSource,
+                    $existingClassConstants,
+                    $fqClasslikeName
                 );
 
-                if (!$single_item_value_type) {
+                if (!$singleItemValueType) {
                     return null;
                 }
 
@@ -1003,66 +1003,66 @@ class StatementsChecker extends SourceChecker implements StatementsSource
                     || $item->key instanceof PhpParser\Node\Scalar\LNumber
                     || !$item->key
                 ) {
-                    $property_types[$item->key ? $item->key->value : $int_offset] = $single_item_value_type;
+                    $propertyTypes[$item->key ? $item->key->value : $intOffset] = $singleItemValueType;
                 } else {
-                    $dim_type = self::getSimpleType(
+                    $dimType = self::getSimpleType(
                         $codebase,
                         $item->key,
                         $aliases,
-                        $file_source,
-                        $existing_class_constants,
-                        $fq_classlike_name
+                        $fileSource,
+                        $existingClassConstants,
+                        $fqClasslikeName
                     );
 
-                    if (!$dim_type) {
+                    if (!$dimType) {
                         return null;
                     }
 
-                    $dim_atomic_types = $dim_type->getTypes();
+                    $dimAtomicTypes = $dimType->getTypes();
 
-                    if (count($dim_atomic_types) > 1 || $dim_type->isMixed()) {
-                        $can_create_objectlike = false;
+                    if (count($dimAtomicTypes) > 1 || $dimType->isMixed()) {
+                        $canCreateObjectlike = false;
                     } else {
-                        $atomic_type = array_shift($dim_atomic_types);
+                        $atomicType = array_shift($dimAtomicTypes);
 
-                        if ($atomic_type instanceof Type\Atomic\TLiteralInt
-                            || $atomic_type instanceof Type\Atomic\TLiteralString
+                        if ($atomicType instanceof Type\Atomic\TLiteralInt
+                            || $atomicType instanceof Type\Atomic\TLiteralString
                         ) {
-                            if ($atomic_type instanceof Type\Atomic\TLiteralClassString) {
-                                $class_strings[$atomic_type->value] = true;
+                            if ($atomicType instanceof Type\Atomic\TLiteralClassString) {
+                                $classStrings[$atomicType->value] = true;
                             }
 
-                            $property_types[$atomic_type->value] = $single_item_value_type;
+                            $propertyTypes[$atomicType->value] = $singleItemValueType;
                         } else {
-                            $can_create_objectlike = false;
+                            $canCreateObjectlike = false;
                         }
                     }
                 }
 
-                if ($item_value_type) {
-                    $item_value_type = Type::combineUnionTypes($single_item_value_type, $item_value_type);
+                if ($itemValueType) {
+                    $itemValueType = Type::combineUnionTypes($singleItemValueType, $itemValueType);
                 } else {
-                    $item_value_type = $single_item_value_type;
+                    $itemValueType = $singleItemValueType;
                 }
             }
 
             // if this array looks like an object-like array, let's return that instead
-            if ($item_value_type
-                && $item_key_type
-                && ($item_key_type->hasString() || $item_key_type->hasInt())
-                && $can_create_objectlike
+            if ($itemValueType
+                && $itemKeyType
+                && ($itemKeyType->hasString() || $itemKeyType->hasInt())
+                && $canCreateObjectlike
             ) {
-                return new Type\Union([new Type\Atomic\ObjectLike($property_types, $class_strings)]);
+                return new Type\Union([new Type\Atomic\ObjectLike($propertyTypes, $classStrings)]);
             }
 
-            if (!$item_key_type || !$item_value_type) {
+            if (!$itemKeyType || !$itemValueType) {
                 return null;
             }
 
             return new Type\Union([
                 new Type\Atomic\TArray([
-                    $item_key_type,
-                    $item_value_type,
+                    $itemKeyType,
+                    $itemValueType,
                 ]),
             ]);
         }
@@ -1092,32 +1092,32 @@ class StatementsChecker extends SourceChecker implements StatementsSource
         }
 
         if ($stmt instanceof PhpParser\Node\Expr\UnaryMinus || $stmt instanceof PhpParser\Node\Expr\UnaryPlus) {
-            $type_to_invert = self::getSimpleType(
+            $typeToInvert = self::getSimpleType(
                 $codebase,
                 $stmt->expr,
                 $aliases,
-                $file_source,
-                $existing_class_constants,
-                $fq_classlike_name
+                $fileSource,
+                $existingClassConstants,
+                $fqClasslikeName
             );
 
-            if (!$type_to_invert) {
+            if (!$typeToInvert) {
                 return null;
             }
 
-            foreach ($type_to_invert->getTypes() as $type_part) {
-                if ($type_part instanceof Type\Atomic\TLiteralInt
+            foreach ($typeToInvert->getTypes() as $typePart) {
+                if ($typePart instanceof Type\Atomic\TLiteralInt
                     && $stmt instanceof PhpParser\Node\Expr\UnaryMinus
                 ) {
-                    $type_part->value = -$type_part->value;
-                } elseif ($type_part instanceof Type\Atomic\TLiteralFloat
+                    $typePart->value = -$typePart->value;
+                } elseif ($typePart instanceof Type\Atomic\TLiteralFloat
                     && $stmt instanceof PhpParser\Node\Expr\UnaryMinus
                 ) {
-                    $type_part->value = -$type_part->value;
+                    $typePart->value = -$typePart->value;
                 }
             }
 
-            return $type_to_invert;
+            return $typeToInvert;
         }
 
         return null;
@@ -1143,118 +1143,118 @@ class StatementsChecker extends SourceChecker implements StatementsSource
     }
 
     /**
-     * @param   string  $const_name
-     * @param   bool    $is_fully_qualified
+     * @param   string  $constName
+     * @param   bool    $isFullyQualified
      * @param   Context $context
      *
      * @return  Type\Union|null
      */
     public function getConstType(
-        StatementsChecker $statements_checker,
-        $const_name,
-        $is_fully_qualified,
+        StatementsChecker $statementsChecker,
+        $constName,
+        $isFullyQualified,
         Context $context
     ) {
-        $fq_const_name = null;
+        $fqConstName = null;
 
-        $aliased_constants = $this->getAliases()->constants;
+        $aliasedConstants = $this->getAliases()->constants;
 
-        if (isset($aliased_constants[$const_name])) {
-            $fq_const_name = $aliased_constants[$const_name];
-        } elseif ($is_fully_qualified) {
-            $fq_const_name = $const_name;
-        } elseif (strpos($const_name, '\\')) {
-            $fq_const_name = Type::getFQCLNFromString($const_name, $this->getAliases());
+        if (isset($aliasedConstants[$constName])) {
+            $fqConstName = $aliasedConstants[$constName];
+        } elseif ($isFullyQualified) {
+            $fqConstName = $constName;
+        } elseif (strpos($constName, '\\')) {
+            $fqConstName = Type::getFQCLNFromString($constName, $this->getAliases());
         }
 
-        if ($fq_const_name) {
-            $const_name_parts = explode('\\', $fq_const_name);
-            $const_name = array_pop($const_name_parts);
-            $namespace_name = implode('\\', $const_name_parts);
-            $namespace_constants = NamespaceChecker::getConstantsForNamespace(
-                $namespace_name,
+        if ($fqConstName) {
+            $constNameParts = explode('\\', $fqConstName);
+            $constName = array_pop($constNameParts);
+            $namespaceName = implode('\\', $constNameParts);
+            $namespaceConstants = NamespaceChecker::getConstantsForNamespace(
+                $namespaceName,
                 \ReflectionProperty::IS_PUBLIC
             );
 
-            if (isset($namespace_constants[$const_name])) {
-                return $namespace_constants[$const_name];
+            if (isset($namespaceConstants[$constName])) {
+                return $namespaceConstants[$constName];
             }
         }
 
-        if ($context->hasVariable($const_name, $statements_checker)) {
-            return $context->vars_in_scope[$const_name];
+        if ($context->hasVariable($constName, $statementsChecker)) {
+            return $context->varsInScope[$constName];
         }
 
-        $file_path = $statements_checker->getRootFilePath();
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
+        $filePath = $statementsChecker->getRootFilePath();
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
 
-        $file_storage_provider = $project_checker->file_storage_provider;
+        $fileStorageProvider = $projectChecker->fileStorageProvider;
 
-        $file_storage = $file_storage_provider->get($file_path);
+        $fileStorage = $fileStorageProvider->get($filePath);
 
-        if (isset($file_storage->declaring_constants[$const_name])) {
-            $constant_file_path = $file_storage->declaring_constants[$const_name];
+        if (isset($fileStorage->declaringConstants[$constName])) {
+            $constantFilePath = $fileStorage->declaringConstants[$constName];
 
-            return $file_storage_provider->get($constant_file_path)->constants[$const_name];
+            return $fileStorageProvider->get($constantFilePath)->constants[$constName];
         }
 
-        return ConstFetchChecker::getGlobalConstType($project_checker->codebase, $fq_const_name, $const_name);
+        return ConstFetchChecker::getGlobalConstType($projectChecker->codebase, $fqConstName, $constName);
     }
 
     /**
-     * @param   string      $const_name
-     * @param   Type\Union  $const_type
+     * @param   string      $constName
+     * @param   Type\Union  $constType
      * @param   Context     $context
      *
      * @return  void
      */
-    public function setConstType($const_name, Type\Union $const_type, Context $context)
+    public function setConstType($constName, Type\Union $constType, Context $context)
     {
-        $context->vars_in_scope[$const_name] = $const_type;
-        $context->constants[$const_name] = $const_type;
+        $context->varsInScope[$constName] = $constType;
+        $context->constants[$constName] = $constType;
 
         if ($this->source instanceof NamespaceChecker) {
-            $this->source->setConstType($const_name, $const_type);
+            $this->source->setConstType($constName, $constType);
         }
     }
 
     /**
-     * @param  string       $var_name
+     * @param  string       $varName
      *
      * @return bool
      */
-    public function hasVariable($var_name)
+    public function hasVariable($varName)
     {
-        return isset($this->all_vars[$var_name]);
+        return isset($this->allVars[$varName]);
     }
 
     /**
-     * @param  string       $var_id
+     * @param  string       $varId
      * @param  CodeLocation $location
-     * @param  int|null     $branch_point
+     * @param  int|null     $branchPoint
      *
      * @return void
      */
-    public function registerVariable($var_id, CodeLocation $location, $branch_point)
+    public function registerVariable($varId, CodeLocation $location, $branchPoint)
     {
-        $this->all_vars[$var_id] = $location;
+        $this->allVars[$varId] = $location;
 
-        if ($branch_point) {
-            $this->var_branch_points[$var_id] = $branch_point;
+        if ($branchPoint) {
+            $this->varBranchPoints[$varId] = $branchPoint;
         }
 
-        $this->registerVariableAssignment($var_id, $location);
+        $this->registerVariableAssignment($varId, $location);
     }
 
     /**
-     * @param  string       $var_id
+     * @param  string       $varId
      * @param  CodeLocation $location
      *
      * @return void
      */
-    public function registerVariableAssignment($var_id, CodeLocation $location)
+    public function registerVariableAssignment($varId, CodeLocation $location)
     {
-        $this->unused_var_locations[$location->getHash()] = [$var_id, $location];
+        $this->unusedVarLocations[$location->getHash()] = [$varId, $location];
     }
 
     /**
@@ -1264,8 +1264,8 @@ class StatementsChecker extends SourceChecker implements StatementsSource
     public function registerVariableUses(array $locations)
     {
         foreach ($locations as $hash => $_) {
-            unset($this->unused_var_locations[$hash]);
-            $this->used_var_locations[$hash] = true;
+            unset($this->unusedVarLocations[$hash]);
+            $this->usedVarLocations[$hash] = true;
         }
     }
 
@@ -1274,40 +1274,40 @@ class StatementsChecker extends SourceChecker implements StatementsSource
      */
     public function getUnusedVarLocations()
     {
-        return $this->unused_var_locations;
+        return $this->unusedVarLocations;
     }
 
     /**
      * The first appearance of the variable in this set of statements being evaluated
      *
-     * @param  string  $var_id
+     * @param  string  $varId
      *
      * @return CodeLocation|null
      */
-    public function getFirstAppearance($var_id)
+    public function getFirstAppearance($varId)
     {
-        return isset($this->all_vars[$var_id]) ? $this->all_vars[$var_id] : null;
+        return isset($this->allVars[$varId]) ? $this->allVars[$varId] : null;
     }
 
     /**
-     * @param  string $var_id
+     * @param  string $varId
      *
      * @return int|null
      */
-    public function getBranchPoint($var_id)
+    public function getBranchPoint($varId)
     {
-        return isset($this->var_branch_points[$var_id]) ? $this->var_branch_points[$var_id] : null;
+        return isset($this->varBranchPoints[$varId]) ? $this->varBranchPoints[$varId] : null;
     }
 
     /**
-     * @param string $var_id
-     * @param int    $branch_point
+     * @param string $varId
+     * @param int    $branchPoint
      *
      * @return void
      */
-    public function addVariableInitialization($var_id, $branch_point)
+    public function addVariableInitialization($varId, $branchPoint)
     {
-        $this->vars_to_initialize[$var_id] = $branch_point;
+        $this->varsToInitialize[$varId] = $branchPoint;
     }
 
     /**
@@ -1315,7 +1315,7 @@ class StatementsChecker extends SourceChecker implements StatementsSource
      */
     public function getFileChecker()
     {
-        return $this->file_checker;
+        return $this->fileChecker;
     }
 
     /**
@@ -1323,6 +1323,6 @@ class StatementsChecker extends SourceChecker implements StatementsSource
      */
     public function getFunctionCheckers()
     {
-        return $this->function_checkers;
+        return $this->functionCheckers;
     }
 }

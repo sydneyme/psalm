@@ -17,7 +17,7 @@ class ClassStringTest extends TestCase
      */
     public function testDontAllowStringConstCoercion()
     {
-        Config::getInstance()->allow_coercion_from_string_to_class_const = false;
+        Config::getInstance()->allowCoercionFromStringToClassConst = false;
 
         $this->addFile(
             'somefile.php',
@@ -43,7 +43,7 @@ class ClassStringTest extends TestCase
      */
     public function testDontAllowStringStandInForNewClass()
     {
-        Config::getInstance()->allow_string_standin_for_class = false;
+        Config::getInstance()->allowStringStandinForClass = false;
 
         $this->addFile(
             'somefile.php',
@@ -66,7 +66,7 @@ class ClassStringTest extends TestCase
      */
     public function testDontAllowStringStandInForStaticMethodCall()
     {
-        Config::getInstance()->allow_string_standin_for_class = false;
+        Config::getInstance()->allowStringStandinForClass = false;
 
         $this->addFile(
             'somefile.php',

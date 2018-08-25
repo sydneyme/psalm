@@ -24,11 +24,11 @@ class TArray extends \Psalm\Type\Atomic
     /**
      * Constructs a new instance of a generic type
      *
-     * @param array<int, \Psalm\Type\Union> $type_params
+     * @param array<int, \Psalm\Type\Union> $typeParams
      */
-    public function __construct(array $type_params)
+    public function __construct(array $typeParams)
     {
-        $this->type_params = $type_params;
+        $this->typeParams = $typeParams;
     }
 
     /**
@@ -41,47 +41,47 @@ class TArray extends \Psalm\Type\Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return string
      */
     public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     ) {
         return $this->getKey();
     }
 
     public function canBeFullyExpressedInPhp()
     {
-        return $this->type_params[0]->isMixed() && $this->type_params[1]->isMixed();
+        return $this->typeParams[0]->isMixed() && $this->typeParams[1]->isMixed();
     }
 
     /**
      * @return bool
      */
-    public function equals(Atomic $other_type)
+    public function equals(Atomic $otherType)
     {
-        if (!$other_type instanceof self) {
+        if (!$otherType instanceof self) {
             return false;
         }
 
-        if ($this->count !== $other_type->count) {
+        if ($this->count !== $otherType->count) {
             return false;
         }
 
-        if (count($this->type_params) !== count($other_type->type_params)) {
+        if (count($this->typeParams) !== count($otherType->typeParams)) {
             return false;
         }
 
-        foreach ($this->type_params as $i => $type_param) {
-            if (!$type_param->equals($other_type->type_params[$i])) {
+        foreach ($this->typeParams as $i => $typeParam) {
+            if (!$typeParam->equals($otherType->typeParams[$i])) {
                 return false;
             }
         }

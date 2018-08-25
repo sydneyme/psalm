@@ -13,19 +13,19 @@ class TraitChecker extends ClassLikeChecker
     private $aliases;
 
     /**
-     * @param string $fq_class_name
+     * @param string $fqClassName
      */
     public function __construct(
         PhpParser\Node\Stmt\Trait_ $class,
         StatementsSource $source,
-        $fq_class_name,
+        $fqClassName,
         Aliases $aliases
     ) {
         $this->source = $source;
-        $this->file_checker = $source->getFileChecker();
+        $this->fileChecker = $source->getFileChecker();
         $this->class = $class;
-        $this->fq_class_name = $fq_class_name;
-        $this->storage = $this->file_checker->project_checker->classlike_storage_provider->get($fq_class_name);
+        $this->fqClassName = $fqClassName;
+        $this->storage = $this->fileChecker->projectChecker->classlikeStorageProvider->get($fqClassName);
         $this->aliases = $aliases;
     }
 

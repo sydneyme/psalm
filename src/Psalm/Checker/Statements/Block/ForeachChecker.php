@@ -24,309 +24,309 @@ use Psalm\Type;
 class ForeachChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PhpParser\Node\Stmt\Foreach_    $stmt
      * @param   Context                         $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Stmt\Foreach_ $stmt,
         Context $context
     ) {
-        if (ExpressionChecker::analyze($statements_checker, $stmt->expr, $context) === false) {
+        if (ExpressionChecker::analyze($statementsChecker, $stmt->expr, $context) === false) {
             return false;
         }
 
-        $foreach_context = clone $context;
+        $foreachContext = clone $context;
 
-        $foreach_context->inside_loop = true;
+        $foreachContext->insideLoop = true;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
-        if ($project_checker->alter_code) {
-            $foreach_context->branch_point =
-                $foreach_context->branch_point ?: (int) $stmt->getAttribute('startFilePos');
+        if ($projectChecker->alterCode) {
+            $foreachContext->branchPoint =
+                $foreachContext->branchPoint ?: (int) $stmt->getAttribute('startFilePos');
         }
 
-        $key_type = null;
-        $value_type = null;
+        $keyType = null;
+        $valueType = null;
 
-        $var_id = ExpressionChecker::getVarId(
+        $varId = ExpressionChecker::getVarId(
             $stmt->expr,
-            $statements_checker->getFQCLN(),
-            $statements_checker
+            $statementsChecker->getFQCLN(),
+            $statementsChecker
         );
 
         if (isset($stmt->expr->inferredType)) {
-            $iterator_type = $stmt->expr->inferredType;
-        } elseif ($var_id && $foreach_context->hasVariable($var_id, $statements_checker)) {
-            $iterator_type = $foreach_context->vars_in_scope[$var_id];
+            $iteratorType = $stmt->expr->inferredType;
+        } elseif ($varId && $foreachContext->hasVariable($varId, $statementsChecker)) {
+            $iteratorType = $foreachContext->varsInScope[$varId];
         } else {
-            $iterator_type = null;
+            $iteratorType = null;
         }
 
-        if ($iterator_type) {
-            if ($iterator_type->isNull()) {
+        if ($iteratorType) {
+            if ($iteratorType->isNull()) {
                 if (IssueBuffer::accepts(
                     new NullIterator(
                         'Cannot iterate over null',
-                        new CodeLocation($statements_checker->getSource(), $stmt->expr)
+                        new CodeLocation($statementsChecker->getSource(), $stmt->expr)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
-            } elseif ($iterator_type->isNullable() && !$iterator_type->ignore_nullable_issues) {
+            } elseif ($iteratorType->isNullable() && !$iteratorType->ignoreNullableIssues) {
                 if (IssueBuffer::accepts(
                     new PossiblyNullIterator(
-                        'Cannot iterate over nullable var ' . $iterator_type,
-                        new CodeLocation($statements_checker->getSource(), $stmt->expr)
+                        'Cannot iterate over nullable var ' . $iteratorType,
+                        new CodeLocation($statementsChecker->getSource(), $stmt->expr)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
-            } elseif ($iterator_type->isFalsable() && !$iterator_type->ignore_falsable_issues) {
+            } elseif ($iteratorType->isFalsable() && !$iteratorType->ignoreFalsableIssues) {
                 if (IssueBuffer::accepts(
                     new PossiblyFalseIterator(
-                        'Cannot iterate over falsable var ' . $iterator_type,
-                        new CodeLocation($statements_checker->getSource(), $stmt->expr)
+                        'Cannot iterate over falsable var ' . $iteratorType,
+                        new CodeLocation($statementsChecker->getSource(), $stmt->expr)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
             }
 
-            $has_valid_iterator = false;
-            $invalid_iterator_types = [];
+            $hasValidIterator = false;
+            $invalidIteratorTypes = [];
 
-            foreach ($iterator_type->getTypes() as $iterator_type) {
+            foreach ($iteratorType->getTypes() as $iteratorType) {
                 // if it's an empty array, we cannot iterate over it
-                if ($iterator_type instanceof Type\Atomic\TArray
-                    && $iterator_type->type_params[1]->isEmpty()
+                if ($iteratorType instanceof Type\Atomic\TArray
+                    && $iteratorType->typeParams[1]->isEmpty()
                 ) {
-                    $has_valid_iterator = true;
+                    $hasValidIterator = true;
                     continue;
                 }
 
-                if ($iterator_type instanceof Type\Atomic\TNull || $iterator_type instanceof Type\Atomic\TFalse) {
+                if ($iteratorType instanceof Type\Atomic\TNull || $iteratorType instanceof Type\Atomic\TFalse) {
                     continue;
                 }
 
-                if ($iterator_type instanceof Type\Atomic\TArray
-                    || $iterator_type instanceof Type\Atomic\ObjectLike
+                if ($iteratorType instanceof Type\Atomic\TArray
+                    || $iteratorType instanceof Type\Atomic\ObjectLike
                 ) {
-                    if ($iterator_type instanceof Type\Atomic\ObjectLike) {
-                        $iterator_type = $iterator_type->getGenericArrayType();
+                    if ($iteratorType instanceof Type\Atomic\ObjectLike) {
+                        $iteratorType = $iteratorType->getGenericArrayType();
                     }
 
-                    if (!$value_type) {
-                        $value_type = $iterator_type->type_params[1];
+                    if (!$valueType) {
+                        $valueType = $iteratorType->typeParams[1];
                     } else {
-                        $value_type = Type::combineUnionTypes($value_type, $iterator_type->type_params[1]);
+                        $valueType = Type::combineUnionTypes($valueType, $iteratorType->typeParams[1]);
                     }
 
-                    $key_type_part = $iterator_type->type_params[0];
+                    $keyTypePart = $iteratorType->typeParams[0];
 
-                    if (!$key_type) {
-                        $key_type = $key_type_part;
+                    if (!$keyType) {
+                        $keyType = $keyTypePart;
                     } else {
-                        $key_type = Type::combineUnionTypes($key_type, $key_type_part);
+                        $keyType = Type::combineUnionTypes($keyType, $keyTypePart);
                     }
 
-                    $has_valid_iterator = true;
+                    $hasValidIterator = true;
                     continue;
                 }
 
-                if ($iterator_type instanceof Type\Atomic\Scalar ||
-                    $iterator_type instanceof Type\Atomic\TVoid
+                if ($iteratorType instanceof Type\Atomic\Scalar ||
+                    $iteratorType instanceof Type\Atomic\TVoid
                 ) {
-                    $invalid_iterator_types[] = $iterator_type->getKey();
+                    $invalidIteratorTypes[] = $iteratorType->getKey();
 
-                    $value_type = Type::getMixed();
-                } elseif ($iterator_type instanceof Type\Atomic\TObject ||
-                    $iterator_type instanceof Type\Atomic\TMixed ||
-                    $iterator_type instanceof Type\Atomic\TEmpty
+                    $valueType = Type::getMixed();
+                } elseif ($iteratorType instanceof Type\Atomic\TObject ||
+                    $iteratorType instanceof Type\Atomic\TMixed ||
+                    $iteratorType instanceof Type\Atomic\TEmpty
                 ) {
-                    $has_valid_iterator = true;
-                    $value_type = Type::getMixed();
-                } elseif ($iterator_type instanceof Type\Atomic\TNamedObject) {
-                    if ($iterator_type->value !== 'Traversable' &&
-                        $iterator_type->value !== $statements_checker->getClassName()
+                    $hasValidIterator = true;
+                    $valueType = Type::getMixed();
+                } elseif ($iteratorType instanceof Type\Atomic\TNamedObject) {
+                    if ($iteratorType->value !== 'Traversable' &&
+                        $iteratorType->value !== $statementsChecker->getClassName()
                     ) {
                         if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                            $statements_checker,
-                            $iterator_type->value,
-                            new CodeLocation($statements_checker->getSource(), $stmt->expr),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker,
+                            $iteratorType->value,
+                            new CodeLocation($statementsChecker->getSource(), $stmt->expr),
+                            $statementsChecker->getSuppressedIssues()
                         ) === false) {
                             return false;
                         }
                     }
 
-                    $has_valid_iterator = true;
+                    $hasValidIterator = true;
 
-                    if ($iterator_type instanceof Type\Atomic\TGenericObject &&
-                        (strtolower($iterator_type->value) === 'iterable' ||
-                            strtolower($iterator_type->value) === 'traversable' ||
+                    if ($iteratorType instanceof Type\Atomic\TGenericObject &&
+                        (strtolower($iteratorType->value) === 'iterable' ||
+                            strtolower($iteratorType->value) === 'traversable' ||
                             $codebase->classImplements(
-                                $iterator_type->value,
+                                $iteratorType->value,
                                 'Traversable'
                             ))
                     ) {
-                        $value_index = count($iterator_type->type_params) - 1;
-                        $value_type_part = $iterator_type->type_params[$value_index];
+                        $valueIndex = count($iteratorType->typeParams) - 1;
+                        $valueTypePart = $iteratorType->typeParams[$valueIndex];
 
-                        if (!$value_type) {
-                            $value_type = $value_type_part;
+                        if (!$valueType) {
+                            $valueType = $valueTypePart;
                         } else {
-                            $value_type = Type::combineUnionTypes($value_type, $value_type_part);
+                            $valueType = Type::combineUnionTypes($valueType, $valueTypePart);
                         }
 
-                        if ($value_index) {
-                            $key_type_part = $iterator_type->type_params[0];
+                        if ($valueIndex) {
+                            $keyTypePart = $iteratorType->typeParams[0];
 
-                            if (!$key_type) {
-                                $key_type = $key_type_part;
+                            if (!$keyType) {
+                                $keyType = $keyTypePart;
                             } else {
-                                $key_type = Type::combineUnionTypes($key_type, $key_type_part);
+                                $keyType = Type::combineUnionTypes($keyType, $keyTypePart);
                             }
                         }
                         continue;
                     }
 
-                    if (!$codebase->classlikes->classOrInterfaceExists($iterator_type->value)) {
+                    if (!$codebase->classlikes->classOrInterfaceExists($iteratorType->value)) {
                         continue;
                     }
 
                     if ($codebase->classImplements(
-                        $iterator_type->value,
+                        $iteratorType->value,
                         'IteratorAggregate'
                     ) ||
                         (
-                            $codebase->interfaceExists($iterator_type->value)
+                            $codebase->interfaceExists($iteratorType->value)
                             && $codebase->interfaceExtends(
-                                $iterator_type->value,
+                                $iteratorType->value,
                                 'IteratorAggregate'
                             )
                         )
                     ) {
-                        $iterator_method = $iterator_type->value . '::getIterator';
-                        $self_class = $iterator_type->value;
-                        $iterator_class_type = $codebase->methods->getMethodReturnType(
-                            $iterator_method,
-                            $self_class
+                        $iteratorMethod = $iteratorType->value . '::getIterator';
+                        $selfClass = $iteratorType->value;
+                        $iteratorClassType = $codebase->methods->getMethodReturnType(
+                            $iteratorMethod,
+                            $selfClass
                         );
 
-                        if ($iterator_class_type) {
-                            $array_type = ExpressionChecker::fleshOutType(
-                                $project_checker,
-                                $iterator_class_type,
-                                $self_class,
-                                $self_class
+                        if ($iteratorClassType) {
+                            $arrayType = ExpressionChecker::fleshOutType(
+                                $projectChecker,
+                                $iteratorClassType,
+                                $selfClass,
+                                $selfClass
                             );
 
-                            foreach ($array_type->getTypes() as $array_atomic_type) {
-                                if ($array_atomic_type instanceof Type\Atomic\TArray
-                                    || $array_atomic_type instanceof Type\Atomic\ObjectLike
+                            foreach ($arrayType->getTypes() as $arrayAtomicType) {
+                                if ($arrayAtomicType instanceof Type\Atomic\TArray
+                                    || $arrayAtomicType instanceof Type\Atomic\ObjectLike
                                 ) {
-                                    if ($array_atomic_type instanceof Type\Atomic\ObjectLike) {
-                                        $array_atomic_type = $array_atomic_type->getGenericArrayType();
+                                    if ($arrayAtomicType instanceof Type\Atomic\ObjectLike) {
+                                        $arrayAtomicType = $arrayAtomicType->getGenericArrayType();
                                     }
 
-                                    $key_type_part = $array_atomic_type->type_params[0];
-                                    $value_type_part = $array_atomic_type->type_params[1];
-                                } elseif ($array_atomic_type instanceof Type\Atomic\TGenericObject) {
-                                    $type_param_count = count($array_atomic_type->type_params);
+                                    $keyTypePart = $arrayAtomicType->typeParams[0];
+                                    $valueTypePart = $arrayAtomicType->typeParams[1];
+                                } elseif ($arrayAtomicType instanceof Type\Atomic\TGenericObject) {
+                                    $typeParamCount = count($arrayAtomicType->typeParams);
 
-                                    $value_type_part = $array_atomic_type->type_params[$type_param_count - 1];
-                                    $key_type_part = $type_param_count > 1
-                                        ? $array_atomic_type->type_params[0]
+                                    $valueTypePart = $arrayAtomicType->typeParams[$typeParamCount - 1];
+                                    $keyTypePart = $typeParamCount > 1
+                                        ? $arrayAtomicType->typeParams[0]
                                         : Type::getMixed();
                                 } else {
-                                    $key_type = Type::getMixed();
-                                    $value_type = Type::getMixed();
+                                    $keyType = Type::getMixed();
+                                    $valueType = Type::getMixed();
                                     break;
                                 }
 
-                                if (!$key_type) {
-                                    $key_type = $key_type_part;
+                                if (!$keyType) {
+                                    $keyType = $keyTypePart;
                                 } else {
-                                    $key_type = Type::combineUnionTypes($key_type, $key_type_part);
+                                    $keyType = Type::combineUnionTypes($keyType, $keyTypePart);
                                 }
 
-                                if (!$value_type) {
-                                    $value_type = $value_type_part;
+                                if (!$valueType) {
+                                    $valueType = $valueTypePart;
                                 } else {
-                                    $value_type = Type::combineUnionTypes($value_type, $value_type_part);
+                                    $valueType = Type::combineUnionTypes($valueType, $valueTypePart);
                                 }
                             }
                         } else {
-                            $value_type = Type::getMixed();
+                            $valueType = Type::getMixed();
                         }
                     } elseif ($codebase->classImplements(
-                        $iterator_type->value,
+                        $iteratorType->value,
                         'Iterator'
                     ) ||
                         (
-                            $codebase->interfaceExists($iterator_type->value)
+                            $codebase->interfaceExists($iteratorType->value)
                             && $codebase->interfaceExtends(
-                                $iterator_type->value,
+                                $iteratorType->value,
                                 'Iterator'
                             )
                         )
                     ) {
-                        $iterator_method = $iterator_type->value . '::current';
-                        $self_class = $iterator_type->value;
-                        $iterator_class_type = $codebase->methods->getMethodReturnType(
-                            $iterator_method,
-                            $self_class
+                        $iteratorMethod = $iteratorType->value . '::current';
+                        $selfClass = $iteratorType->value;
+                        $iteratorClassType = $codebase->methods->getMethodReturnType(
+                            $iteratorMethod,
+                            $selfClass
                         );
 
-                        if ($iterator_class_type) {
-                            $value_type_part = ExpressionChecker::fleshOutType(
-                                $project_checker,
-                                $iterator_class_type,
-                                $self_class,
-                                $self_class
+                        if ($iteratorClassType) {
+                            $valueTypePart = ExpressionChecker::fleshOutType(
+                                $projectChecker,
+                                $iteratorClassType,
+                                $selfClass,
+                                $selfClass
                             );
 
-                            if (!$value_type) {
-                                $value_type = $value_type_part;
+                            if (!$valueType) {
+                                $valueType = $valueTypePart;
                             } else {
-                                $value_type = Type::combineUnionTypes($value_type, $value_type_part);
+                                $valueType = Type::combineUnionTypes($valueType, $valueTypePart);
                             }
                         } else {
-                            $value_type = Type::getMixed();
+                            $valueType = Type::getMixed();
                         }
                     } elseif ($codebase->classImplements(
-                        $iterator_type->value,
+                        $iteratorType->value,
                         'Traversable'
                     ) ||
                         (
-                            $codebase->interfaceExists($iterator_type->value)
+                            $codebase->interfaceExists($iteratorType->value)
                             && $codebase->interfaceExtends(
-                                $iterator_type->value,
+                                $iteratorType->value,
                                 'Traversable'
                             )
                         )
                     ) {
                         // @todo try and get value type
                     } elseif (!in_array(
-                        strtolower($iterator_type->value),
+                        strtolower($iteratorType->value),
                         ['iterator', 'iterable', 'traversable'],
                         true
                     )) {
                         if (IssueBuffer::accepts(
                             new RawObjectIteration(
-                                'Possibly undesired iteration over regular object ' . $iterator_type->value,
-                                new CodeLocation($statements_checker->getSource(), $stmt->expr)
+                                'Possibly undesired iteration over regular object ' . $iteratorType->value,
+                                new CodeLocation($statementsChecker->getSource(), $stmt->expr)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -334,24 +334,24 @@ class ForeachChecker
                 }
             }
 
-            if ($invalid_iterator_types) {
-                if ($has_valid_iterator) {
+            if ($invalidIteratorTypes) {
+                if ($hasValidIterator) {
                     if (IssueBuffer::accepts(
                         new PossiblyInvalidIterator(
-                            'Cannot iterate over ' . $invalid_iterator_types[0],
-                            new CodeLocation($statements_checker->getSource(), $stmt->expr)
+                            'Cannot iterate over ' . $invalidIteratorTypes[0],
+                            new CodeLocation($statementsChecker->getSource(), $stmt->expr)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 } else {
                     if (IssueBuffer::accepts(
                         new InvalidIterator(
-                            'Cannot iterate over ' . $invalid_iterator_types[0],
-                            new CodeLocation($statements_checker->getSource(), $stmt->expr)
+                            'Cannot iterate over ' . $invalidIteratorTypes[0],
+                            new CodeLocation($statementsChecker->getSource(), $stmt->expr)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
@@ -360,120 +360,120 @@ class ForeachChecker
         }
 
         if ($stmt->keyVar && $stmt->keyVar instanceof PhpParser\Node\Expr\Variable && is_string($stmt->keyVar->name)) {
-            $key_var_id = '$' . $stmt->keyVar->name;
-            $foreach_context->vars_in_scope[$key_var_id] = $key_type ?: Type::getMixed();
-            $foreach_context->vars_possibly_in_scope[$key_var_id] = true;
+            $keyVarId = '$' . $stmt->keyVar->name;
+            $foreachContext->varsInScope[$keyVarId] = $keyType ?: Type::getMixed();
+            $foreachContext->varsPossiblyInScope[$keyVarId] = true;
 
-            $location = new CodeLocation($statements_checker, $stmt->keyVar);
+            $location = new CodeLocation($statementsChecker, $stmt->keyVar);
 
-            if ($context->collect_references && !isset($foreach_context->byref_constraints[$key_var_id])) {
-                $foreach_context->unreferenced_vars[$key_var_id] = [$location->getHash() => $location];
+            if ($context->collectReferences && !isset($foreachContext->byrefConstraints[$keyVarId])) {
+                $foreachContext->unreferencedVars[$keyVarId] = [$location->getHash() => $location];
             }
 
-            if (!$statements_checker->hasVariable($key_var_id)) {
-                $statements_checker->registerVariable(
-                    $key_var_id,
+            if (!$statementsChecker->hasVariable($keyVarId)) {
+                $statementsChecker->registerVariable(
+                    $keyVarId,
                     $location,
-                    $foreach_context->branch_point
+                    $foreachContext->branchPoint
                 );
             } else {
-                $statements_checker->registerVariableAssignment(
-                    $key_var_id,
+                $statementsChecker->registerVariableAssignment(
+                    $keyVarId,
                     $location
                 );
             }
 
-            if ($stmt->byRef && $context->collect_references) {
-                $statements_checker->registerVariableUses([$location->getHash() => $location]);
+            if ($stmt->byRef && $context->collectReferences) {
+                $statementsChecker->registerVariableUses([$location->getHash() => $location]);
             }
         }
 
-        if ($context->collect_references
+        if ($context->collectReferences
             && $stmt->byRef
             && $stmt->valueVar instanceof PhpParser\Node\Expr\Variable
             && is_string($stmt->valueVar->name)
         ) {
-            $foreach_context->byref_constraints['$' . $stmt->valueVar->name]
-                = new \Psalm\ReferenceConstraint($value_type);
+            $foreachContext->byrefConstraints['$' . $stmt->valueVar->name]
+                = new \Psalm\ReferenceConstraint($valueType);
         }
 
         AssignmentChecker::analyze(
-            $statements_checker,
+            $statementsChecker,
             $stmt->valueVar,
             null,
-            $value_type ?: Type::getMixed(),
-            $foreach_context,
+            $valueType ?: Type::getMixed(),
+            $foreachContext,
             (string)$stmt->getDocComment()
         );
 
-        $doc_comment_text = (string)$stmt->getDocComment();
+        $docCommentText = (string)$stmt->getDocComment();
 
-        if ($doc_comment_text) {
-            $var_comments = [];
+        if ($docCommentText) {
+            $varComments = [];
 
             try {
-                $var_comments = CommentChecker::getTypeFromComment(
-                    $doc_comment_text,
-                    $statements_checker->getSource(),
-                    $statements_checker->getSource()->getAliases()
+                $varComments = CommentChecker::getTypeFromComment(
+                    $docCommentText,
+                    $statementsChecker->getSource(),
+                    $statementsChecker->getSource()->getAliases()
                 );
             } catch (DocblockParseException $e) {
                 if (IssueBuffer::accepts(
                     new InvalidDocblock(
                         (string)$e->getMessage(),
-                        new CodeLocation($statements_checker, $stmt)
+                        new CodeLocation($statementsChecker, $stmt)
                     )
                 )) {
                     // fall through
                 }
             }
 
-            foreach ($var_comments as $var_comment) {
-                if (!$var_comment->var_id) {
+            foreach ($varComments as $varComment) {
+                if (!$varComment->varId) {
                     continue;
                 }
 
-                $comment_type = ExpressionChecker::fleshOutType(
-                    $project_checker,
-                    $var_comment->type,
+                $commentType = ExpressionChecker::fleshOutType(
+                    $projectChecker,
+                    $varComment->type,
                     $context->self,
                     $context->self
                 );
 
-                $foreach_context->vars_in_scope[$var_comment->var_id] = $comment_type;
+                $foreachContext->varsInScope[$varComment->varId] = $commentType;
             }
         }
 
-        $loop_scope = new LoopScope($foreach_context, $context);
+        $loopScope = new LoopScope($foreachContext, $context);
 
-        $protected_var_ids = $context->protected_var_ids;
-        if ($var_id) {
-            $protected_var_ids[$var_id] = true;
+        $protectedVarIds = $context->protectedVarIds;
+        if ($varId) {
+            $protectedVarIds[$varId] = true;
         }
-        $loop_scope->protected_var_ids = $protected_var_ids;
+        $loopScope->protectedVarIds = $protectedVarIds;
 
-        LoopChecker::analyze($statements_checker, $stmt->stmts, [], [], $loop_scope);
+        LoopChecker::analyze($statementsChecker, $stmt->stmts, [], [], $loopScope);
 
-        $context->vars_possibly_in_scope = array_merge(
-            $foreach_context->vars_possibly_in_scope,
-            $context->vars_possibly_in_scope
+        $context->varsPossiblyInScope = array_merge(
+            $foreachContext->varsPossiblyInScope,
+            $context->varsPossiblyInScope
         );
 
-        $context->referenced_var_ids = array_merge(
-            $foreach_context->referenced_var_ids,
-            $context->referenced_var_ids
+        $context->referencedVarIds = array_merge(
+            $foreachContext->referencedVarIds,
+            $context->referencedVarIds
         );
 
-        if ($context->collect_exceptions) {
-            $context->possibly_thrown_exceptions += $foreach_context->possibly_thrown_exceptions;
+        if ($context->collectExceptions) {
+            $context->possiblyThrownExceptions += $foreachContext->possiblyThrownExceptions;
         }
 
-        if ($context->collect_references) {
-            foreach ($foreach_context->unreferenced_vars as $var_id => $locations) {
-                if (isset($context->unreferenced_vars[$var_id])) {
-                    $context->unreferenced_vars[$var_id] += $locations;
+        if ($context->collectReferences) {
+            foreach ($foreachContext->unreferencedVars as $varId => $locations) {
+                if (isset($context->unreferencedVars[$varId])) {
+                    $context->unreferencedVars[$varId] += $locations;
                 } else {
-                    $context->unreferenced_vars[$var_id] = $locations;
+                    $context->unreferencedVars[$varId] = $locations;
                 }
             }
         }

@@ -24,42 +24,42 @@ class FileStorageProvider
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return FileStorage
      */
-    public function get($file_path)
+    public function get($filePath)
     {
-        $file_path = strtolower($file_path);
+        $filePath = strtolower($filePath);
 
-        if (!isset(self::$storage[$file_path])) {
-            throw new \InvalidArgumentException('Could not get file storage for ' . $file_path);
+        if (!isset(self::$storage[$filePath])) {
+            throw new \InvalidArgumentException('Could not get file storage for ' . $filePath);
         }
 
-        return self::$storage[$file_path];
+        return self::$storage[$filePath];
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return bool
      */
-    public function has($file_path, $file_contents)
+    public function has($filePath, $fileContents)
     {
-        $file_path = strtolower($file_path);
+        $filePath = strtolower($filePath);
 
-        if (isset(self::$storage[$file_path])) {
+        if (isset(self::$storage[$filePath])) {
             return true;
         }
 
-        $cached_value = $this->cache->getLatestFromCache($file_path, $file_contents);
+        $cachedValue = $this->cache->getLatestFromCache($filePath, $fileContents);
 
-        if (!$cached_value) {
+        if (!$cachedValue) {
             return false;
         }
 
-        self::$storage[$file_path] = $cached_value;
+        self::$storage[$filePath] = $cachedValue;
 
         return true;
     }
@@ -73,15 +73,15 @@ class FileStorageProvider
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return FileStorage
      */
-    public function create($file_path)
+    public function create($filePath)
     {
-        $file_path_lc = strtolower($file_path);
+        $filePathLc = strtolower($filePath);
 
-        self::$storage[$file_path_lc] = $storage = new FileStorage($file_path);
+        self::$storage[$filePathLc] = $storage = new FileStorage($filePath);
 
         return $storage;
     }

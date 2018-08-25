@@ -14,7 +14,7 @@ class MagicMethodAnnotationTest extends TestCase
      */
     public function testPhpDocMethodWhenUndefined()
     {
-        Config::getInstance()->use_phpdoc_methods_without_call = true;
+        Config::getInstance()->usePhpdocMethodsWithoutCall = true;
 
         $this->addFile(
             'somefile.php',
@@ -48,7 +48,7 @@ class MagicMethodAnnotationTest extends TestCase
      */
     public function testCannotOverrideParentClassRetunTypeWhenIgnoringPhpDocMethod()
     {
-        Config::getInstance()->use_phpdoc_methods_without_call = false;
+        Config::getInstance()->usePhpdocMethodsWithoutCall = false;
 
         $this->addFile(
             'somefile.php',
@@ -71,7 +71,7 @@ class MagicMethodAnnotationTest extends TestCase
 
         $this->analyzeFile('somefile.php', $context);
 
-        $this->assertSame('ParentClass', (string) $context->vars_in_scope['$child']);
+        $this->assertSame('ParentClass', (string) $context->varsInScope['$child']);
     }
 
     /**
@@ -79,7 +79,7 @@ class MagicMethodAnnotationTest extends TestCase
      */
     public function testOverrideParentClassRetunType()
     {
-        Config::getInstance()->use_phpdoc_methods_without_call = true;
+        Config::getInstance()->usePhpdocMethodsWithoutCall = true;
 
         $this->addFile(
             'somefile.php',
@@ -102,7 +102,7 @@ class MagicMethodAnnotationTest extends TestCase
 
         $this->analyzeFile('somefile.php', $context);
 
-        $this->assertSame('Child', (string) $context->vars_in_scope['$child']);
+        $this->assertSame('Child', (string) $context->varsInScope['$child']);
     }
 
     /**

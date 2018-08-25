@@ -125,46 +125,46 @@ abstract class SourceChecker implements StatementsSource
     }
 
     /**
-     * @param string $file_path
-     * @param string $file_name
+     * @param string $filePath
+     * @param string $fileName
      *
      * @return void
      */
-    public function setRootFilePath($file_path, $file_name)
+    public function setRootFilePath($filePath, $fileName)
     {
         if ($this->source === null) {
             throw new \UnexpectedValueException('$source cannot be null');
         }
 
-        $this->source->setRootFilePath($file_path, $file_name);
+        $this->source->setRootFilePath($filePath, $fileName);
     }
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      *
      * @return bool
      */
-    public function hasParentFilePath($file_path)
+    public function hasParentFilePath($filePath)
     {
         if ($this->source === null) {
             throw new \UnexpectedValueException('$source cannot be null');
         }
 
-        return $this->source->hasParentFilePath($file_path);
+        return $this->source->hasParentFilePath($filePath);
     }
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      *
      * @return bool
      */
-    public function hasAlreadyRequiredFilePath($file_path)
+    public function hasAlreadyRequiredFilePath($filePath)
     {
         if ($this->source === null) {
             throw new \UnexpectedValueException('$source cannot be null');
         }
 
-        return $this->source->hasAlreadyRequiredFilePath($file_path);
+        return $this->source->hasAlreadyRequiredFilePath($filePath);
     }
 
     /**
@@ -202,31 +202,31 @@ abstract class SourceChecker implements StatementsSource
     }
 
     /**
-     * @param array<int, string> $new_issues
+     * @param array<int, string> $newIssues
      *
      * @return void
      */
-    public function addSuppressedIssues(array $new_issues)
+    public function addSuppressedIssues(array $newIssues)
     {
         if ($this->source === null) {
             throw new \UnexpectedValueException('$source cannot be null');
         }
 
-        $this->source->addSuppressedIssues($new_issues);
+        $this->source->addSuppressedIssues($newIssues);
     }
 
     /**
-     * @param array<int, string> $new_issues
+     * @param array<int, string> $newIssues
      *
      * @return void
      */
-    public function removeSuppressedIssues(array $new_issues)
+    public function removeSuppressedIssues(array $newIssues)
     {
         if ($this->source === null) {
             throw new \UnexpectedValueException('$source cannot be null');
         }
 
-        $this->source->removeSuppressedIssues($new_issues);
+        $this->source->removeSuppressedIssues($newIssues);
     }
 
     /**

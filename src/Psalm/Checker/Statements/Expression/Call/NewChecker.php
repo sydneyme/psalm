@@ -22,54 +22,54 @@ use Psalm\Type\Atomic\TNamedObject;
 class NewChecker extends \Psalm\Checker\Statements\Expression\CallChecker
 {
     /**
-     * @param   StatementsChecker           $statements_checker
+     * @param   StatementsChecker           $statementsChecker
      * @param   PhpParser\Node\Expr\New_    $stmt
      * @param   Context                     $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\New_ $stmt,
         Context $context
     ) {
-        $fq_class_name = null;
+        $fqClassName = null;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
-        $config = $project_checker->config;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
+        $config = $projectChecker->config;
 
-        $late_static = false;
+        $lateStatic = false;
 
         if ($stmt->class instanceof PhpParser\Node\Name) {
             if (!in_array(strtolower($stmt->class->parts[0]), ['self', 'static', 'parent'], true)) {
-                $fq_class_name = ClassLikeChecker::getFQCLNFromNameObject(
+                $fqClassName = ClassLikeChecker::getFQCLNFromNameObject(
                     $stmt->class,
-                    $statements_checker->getAliases()
+                    $statementsChecker->getAliases()
                 );
 
-                if ($context->check_classes) {
-                    if ($context->isPhantomClass($fq_class_name)) {
+                if ($context->checkClasses) {
+                    if ($context->isPhantomClass($fqClassName)) {
                         return null;
                     }
 
                     if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                        $statements_checker,
-                        $fq_class_name,
-                        new CodeLocation($statements_checker->getSource(), $stmt->class),
-                        $statements_checker->getSuppressedIssues(),
+                        $statementsChecker,
+                        $fqClassName,
+                        new CodeLocation($statementsChecker->getSource(), $stmt->class),
+                        $statementsChecker->getSuppressedIssues(),
                         false
                     ) === false) {
                         return false;
                     }
 
-                    if ($codebase->interfaceExists($fq_class_name)) {
+                    if ($codebase->interfaceExists($fqClassName)) {
                         if (IssueBuffer::accepts(
                             new InterfaceInstantiation(
-                                'Interface ' . $fq_class_name . ' cannot be instantiated',
-                                new CodeLocation($statements_checker->getSource(), $stmt->class)
+                                'Interface ' . $fqClassName . ' cannot be instantiated',
+                                new CodeLocation($statementsChecker->getSource(), $stmt->class)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -80,137 +80,137 @@ class NewChecker extends \Psalm\Checker\Statements\Expression\CallChecker
             } else {
                 switch ($stmt->class->parts[0]) {
                     case 'self':
-                        $fq_class_name = $context->self;
+                        $fqClassName = $context->self;
                         break;
 
                     case 'parent':
-                        $fq_class_name = $context->parent;
+                        $fqClassName = $context->parent;
                         break;
 
                     case 'static':
                         // @todo maybe we can do better here
-                        $fq_class_name = $context->self;
-                        $late_static = true;
+                        $fqClassName = $context->self;
+                        $lateStatic = true;
                         break;
                 }
             }
         } elseif ($stmt->class instanceof PhpParser\Node\Stmt\Class_) {
-            $statements_checker->analyze([$stmt->class], $context);
-            $fq_class_name = ClassChecker::getAnonymousClassName($stmt->class, $statements_checker->getFilePath());
+            $statementsChecker->analyze([$stmt->class], $context);
+            $fqClassName = ClassChecker::getAnonymousClassName($stmt->class, $statementsChecker->getFilePath());
         } else {
-            ExpressionChecker::analyze($statements_checker, $stmt->class, $context);
+            ExpressionChecker::analyze($statementsChecker, $stmt->class, $context);
 
-            $generic_params = null;
+            $genericParams = null;
 
             if (self::checkMethodArgs(
                 null,
                 $stmt->args,
-                $generic_params,
+                $genericParams,
                 $context,
-                new CodeLocation($statements_checker->getSource(), $stmt),
-                $statements_checker
+                new CodeLocation($statementsChecker->getSource(), $stmt),
+                $statementsChecker
             ) === false) {
                 return false;
             }
 
             if (isset($stmt->class->inferredType)) {
-                $new_type = null;
+                $newType = null;
 
-                foreach ($stmt->class->inferredType->getTypes() as $lhs_type_part) {
+                foreach ($stmt->class->inferredType->getTypes() as $lhsTypePart) {
                     // this is always OK
-                    if ($lhs_type_part instanceof Type\Atomic\TLiteralClassString
-                        || $lhs_type_part instanceof Type\Atomic\TClassString
+                    if ($lhsTypePart instanceof Type\Atomic\TLiteralClassString
+                        || $lhsTypePart instanceof Type\Atomic\TClassString
                     ) {
                         if (!isset($stmt->inferredType)) {
-                            $class_name = $lhs_type_part instanceof Type\Atomic\TClassString
+                            $className = $lhsTypePart instanceof Type\Atomic\TClassString
                                 ? 'object'
-                                : $lhs_type_part->value;
+                                : $lhsTypePart->value;
 
-                            if ($new_type) {
-                                $new_type = Type::combineUnionTypes(
-                                    $new_type,
-                                    Type::parseString($class_name)
+                            if ($newType) {
+                                $newType = Type::combineUnionTypes(
+                                    $newType,
+                                    Type::parseString($className)
                                 );
                             } else {
-                                $new_type = Type::parseString($class_name);
+                                $newType = Type::parseString($className);
                             }
                         }
 
                         continue;
                     }
 
-                    if ($lhs_type_part instanceof Type\Atomic\TString) {
-                        if ($config->allow_string_standin_for_class
-                            && !$lhs_type_part instanceof Type\Atomic\TNumericString
+                    if ($lhsTypePart instanceof Type\Atomic\TString) {
+                        if ($config->allowStringStandinForClass
+                            && !$lhsTypePart instanceof Type\Atomic\TNumericString
                         ) {
                             // do nothing
                         } elseif (IssueBuffer::accepts(
                             new InvalidStringClass(
                                 'String cannot be used as a class',
-                                new CodeLocation($statements_checker->getSource(), $stmt)
+                                new CodeLocation($statementsChecker->getSource(), $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             // fall through
                         }
-                    } elseif ($lhs_type_part instanceof Type\Atomic\TMixed
-                        || $lhs_type_part instanceof Type\Atomic\TGenericParam
+                    } elseif ($lhsTypePart instanceof Type\Atomic\TMixed
+                        || $lhsTypePart instanceof Type\Atomic\TGenericParam
                     ) {
                         // do nothing
-                    } elseif ($lhs_type_part instanceof Type\Atomic\TFalse
-                        && $stmt->class->inferredType->ignore_falsable_issues
+                    } elseif ($lhsTypePart instanceof Type\Atomic\TFalse
+                        && $stmt->class->inferredType->ignoreFalsableIssues
                     ) {
                         // do nothing
-                    } elseif ($lhs_type_part instanceof Type\Atomic\TNull
-                        && $stmt->class->inferredType->ignore_nullable_issues
+                    } elseif ($lhsTypePart instanceof Type\Atomic\TNull
+                        && $stmt->class->inferredType->ignoreNullableIssues
                     ) {
                         // do nothing
                     } elseif (IssueBuffer::accepts(
                         new UndefinedClass(
-                            'Type ' . $lhs_type_part . ' cannot be called as a class',
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            (string)$lhs_type_part
+                            'Type ' . $lhsTypePart . ' cannot be called as a class',
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            (string)$lhsTypePart
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
 
-                    if ($new_type) {
-                        $new_type = Type::combineUnionTypes(
-                            $new_type,
+                    if ($newType) {
+                        $newType = Type::combineUnionTypes(
+                            $newType,
                             Type::getObject()
                         );
                     } else {
-                        $new_type = Type::getObject();
+                        $newType = Type::getObject();
                     }
                 }
 
-                if ($new_type) {
-                    $stmt->inferredType = $new_type;
+                if ($newType) {
+                    $stmt->inferredType = $newType;
                 }
             }
 
             return null;
         }
 
-        if ($fq_class_name) {
-            $stmt->inferredType = new Type\Union([new TNamedObject($fq_class_name)]);
+        if ($fqClassName) {
+            $stmt->inferredType = new Type\Union([new TNamedObject($fqClassName)]);
 
-            if (strtolower($fq_class_name) !== 'stdclass' &&
-                $context->check_classes &&
-                $codebase->classlikes->classExists($fq_class_name)
+            if (strtolower($fqClassName) !== 'stdclass' &&
+                $context->checkClasses &&
+                $codebase->classlikes->classExists($fqClassName)
             ) {
-                $storage = $project_checker->classlike_storage_provider->get($fq_class_name);
+                $storage = $projectChecker->classlikeStorageProvider->get($fqClassName);
 
                 // if we're not calling this constructor via new static()
-                if ($storage->abstract && !$late_static) {
+                if ($storage->abstract && !$lateStatic) {
                     if (IssueBuffer::accepts(
                         new AbstractInstantiation(
-                            'Unable to instantiate a abstract class ' . $fq_class_name,
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Unable to instantiate a abstract class ' . $fqClassName,
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
@@ -219,114 +219,114 @@ class NewChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                 if ($storage->deprecated) {
                     if (IssueBuffer::accepts(
                         new DeprecatedClass(
-                            $fq_class_name . ' is marked deprecated',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            $fqClassName . ' is marked deprecated',
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 }
 
                 if ($codebase->methodExists(
-                    $fq_class_name . '::__construct',
-                    $context->collect_references ? new CodeLocation($statements_checker->getSource(), $stmt) : null
+                    $fqClassName . '::__construct',
+                    $context->collectReferences ? new CodeLocation($statementsChecker->getSource(), $stmt) : null
                 )) {
-                    $method_id = $fq_class_name . '::__construct';
+                    $methodId = $fqClassName . '::__construct';
 
                     if (self::checkMethodArgs(
-                        $method_id,
+                        $methodId,
                         $stmt->args,
-                        $found_generic_params,
+                        $foundGenericParams,
                         $context,
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $statements_checker
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $statementsChecker
                     ) === false) {
                         return false;
                     }
 
                     if (MethodChecker::checkMethodVisibility(
-                        $method_id,
+                        $methodId,
                         $context->self,
-                        $statements_checker->getSource(),
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSource(),
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $statementsChecker->getSuppressedIssues()
                     ) === false) {
                         return false;
                     }
 
-                    $generic_params = null;
+                    $genericParams = null;
 
-                    if ($storage->template_types) {
-                        foreach ($storage->template_types as $template_name => $_) {
-                            if (isset($found_generic_params[$template_name])) {
-                                $generic_params[] = $found_generic_params[$template_name];
+                    if ($storage->templateTypes) {
+                        foreach ($storage->templateTypes as $templateName => $_) {
+                            if (isset($foundGenericParams[$templateName])) {
+                                $genericParams[] = $foundGenericParams[$templateName];
                             } else {
-                                $generic_params[] = Type::getMixed();
+                                $genericParams[] = Type::getMixed();
                             }
                         }
                     }
 
-                    if ($fq_class_name === 'ArrayIterator' && isset($stmt->args[0]->value->inferredType)) {
-                        $first_arg_type = $stmt->args[0]->value->inferredType;
+                    if ($fqClassName === 'ArrayIterator' && isset($stmt->args[0]->value->inferredType)) {
+                        $firstArgType = $stmt->args[0]->value->inferredType;
 
-                        if ($first_arg_type->hasGeneric()) {
-                            $key_type = null;
-                            $value_type = null;
+                        if ($firstArgType->hasGeneric()) {
+                            $keyType = null;
+                            $valueType = null;
 
-                            foreach ($first_arg_type->getTypes() as $type) {
+                            foreach ($firstArgType->getTypes() as $type) {
                                 if ($type instanceof Type\Atomic\TArray) {
-                                    $first_type_param = count($type->type_params) ? $type->type_params[0] : null;
-                                    $last_type_param = $type->type_params[count($type->type_params) - 1];
+                                    $firstTypeParam = count($type->typeParams) ? $type->typeParams[0] : null;
+                                    $lastTypeParam = $type->typeParams[count($type->typeParams) - 1];
 
-                                    if ($value_type === null) {
-                                        $value_type = clone $last_type_param;
+                                    if ($valueType === null) {
+                                        $valueType = clone $lastTypeParam;
                                     } else {
-                                        $value_type = Type::combineUnionTypes($value_type, $last_type_param);
+                                        $valueType = Type::combineUnionTypes($valueType, $lastTypeParam);
                                     }
 
-                                    if (!$key_type || !$first_type_param) {
-                                        $key_type = $first_type_param ? clone $first_type_param : Type::getMixed();
+                                    if (!$keyType || !$firstTypeParam) {
+                                        $keyType = $firstTypeParam ? clone $firstTypeParam : Type::getMixed();
                                     } else {
-                                        $key_type = Type::combineUnionTypes($key_type, $first_type_param);
+                                        $keyType = Type::combineUnionTypes($keyType, $firstTypeParam);
                                     }
                                 }
                             }
 
-                            if ($key_type === null) {
-                                throw new \UnexpectedValueException('$key_type cannot be null');
+                            if ($keyType === null) {
+                                throw new \UnexpectedValueException('$keyType cannot be null');
                             }
 
-                            if ($value_type === null) {
-                                throw new \UnexpectedValueException('$value_type cannot be null');
+                            if ($valueType === null) {
+                                throw new \UnexpectedValueException('$valueType cannot be null');
                             }
 
                             $stmt->inferredType = new Type\Union([
                                 new Type\Atomic\TGenericObject(
-                                    $fq_class_name,
+                                    $fqClassName,
                                     [
-                                        $key_type,
-                                        $value_type,
+                                        $keyType,
+                                        $valueType,
                                     ]
                                 ),
                             ]);
                         }
-                    } elseif ($generic_params) {
+                    } elseif ($genericParams) {
                         $stmt->inferredType = new Type\Union([
                             new Type\Atomic\TGenericObject(
-                                $fq_class_name,
-                                $generic_params
+                                $fqClassName,
+                                $genericParams
                             ),
                         ]);
                     }
                 } elseif ($stmt->args) {
                     if (IssueBuffer::accepts(
                         new TooManyArguments(
-                            'Class ' . $fq_class_name . ' has no __construct, but arguments were passed',
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            $fq_class_name . '::__construct'
+                            'Class ' . $fqClassName . ' has no __construct, but arguments were passed',
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            $fqClassName . '::__construct'
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
@@ -334,7 +334,7 @@ class NewChecker extends \Psalm\Checker\Statements\Expression\CallChecker
             }
         }
 
-        if (!$config->remember_property_assignments_after_call && !$context->collect_initializations) {
+        if (!$config->rememberPropertyAssignmentsAfterCall && !$context->collectInitializations) {
             $context->removeAllObjectVars();
         }
 

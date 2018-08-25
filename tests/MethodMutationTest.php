@@ -49,30 +49,30 @@ class MethodMutationTest extends TestCase
 
         class Controller {
             /** @var UserViewData */
-            public $user_viewdata;
+            public $userViewdata;
 
             /** @var string|null */
             public $title;
 
             public function __construct() {
-                $this->user_viewdata = new UserViewData();
+                $this->userViewdata = new UserViewData();
             }
 
             public function setUser(): void
             {
-                $user_id = (int)$_GET["id"];
+                $userId = (int)$_GET["id"];
 
-                if (!$user_id) {
+                if (!$userId) {
                     throw new UnauthorizedException("No user id supplied");
                 }
 
-                $user = User::loadUser($user_id);
+                $user = User::loadUser($userId);
 
                 if (!$user) {
                     throw new UnauthorizedException("User not found");
                 }
 
-                $this->user_viewdata->name = $user->name;
+                $this->userViewdata->name = $user->name;
             }
         }
 
@@ -84,20 +84,20 @@ class MethodMutationTest extends TestCase
                     $this->title = "hello";
                 }
 
-                return new Response($this->user_viewdata);
+                return new Response($this->userViewdata);
             }
         }'
         );
 
-        new FileChecker($this->project_checker, 'somefile.php', 'somefile.php');
-        $this->project_checker->getCodebase()->scanFiles();
-        $method_context = new Context();
-        $this->project_checker->getMethodMutations('FooController::barBar', $method_context);
+        new FileChecker($this->projectChecker, 'somefile.php', 'somefile.php');
+        $this->projectChecker->getCodebase()->scanFiles();
+        $methodContext = new Context();
+        $this->projectChecker->getMethodMutations('FooController::barBar', $methodContext);
 
-        $this->assertSame('UserViewData', (string)$method_context->vars_in_scope['$this->user_viewdata']);
-        $this->assertSame('string', (string)$method_context->vars_in_scope['$this->user_viewdata->name']);
+        $this->assertSame('UserViewData', (string)$methodContext->varsInScope['$this->userViewdata']);
+        $this->assertSame('string', (string)$methodContext->varsInScope['$this->userViewdata->name']);
         /** @psalm-suppress InvalidScalarArgument */
-        $this->assertTrue($method_context->vars_possibly_in_scope['$this->title']);
+        $this->assertTrue($methodContext->varsPossiblyInScope['$this->title']);
     }
 
     /**
@@ -126,12 +126,12 @@ class MethodMutationTest extends TestCase
         }'
         );
 
-        new FileChecker($this->project_checker, 'somefile.php', 'somefile.php');
-        $this->project_checker->getCodebase()->scanFiles();
-        $method_context = new Context();
-        $this->project_checker->getMethodMutations('FooController::__construct', $method_context);
+        new FileChecker($this->projectChecker, 'somefile.php', 'somefile.php');
+        $this->projectChecker->getCodebase()->scanFiles();
+        $methodContext = new Context();
+        $this->projectChecker->getMethodMutations('FooController::__construct', $methodContext);
 
-        $this->assertSame('Foo', (string)$method_context->vars_in_scope['$this->foo']);
+        $this->assertSame('Foo', (string)$methodContext->varsInScope['$this->foo']);
     }
 
     /**
@@ -162,11 +162,11 @@ class MethodMutationTest extends TestCase
         }'
         );
 
-        new FileChecker($this->project_checker, 'somefile.php', 'somefile.php');
-        $this->project_checker->getCodebase()->scanFiles();
-        $method_context = new Context();
-        $this->project_checker->getMethodMutations('FooController::__construct', $method_context);
+        new FileChecker($this->projectChecker, 'somefile.php', 'somefile.php');
+        $this->projectChecker->getCodebase()->scanFiles();
+        $methodContext = new Context();
+        $this->projectChecker->getMethodMutations('FooController::__construct', $methodContext);
 
-        $this->assertSame('Foo', (string)$method_context->vars_in_scope['$this->foo']);
+        $this->assertSame('Foo', (string)$methodContext->varsInScope['$this->foo']);
     }
 }

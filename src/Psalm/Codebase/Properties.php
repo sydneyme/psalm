@@ -14,49 +14,49 @@ class Properties
     /**
      * @var ClassLikeStorageProvider
      */
-    private $classlike_storage_provider;
+    private $classlikeStorageProvider;
 
     /**
      * @var bool
      */
-    public $collect_references = false;
+    public $collectReferences = false;
 
     public function __construct(
-        ClassLikeStorageProvider $storage_provider
+        ClassLikeStorageProvider $storageProvider
     ) {
-        $this->classlike_storage_provider = $storage_provider;
+        $this->classlikeStorageProvider = $storageProvider;
     }
 
     /**
      * Whether or not a given property exists
      *
-     * @param  string $property_id
+     * @param  string $propertyId
      *
      * @return bool
      */
     public function propertyExists(
-        $property_id,
-        CodeLocation $code_location = null
+        $propertyId,
+        CodeLocation $codeLocation = null
     ) {
         // remove trailing backslash if it exists
-        $property_id = preg_replace('/^\\\\/', '', $property_id);
+        $propertyId = preg_replace('/^\\\\/', '', $propertyId);
 
-        list($fq_class_name, $property_name) = explode('::$', $property_id);
+        list($fqClassName, $propertyName) = explode('::$', $propertyId);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->declaring_property_ids[$property_name])) {
-            if ($this->collect_references && $code_location) {
-                $declaring_property_class = $class_storage->declaring_property_ids[$property_name];
+        if (isset($classStorage->declaringPropertyIds[$propertyName])) {
+            if ($this->collectReferences && $codeLocation) {
+                $declaringPropertyClass = $classStorage->declaringPropertyIds[$propertyName];
 
-                $declaring_class_storage = $this->classlike_storage_provider->get($declaring_property_class);
-                $declaring_property_storage = $declaring_class_storage->properties[$property_name];
+                $declaringClassStorage = $this->classlikeStorageProvider->get($declaringPropertyClass);
+                $declaringPropertyStorage = $declaringClassStorage->properties[$propertyName];
 
-                if ($declaring_property_storage->referencing_locations === null) {
-                    $declaring_property_storage->referencing_locations = [];
+                if ($declaringPropertyStorage->referencingLocations === null) {
+                    $declaringPropertyStorage->referencingLocations = [];
                 }
 
-                $declaring_property_storage->referencing_locations[$code_location->file_path][] = $code_location;
+                $declaringPropertyStorage->referencingLocations[$codeLocation->filePath][] = $codeLocation;
             }
 
             return true;
@@ -66,42 +66,42 @@ class Properties
     }
 
     /**
-     * @param  string $property_id
+     * @param  string $propertyId
      *
      * @return string|null
      */
-    public function getDeclaringClassForProperty($property_id)
+    public function getDeclaringClassForProperty($propertyId)
     {
-        list($fq_class_name, $property_name) = explode('::$', $property_id);
+        list($fqClassName, $propertyName) = explode('::$', $propertyId);
 
-        $fq_class_name = strtolower($fq_class_name);
+        $fqClassName = strtolower($fqClassName);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->declaring_property_ids[$property_name])) {
-            return $class_storage->declaring_property_ids[$property_name];
+        if (isset($classStorage->declaringPropertyIds[$propertyName])) {
+            return $classStorage->declaringPropertyIds[$propertyName];
         }
     }
 
     /**
      * Get the class this property appears in (vs is declared in, which could give a trait)
      *
-     * @param  string $property_id
+     * @param  string $propertyId
      *
      * @return string|null
      */
-    public function getAppearingClassForProperty($property_id)
+    public function getAppearingClassForProperty($propertyId)
     {
-        list($fq_class_name, $property_name) = explode('::$', $property_id);
+        list($fqClassName, $propertyName) = explode('::$', $propertyId);
 
-        $fq_class_name = strtolower($fq_class_name);
+        $fqClassName = strtolower($fqClassName);
 
-        $class_storage = $this->classlike_storage_provider->get($fq_class_name);
+        $classStorage = $this->classlikeStorageProvider->get($fqClassName);
 
-        if (isset($class_storage->appearing_property_ids[$property_name])) {
-            $appearing_property_id = $class_storage->appearing_property_ids[$property_name];
+        if (isset($classStorage->appearingPropertyIds[$propertyName])) {
+            $appearingPropertyId = $classStorage->appearingPropertyIds[$propertyName];
 
-            return explode('::$', $appearing_property_id)[0];
+            return explode('::$', $appearingPropertyId)[0];
         }
     }
 }

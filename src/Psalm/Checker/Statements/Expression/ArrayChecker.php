@@ -15,14 +15,14 @@ use Psalm\Type\Atomic\TString;
 class ArrayChecker
 {
     /**
-     * @param   StatementsChecker           $statements_checker
+     * @param   StatementsChecker           $statementsChecker
      * @param   PhpParser\Node\Expr\Array_  $stmt
      * @param   Context                     $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\Array_ $stmt,
         Context $context
     ) {
@@ -33,137 +33,137 @@ class ArrayChecker
             return null;
         }
 
-        $item_key_type = null;
+        $itemKeyType = null;
 
-        $item_value_type = null;
+        $itemValueType = null;
 
-        $property_types = [];
-        $class_strings = [];
+        $propertyTypes = [];
+        $classStrings = [];
 
-        $can_create_objectlike = true;
+        $canCreateObjectlike = true;
 
-        $array_keys = [];
+        $arrayKeys = [];
 
-        $int_offset_diff = 0;
+        $intOffsetDiff = 0;
 
-        /** @var int $int_offset */
-        foreach ($stmt->items as $int_offset => $item) {
+        /** @var int $intOffset */
+        foreach ($stmt->items as $intOffset => $item) {
             if ($item === null) {
                 continue;
             }
 
-            $item_key_value = null;
+            $itemKeyValue = null;
 
             if ($item->key) {
-                if (ExpressionChecker::analyze($statements_checker, $item->key, $context) === false) {
+                if (ExpressionChecker::analyze($statementsChecker, $item->key, $context) === false) {
                     return false;
                 }
 
                 if (isset($item->key->inferredType)) {
-                    $key_type = $item->key->inferredType;
+                    $keyType = $item->key->inferredType;
 
                     if ($item->key instanceof PhpParser\Node\Scalar\String_
                         && preg_match('/^(0|[1-9][0-9]*)$/', $item->key->value)
                     ) {
-                        $key_type = Type::getInt(false, (int) $item->key->value);
+                        $keyType = Type::getInt(false, (int) $item->key->value);
                     }
 
-                    if ($item_key_type) {
-                        $item_key_type = Type::combineUnionTypes($key_type, $item_key_type);
+                    if ($itemKeyType) {
+                        $itemKeyType = Type::combineUnionTypes($keyType, $itemKeyType);
                     } else {
-                        $item_key_type = $key_type;
+                        $itemKeyType = $keyType;
                     }
 
                     if ($item->key->inferredType->isSingleStringLiteral()) {
-                        $item_key_literal_type = $item->key->inferredType->getSingleStringLiteral();
-                        $item_key_value = $item_key_literal_type->value;
+                        $itemKeyLiteralType = $item->key->inferredType->getSingleStringLiteral();
+                        $itemKeyValue = $itemKeyLiteralType->value;
 
-                        if ($item_key_literal_type instanceof Type\Atomic\TLiteralClassString) {
-                            $class_strings[$item_key_value] = true;
+                        if ($itemKeyLiteralType instanceof Type\Atomic\TLiteralClassString) {
+                            $classStrings[$itemKeyValue] = true;
                         }
                     } elseif ($item->key->inferredType->isSingleIntLiteral()) {
-                        $item_key_value = $item->key->inferredType->getSingleIntLiteral()->value;
+                        $itemKeyValue = $item->key->inferredType->getSingleIntLiteral()->value;
 
-                        if ($item_key_value > $int_offset + $int_offset_diff) {
-                            $int_offset_diff = $item_key_value - ($int_offset + $int_offset_diff);
+                        if ($itemKeyValue > $intOffset + $intOffsetDiff) {
+                            $intOffsetDiff = $itemKeyValue - ($intOffset + $intOffsetDiff);
                         }
                     }
                 }
             } else {
-                $item_key_value = $int_offset + $int_offset_diff;
-                $item_key_type = Type::getInt();
+                $itemKeyValue = $intOffset + $intOffsetDiff;
+                $itemKeyType = Type::getInt();
             }
 
-            if ($item_key_value !== null) {
-                if (isset($array_keys[$item_key_value])) {
+            if ($itemKeyValue !== null) {
+                if (isset($arrayKeys[$itemKeyValue])) {
                     if (IssueBuffer::accepts(
                         new DuplicateArrayKey(
-                            'Key \'' . $item_key_value . '\' already exists on array',
-                            new CodeLocation($statements_checker->getSource(), $item)
+                            'Key \'' . $itemKeyValue . '\' already exists on array',
+                            new CodeLocation($statementsChecker->getSource(), $item)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 }
 
-                $array_keys[$item_key_value] = true;
+                $arrayKeys[$itemKeyValue] = true;
             }
 
-            if (ExpressionChecker::analyze($statements_checker, $item->value, $context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $item->value, $context) === false) {
                 return false;
             }
 
-            if ($item_value_type && $item_value_type->isMixed() && !$can_create_objectlike) {
+            if ($itemValueType && $itemValueType->isMixed() && !$canCreateObjectlike) {
                 continue;
             }
 
             if (isset($item->value->inferredType)) {
-                if ($item_key_value !== null) {
-                    $property_types[$item_key_value] = $item->value->inferredType;
+                if ($itemKeyValue !== null) {
+                    $propertyTypes[$itemKeyValue] = $item->value->inferredType;
                 } else {
-                    $can_create_objectlike = false;
+                    $canCreateObjectlike = false;
                 }
 
-                if ($item_value_type) {
-                    $item_value_type = Type::combineUnionTypes($item->value->inferredType, clone $item_value_type);
+                if ($itemValueType) {
+                    $itemValueType = Type::combineUnionTypes($item->value->inferredType, clone $itemValueType);
                 } else {
-                    $item_value_type = $item->value->inferredType;
+                    $itemValueType = $item->value->inferredType;
                 }
             } else {
-                $item_value_type = Type::getMixed();
+                $itemValueType = Type::getMixed();
 
-                if ($item_key_value !== null) {
-                    $property_types[$item_key_value] = $item_value_type;
+                if ($itemKeyValue !== null) {
+                    $propertyTypes[$itemKeyValue] = $itemValueType;
                 } else {
-                    $can_create_objectlike = false;
+                    $canCreateObjectlike = false;
                 }
             }
         }
 
         // if this array looks like an object-like array, let's return that instead
-        if ($item_value_type
-            && $item_key_type
-            && ($item_key_type->hasString() || $item_key_type->hasInt())
-            && $can_create_objectlike
+        if ($itemValueType
+            && $itemKeyType
+            && ($itemKeyType->hasString() || $itemKeyType->hasInt())
+            && $canCreateObjectlike
         ) {
-            $object_like = new Type\Atomic\ObjectLike($property_types, $class_strings);
-            $object_like->sealed = true;
+            $objectLike = new Type\Atomic\ObjectLike($propertyTypes, $classStrings);
+            $objectLike->sealed = true;
 
-            $stmt->inferredType = new Type\Union([$object_like]);
+            $stmt->inferredType = new Type\Union([$objectLike]);
 
             return null;
         }
 
-        $array_type = new Type\Atomic\TArray([
-            $item_key_type ?: new Type\Union([new TInt, new TString]),
-            $item_value_type ?: Type::getMixed(),
+        $arrayType = new Type\Atomic\TArray([
+            $itemKeyType ?: new Type\Union([new TInt, new TString]),
+            $itemValueType ?: Type::getMixed(),
         ]);
 
-        $array_type->count = count($stmt->items);
+        $arrayType->count = count($stmt->items);
 
         $stmt->inferredType = new Type\Union([
-            $array_type,
+            $arrayType,
         ]);
 
         return null;

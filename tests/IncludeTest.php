@@ -8,74 +8,74 @@ class IncludeTest extends TestCase
     /**
      * @dataProvider providerTestValidIncludes
      *
-     * @param array<int, string> $files_to_check
+     * @param array<int, string> $filesToCheck
      * @param array<string, string> $files
-     * @param bool $hoist_constants
+     * @param bool $hoistConstants
      *
      * @return void
      */
-    public function testValidInclude(array $files, array $files_to_check, $hoist_constants = false)
+    public function testValidInclude(array $files, array $filesToCheck, $hoistConstants = false)
     {
-        $codebase = $this->project_checker->getCodebase();
+        $codebase = $this->projectChecker->getCodebase();
 
-        foreach ($files as $file_path => $contents) {
-            $this->addFile($file_path, $contents);
-            $codebase->scanner->addFilesToShallowScan([$file_path => $file_path]);
+        foreach ($files as $filePath => $contents) {
+            $this->addFile($filePath, $contents);
+            $codebase->scanner->addFilesToShallowScan([$filePath => $filePath]);
         }
 
-        foreach ($files_to_check as $file_path) {
-            $codebase->addFilesToAnalyze([$file_path => $file_path]);
+        foreach ($filesToCheck as $filePath) {
+            $codebase->addFilesToAnalyze([$filePath => $filePath]);
         }
 
         $codebase->scanFiles();
 
         $config = $codebase->config;
-        $config->hoist_constants = $hoist_constants;
+        $config->hoistConstants = $hoistConstants;
 
-        foreach ($files_to_check as $file_path) {
-            $file_checker = new FileChecker($this->project_checker, $file_path, $config->shortenFileName($file_path));
-            $file_checker->analyze();
+        foreach ($filesToCheck as $filePath) {
+            $fileChecker = new FileChecker($this->projectChecker, $filePath, $config->shortenFileName($filePath));
+            $fileChecker->analyze();
         }
     }
 
     /**
      * @dataProvider providerTestInvalidIncludes
      *
-     * @param array<int, string> $files_to_check
+     * @param array<int, string> $filesToCheck
      * @param array<string, string> $files
-     * @param string $error_message
-     * @param bool $hoist_constants
+     * @param string $errorMessage
+     * @param bool $hoistConstants
      *
      * @return void
      */
     public function testInvalidInclude(
         array $files,
-        array $files_to_check,
-        $error_message,
-        $hoist_constants = false
+        array $filesToCheck,
+        $errorMessage,
+        $hoistConstants = false
     ) {
-        $codebase = $this->project_checker->getCodebase();
+        $codebase = $this->projectChecker->getCodebase();
 
-        foreach ($files as $file_path => $contents) {
-            $this->addFile($file_path, $contents);
-            $codebase->scanner->addFilesToShallowScan([$file_path => $file_path]);
+        foreach ($files as $filePath => $contents) {
+            $this->addFile($filePath, $contents);
+            $codebase->scanner->addFilesToShallowScan([$filePath => $filePath]);
         }
 
-        foreach ($files_to_check as $file_path) {
-            $codebase->addFilesToAnalyze([$file_path => $file_path]);
+        foreach ($filesToCheck as $filePath) {
+            $codebase->addFilesToAnalyze([$filePath => $filePath]);
         }
 
         $codebase->scanFiles();
 
         $this->expectException('\Psalm\Exception\CodeException');
-        $this->expectExceptionMessageRegexp('/\b' . preg_quote($error_message, '/') . '\b/');
+        $this->expectExceptionMessageRegexp('/\b' . preg_quote($errorMessage, '/') . '\b/');
 
         $config = $codebase->config;
-        $config->hoist_constants = $hoist_constants;
+        $config->hoistConstants = $hoistConstants;
 
-        foreach ($files_to_check as $file_path) {
-            $file_checker = new FileChecker($this->project_checker, $file_path, $config->shortenFileName($file_path));
-            $file_checker->analyze();
+        foreach ($filesToCheck as $filePath) {
+            $fileChecker = new FileChecker($this->projectChecker, $filePath, $config->shortenFileName($filePath));
+            $fileChecker->analyze();
         }
     }
 

@@ -6,72 +6,72 @@ class FakeFileProvider extends \Psalm\Provider\FileProvider
     /**
      * @var array<string, string>
      */
-    public $fake_files = [];
+    public $fakeFiles = [];
 
     /**
      * @var array<string, int>
      */
-    public $fake_file_times = [];
+    public $fakeFileTimes = [];
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return bool
      */
-    public function fileExists($file_path)
+    public function fileExists($filePath)
     {
-        return isset($this->fake_files[$file_path]) || parent::fileExists($file_path);
+        return isset($this->fakeFiles[$filePath]) || parent::fileExists($filePath);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return string
      */
-    public function getContents($file_path)
+    public function getContents($filePath)
     {
-        if (isset($this->fake_files[$file_path])) {
-            return $this->fake_files[$file_path];
+        if (isset($this->fakeFiles[$filePath])) {
+            return $this->fakeFiles[$filePath];
         }
 
-        return parent::getContents($file_path);
+        return parent::getContents($filePath);
     }
 
     /**
-     * @param  string  $file_path
-     * @param  string  $file_contents
+     * @param  string  $filePath
+     * @param  string  $fileContents
      *
      * @return void
      */
-    public function setContents($file_path, $file_contents)
+    public function setContents($filePath, $fileContents)
     {
-        $this->fake_files[$file_path] = $file_contents;
+        $this->fakeFiles[$filePath] = $fileContents;
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return int
      */
-    public function getModifiedTime($file_path)
+    public function getModifiedTime($filePath)
     {
-        if (isset($this->fake_file_times[$file_path])) {
-            return $this->fake_file_times[$file_path];
+        if (isset($this->fakeFileTimes[$filePath])) {
+            return $this->fakeFileTimes[$filePath];
         }
 
-        return parent::getModifiedTime($file_path);
+        return parent::getModifiedTime($filePath);
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return void
      * @psalm-suppress InvalidPropertyAssignmentValue because microtime is needed for cache busting
      */
-    public function registerFile($file_path, $file_contents)
+    public function registerFile($filePath, $fileContents)
     {
-        $this->fake_files[$file_path] = $file_contents;
-        $this->fake_file_times[$file_path] = (float) microtime(true);
+        $this->fakeFiles[$filePath] = $fileContents;
+        $this->fakeFileTimes[$filePath] = (float) microtime(true);
     }
 }

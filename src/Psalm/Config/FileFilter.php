@@ -18,22 +18,22 @@ class FileFilter
     /**
      * @var array<string>
      */
-    protected $fq_classlike_names = [];
+    protected $fqClasslikeNames = [];
 
     /**
      * @var array<string>
      */
-    protected $method_ids = [];
+    protected $methodIds = [];
 
     /**
      * @var array<string>
      */
-    protected $property_ids = [];
+    protected $propertyIds = [];
 
     /**
      * @var array<string>
      */
-    protected $files_lowercase = [];
+    protected $filesLowercase = [];
 
     /**
      * @var bool
@@ -43,7 +43,7 @@ class FileFilter
     /**
      * @var array<string, bool>
      */
-    protected $ignore_type_stats = [];
+    protected $ignoreTypeStats = [];
 
     /**
      * @param  bool             $inclusive
@@ -61,14 +61,14 @@ class FileFilter
 
     /**
      * @param  SimpleXMLElement $e
-     * @param  string           $base_dir
+     * @param  string           $baseDir
      * @param  bool             $inclusive
      *
      * @return static
      */
     public static function loadFromXMLElement(
         SimpleXMLElement $e,
-        $base_dir,
+        $baseDir,
         $inclusive
     ) {
         $filter = new static($inclusive);
@@ -76,138 +76,138 @@ class FileFilter
         if ($e->directory) {
             /** @var \SimpleXMLElement $directory */
             foreach ($e->directory as $directory) {
-                $directory_path = (string) $directory['name'];
-                $ignore_type_stats = strtolower(
+                $directoryPath = (string) $directory['name'];
+                $ignoreTypeStats = strtolower(
                     isset($directory['ignoreTypeStats']) ? (string) $directory['ignoreTypeStats'] : ''
                 ) === 'true';
 
-                if ($directory_path[0] === '/' && DIRECTORY_SEPARATOR === '/') {
-                    $prospective_directory_path = $directory_path;
+                if ($directoryPath[0] === '/' && DIRECTORY_SEPARATOR === '/') {
+                    $prospectiveDirectoryPath = $directoryPath;
                 } else {
-                    $prospective_directory_path = $base_dir . DIRECTORY_SEPARATOR . $directory_path;
+                    $prospectiveDirectoryPath = $baseDir . DIRECTORY_SEPARATOR . $directoryPath;
                 }
 
-                if (strpos($prospective_directory_path, '*') !== false) {
+                if (strpos($prospectiveDirectoryPath, '*') !== false) {
                     $globs = array_map(
                         'realpath',
                         array_filter(
-                            glob($prospective_directory_path),
+                            glob($prospectiveDirectoryPath),
                             'is_dir'
                         )
                     );
 
                     if (empty($globs)) {
-                        echo 'Could not resolve config path to ' . $base_dir . DIRECTORY_SEPARATOR .
+                        echo 'Could not resolve config path to ' . $baseDir . DIRECTORY_SEPARATOR .
                             (string)$directory['name'] . PHP_EOL;
                         exit(1);
                     }
 
-                    foreach ($globs as $glob_index => $directory_path) {
-                        if (!$directory_path) {
-                            echo 'Could not resolve config path to ' . $base_dir . DIRECTORY_SEPARATOR .
-                                (string)$directory['name'] . ':' . $glob_index . PHP_EOL;
+                    foreach ($globs as $globIndex => $directoryPath) {
+                        if (!$directoryPath) {
+                            echo 'Could not resolve config path to ' . $baseDir . DIRECTORY_SEPARATOR .
+                                (string)$directory['name'] . ':' . $globIndex . PHP_EOL;
                             exit(1);
                         }
 
-                        if ($ignore_type_stats && $filter instanceof ProjectFileFilter) {
-                            $filter->ignore_type_stats[$directory_path] = true;
+                        if ($ignoreTypeStats && $filter instanceof ProjectFileFilter) {
+                            $filter->ignoreTypeStats[$directoryPath] = true;
                         }
 
-                        $filter->addDirectory($directory_path);
+                        $filter->addDirectory($directoryPath);
                     }
                     continue;
                 }
 
-                $directory_path = realpath($prospective_directory_path);
+                $directoryPath = realpath($prospectiveDirectoryPath);
 
-                if (!$directory_path) {
-                    echo 'Could not resolve config path to ' . $base_dir . DIRECTORY_SEPARATOR .
+                if (!$directoryPath) {
+                    echo 'Could not resolve config path to ' . $baseDir . DIRECTORY_SEPARATOR .
                         (string)$directory['name'] . PHP_EOL;
                     exit(1);
                 }
 
-                if ($ignore_type_stats && $filter instanceof ProjectFileFilter) {
-                    $filter->ignore_type_stats[$directory_path] = true;
+                if ($ignoreTypeStats && $filter instanceof ProjectFileFilter) {
+                    $filter->ignoreTypeStats[$directoryPath] = true;
                 }
 
-                $filter->addDirectory($directory_path);
+                $filter->addDirectory($directoryPath);
             }
         }
 
         if ($e->file) {
             /** @var \SimpleXMLElement $file */
             foreach ($e->file as $file) {
-                $file_path = (string) $file['name'];
+                $filePath = (string) $file['name'];
 
-                if ($file_path[0] === '/' && DIRECTORY_SEPARATOR === '/') {
-                    $prospective_file_path = $file_path;
+                if ($filePath[0] === '/' && DIRECTORY_SEPARATOR === '/') {
+                    $prospectiveFilePath = $filePath;
                 } else {
-                    $prospective_file_path = $base_dir . DIRECTORY_SEPARATOR . $file_path;
+                    $prospectiveFilePath = $baseDir . DIRECTORY_SEPARATOR . $filePath;
                 }
 
-                if (strpos($prospective_file_path, '*') !== false) {
+                if (strpos($prospectiveFilePath, '*') !== false) {
                     $globs = array_map(
                         'realpath',
                         array_filter(
-                            glob($prospective_file_path),
+                            glob($prospectiveFilePath),
                             'file_exists'
                         )
                     );
 
                     if (empty($globs)) {
-                        echo 'Could not resolve config path to ' . $base_dir . DIRECTORY_SEPARATOR .
+                        echo 'Could not resolve config path to ' . $baseDir . DIRECTORY_SEPARATOR .
                             (string)$file['name'] . PHP_EOL;
                         exit(1);
                     }
 
-                    foreach ($globs as $glob_index => $file_path) {
-                        if (!$file_path) {
-                            echo 'Could not resolve config path to ' . $base_dir . DIRECTORY_SEPARATOR .
-                                (string)$file['name'] . ':' . $glob_index . PHP_EOL;
+                    foreach ($globs as $globIndex => $filePath) {
+                        if (!$filePath) {
+                            echo 'Could not resolve config path to ' . $baseDir . DIRECTORY_SEPARATOR .
+                                (string)$file['name'] . ':' . $globIndex . PHP_EOL;
                             exit(1);
                         }
-                        $filter->addFile($file_path);
+                        $filter->addFile($filePath);
                     }
                     continue;
                 }
 
-                $file_path = realpath($prospective_file_path);
+                $filePath = realpath($prospectiveFilePath);
 
-                if (!$file_path) {
-                    echo 'Could not resolve config path to ' . $base_dir . DIRECTORY_SEPARATOR .
+                if (!$filePath) {
+                    echo 'Could not resolve config path to ' . $baseDir . DIRECTORY_SEPARATOR .
                         (string)$file['name'] . PHP_EOL;
                     exit(1);
                 }
 
-                $filter->addFile($file_path);
+                $filter->addFile($filePath);
             }
         }
 
         if ($e->referencedClass) {
-            /** @var \SimpleXMLElement $referenced_class */
-            foreach ($e->referencedClass as $referenced_class) {
-                $filter->fq_classlike_names[] = strtolower((string)$referenced_class['name']);
+            /** @var \SimpleXMLElement $referencedClass */
+            foreach ($e->referencedClass as $referencedClass) {
+                $filter->fqClasslikeNames[] = strtolower((string)$referencedClass['name']);
             }
         }
 
         if ($e->referencedMethod) {
-            /** @var \SimpleXMLElement $referenced_method */
-            foreach ($e->referencedMethod as $referenced_method) {
-                $filter->method_ids[] = strtolower((string)$referenced_method['name']);
+            /** @var \SimpleXMLElement $referencedMethod */
+            foreach ($e->referencedMethod as $referencedMethod) {
+                $filter->methodIds[] = strtolower((string)$referencedMethod['name']);
             }
         }
 
         if ($e->referencedFunction) {
-            /** @var \SimpleXMLElement $referenced_function */
-            foreach ($e->referencedFunction as $referenced_function) {
-                $filter->method_ids[] = strtolower((string)$referenced_function['name']);
+            /** @var \SimpleXMLElement $referencedFunction */
+            foreach ($e->referencedFunction as $referencedFunction) {
+                $filter->methodIds[] = strtolower((string)$referencedFunction['name']);
             }
         }
 
         if ($e->referencedProperty) {
-            /** @var \SimpleXMLElement $referenced_property */
-            foreach ($e->referencedProperty as $referenced_property) {
-                $filter->property_ids[] = strtolower((string)$referenced_property['name']);
+            /** @var \SimpleXMLElement $referencedProperty */
+            foreach ($e->referencedProperty as $referencedProperty) {
+                $filter->propertyIds[] = strtolower((string)$referencedProperty['name']);
             }
         }
 
@@ -225,32 +225,32 @@ class FileFilter
     }
 
     /**
-     * @param  string  $file_name
-     * @param  bool $case_sensitive
+     * @param  string  $fileName
+     * @param  bool $caseSensitive
      *
      * @return bool
      */
-    public function allows($file_name, $case_sensitive = false)
+    public function allows($fileName, $caseSensitive = false)
     {
         if ($this->inclusive) {
-            foreach ($this->directories as $include_dir) {
-                if ($case_sensitive) {
-                    if (strpos($file_name, $include_dir) === 0) {
+            foreach ($this->directories as $includeDir) {
+                if ($caseSensitive) {
+                    if (strpos($fileName, $includeDir) === 0) {
                         return true;
                     }
                 } else {
-                    if (stripos($file_name, $include_dir) === 0) {
+                    if (stripos($fileName, $includeDir) === 0) {
                         return true;
                     }
                 }
             }
 
-            if ($case_sensitive) {
-                if (in_array($file_name, $this->files, true)) {
+            if ($caseSensitive) {
+                if (in_array($fileName, $this->files, true)) {
                     return true;
                 }
             } else {
-                if (in_array(strtolower($file_name), $this->files_lowercase, true)) {
+                if (in_array(strtolower($fileName), $this->filesLowercase, true)) {
                     return true;
                 }
             }
@@ -259,24 +259,24 @@ class FileFilter
         }
 
         // exclusive
-        foreach ($this->directories as $exclude_dir) {
-            if ($case_sensitive) {
-                if (strpos($file_name, $exclude_dir) === 0) {
+        foreach ($this->directories as $excludeDir) {
+            if ($caseSensitive) {
+                if (strpos($fileName, $excludeDir) === 0) {
                     return false;
                 }
             } else {
-                if (stripos($file_name, $exclude_dir) === 0) {
+                if (stripos($fileName, $excludeDir) === 0) {
                     return false;
                 }
             }
         }
 
-        if ($case_sensitive) {
-            if (in_array($file_name, $this->files, true)) {
+        if ($caseSensitive) {
+            if (in_array($fileName, $this->files, true)) {
                 return false;
             }
         } else {
-            if (in_array(strtolower($file_name), $this->files_lowercase, true)) {
+            if (in_array(strtolower($fileName), $this->filesLowercase, true)) {
                 return false;
             }
         }
@@ -285,33 +285,33 @@ class FileFilter
     }
 
     /**
-     * @param  string  $fq_classlike_name
+     * @param  string  $fqClasslikeName
      *
      * @return bool
      */
-    public function allowsClass($fq_classlike_name)
+    public function allowsClass($fqClasslikeName)
     {
-        return in_array(strtolower($fq_classlike_name), $this->fq_classlike_names);
+        return in_array(strtolower($fqClasslikeName), $this->fqClasslikeNames);
     }
 
     /**
-     * @param  string  $method_id
+     * @param  string  $methodId
      *
      * @return bool
      */
-    public function allowsMethod($method_id)
+    public function allowsMethod($methodId)
     {
-        return in_array($method_id, $this->method_ids);
+        return in_array($methodId, $this->methodIds);
     }
 
     /**
-     * @param  string  $property_id
+     * @param  string  $propertyId
      *
      * @return bool
      */
-    public function allowsProperty($property_id)
+    public function allowsProperty($propertyId)
     {
-        return in_array(strtolower($property_id), $this->property_ids);
+        return in_array(strtolower($propertyId), $this->propertyIds);
     }
 
     /**
@@ -331,23 +331,23 @@ class FileFilter
     }
 
     /**
-     * @param   string $file_name
+     * @param   string $fileName
      *
      * @return  void
      */
-    public function addFile($file_name)
+    public function addFile($fileName)
     {
-        $this->files[] = $file_name;
-        $this->files_lowercase[] = strtolower($file_name);
+        $this->files[] = $fileName;
+        $this->filesLowercase[] = strtolower($fileName);
     }
 
     /**
-     * @param string $dir_name
+     * @param string $dirName
      *
      * @return void
      */
-    public function addDirectory($dir_name)
+    public function addDirectory($dirName)
     {
-        $this->directories[] = self::slashify($dir_name);
+        $this->directories[] = self::slashify($dirName);
     }
 }

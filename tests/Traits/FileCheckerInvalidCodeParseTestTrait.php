@@ -16,32 +16,32 @@ trait FileCheckerInvalidCodeParseTestTrait
      * @small
      *
      * @param string $code
-     * @param string $error_message
-     * @param array<string> $error_levels
-     * @param bool $strict_mode
+     * @param string $errorMessage
+     * @param array<string> $errorLevels
+     * @param bool $strictMode
      *
      * @return void
      */
-    public function testInvalidCode($code, $error_message, $error_levels = [], $strict_mode = false)
+    public function testInvalidCode($code, $errorMessage, $errorLevels = [], $strictMode = false)
     {
         if (strpos($this->getTestName(), 'SKIPPED-') !== false) {
             $this->markTestSkipped();
         }
 
-        if ($strict_mode) {
-            Config::getInstance()->strict_binary_operands = true;
+        if ($strictMode) {
+            Config::getInstance()->strictBinaryOperands = true;
         }
 
-        foreach ($error_levels as $error_level) {
-            Config::getInstance()->setCustomErrorLevel($error_level, Config::REPORT_SUPPRESS);
+        foreach ($errorLevels as $errorLevel) {
+            Config::getInstance()->setCustomErrorLevel($errorLevel, Config::REPORT_SUPPRESS);
         }
 
         $this->expectException('\Psalm\Exception\CodeException');
-        $this->expectExceptionMessageRegexp('/\b' . preg_quote($error_message, '/') . '\b/');
+        $this->expectExceptionMessageRegexp('/\b' . preg_quote($errorMessage, '/') . '\b/');
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
-        $this->addFile($file_path, $code);
-        $this->analyzeFile($file_path, new Context());
+        $this->addFile($filePath, $code);
+        $this->analyzeFile($filePath, new Context());
     }
 }

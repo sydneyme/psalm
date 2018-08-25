@@ -11,42 +11,42 @@ class ClassLikeStorage
      *
      * @var array<string, Type\Union>
      */
-    public $public_class_constants = [];
+    public $publicClassConstants = [];
 
     /**
      * A lookup table for protected class constants
      *
      * @var array<string, Type\Union>
      */
-    public $protected_class_constants = [];
+    public $protectedClassConstants = [];
 
     /**
      * A lookup table for private class constants
      *
      * @var array<string, Type\Union>
      */
-    public $private_class_constants = [];
+    public $privateClassConstants = [];
 
     /**
      * A lookup table for nodes of unresolvable public class constants
      *
      * @var array<string, \PhpParser\Node\Expr>
      */
-    public $public_class_constant_nodes = [];
+    public $publicClassConstantNodes = [];
 
     /**
      * A lookup table for nodes of unresolvable protected class constants
      *
      * @var array<string, \PhpParser\Node\Expr>
      */
-    public $protected_class_constant_nodes = [];
+    public $protectedClassConstantNodes = [];
 
     /**
      * A lookup table for nodes of unresolvable private class constants
      *
      * @var array<string, \PhpParser\Node\Expr>
      */
-    public $private_class_constant_nodes = [];
+    public $privateClassConstantNodes = [];
 
     /**
      * Aliases to help Psalm understand constant refs
@@ -73,22 +73,22 @@ class ClassLikeStorage
     /**
      * @var array<string, bool>
      */
-    public $deprecated_constants = [];
+    public $deprecatedConstants = [];
 
     /**
      * @var bool
      */
-    public $sealed_properties = false;
+    public $sealedProperties = false;
 
     /**
      * @var bool
      */
-    public $sealed_methods = false;
+    public $sealedMethods = false;
 
     /**
      * @var array<int, string>
      */
-    public $suppressed_issues = [];
+    public $suppressedIssues = [];
 
     /**
      * @var string
@@ -100,28 +100,28 @@ class ClassLikeStorage
      *
      * @var bool
      */
-    public $user_defined = false;
+    public $userDefined = false;
 
     /**
      * Interfaces this class implements
      *
      * @var array<string, string>
      */
-    public $class_implements = [];
+    public $classImplements = [];
 
     /**
      * Parent interfaces
      *
      * @var  array<string, string>
      */
-    public $parent_interfaces = [];
+    public $parentInterfaces = [];
 
     /**
      * Parent classes
      *
      * @var array<string, string>
      */
-    public $parent_classes = [];
+    public $parentClasses = [];
 
     /**
      * @var CodeLocation|null
@@ -141,22 +141,22 @@ class ClassLikeStorage
     /**
      * @var array<string, string>
      */
-    public $used_traits = [];
+    public $usedTraits = [];
 
     /**
      * @var array<string, string>
      */
-    public $trait_alias_map = [];
+    public $traitAliasMap = [];
 
     /**
      * @var bool
      */
-    public $is_trait = false;
+    public $isTrait = false;
 
     /**
      * @var bool
      */
-    public $is_interface = false;
+    public $isInterface = false;
 
     /**
      * @var array<string, MethodStorage>
@@ -166,32 +166,32 @@ class ClassLikeStorage
     /**
      * @var array<string, FunctionLikeStorage>
      */
-    public $pseudo_methods = [];
+    public $pseudoMethods = [];
 
     /**
      * @var array<string, string>
      */
-    public $declaring_method_ids = [];
+    public $declaringMethodIds = [];
 
     /**
      * @var array<string, string>
      */
-    public $appearing_method_ids = [];
+    public $appearingMethodIds = [];
 
     /**
      * @var array<string, array<string>>
      */
-    public $overridden_method_ids = [];
+    public $overriddenMethodIds = [];
 
     /**
      * @var array<string, array<string>>
      */
-    public $interface_method_ids = [];
+    public $interfaceMethodIds = [];
 
     /**
      * @var array<string, string>
      */
-    public $inheritable_method_ids = [];
+    public $inheritableMethodIds = [];
 
     /**
      * @var array<string, PropertyStorage>
@@ -201,57 +201,57 @@ class ClassLikeStorage
     /**
      * @var array<string, Type\Union>
      */
-    public $pseudo_property_set_types = [];
+    public $pseudoPropertySetTypes = [];
 
     /**
      * @var array<string, Type\Union>
      */
-    public $pseudo_property_get_types = [];
+    public $pseudoPropertyGetTypes = [];
 
     /**
      * @var array<string, string>
      */
-    public $declaring_property_ids = [];
+    public $declaringPropertyIds = [];
 
     /**
      * @var array<string, string>
      */
-    public $appearing_property_ids = [];
+    public $appearingPropertyIds = [];
 
     /**
      * @var array<string, string>
      */
-    public $inheritable_property_ids = [];
+    public $inheritablePropertyIds = [];
 
     /**
      * @var array<string, array<string>>
      */
-    public $overridden_property_ids = [];
+    public $overriddenPropertyIds = [];
 
     /**
      * @var array<string, Type\Union>|null
      */
-    public $template_types;
+    public $templateTypes;
 
     /**
      * @var array<string, string>|null
      */
-    public $template_parents;
+    public $templateParents;
 
     /**
      * @var array<string, array<int, CodeLocation>>|null
      */
-    public $referencing_locations;
+    public $referencingLocations;
 
     /**
      * @var array<string, bool>
      */
-    public $initialized_properties = [];
+    public $initializedProperties = [];
 
     /**
      * @var array<string>
      */
-    public $invalid_dependencies = [];
+    public $invalidDependencies = [];
 
     /**
      * A hash of the source file's name, contents, and this file's modified on date
@@ -263,7 +263,7 @@ class ClassLikeStorage
     /**
      * @var bool
      */
-    public $has_visitor_issues = false;
+    public $hasVisitorIssues = false;
 
     /**
      * @param string $name

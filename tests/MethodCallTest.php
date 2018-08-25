@@ -85,7 +85,7 @@ class MethodCallTest extends TestCase
             'magicCall' => [
                 '<?php
                     class A {
-                        public function __call(string $method_name, array $args) {}
+                        public function __call(string $methodName, array $args) {}
                     }
 
                     $a = new A;

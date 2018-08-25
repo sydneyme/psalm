@@ -23,53 +23,53 @@ class ClassLikeStorageProvider
     }
 
     /**
-     * @param  string $fq_classlike_name
+     * @param  string $fqClasslikeName
      *
      * @return ClassLikeStorage
      */
-    public function get($fq_classlike_name)
+    public function get($fqClasslikeName)
     {
-        $fq_classlike_name_lc = strtolower($fq_classlike_name);
+        $fqClasslikeNameLc = strtolower($fqClasslikeName);
 
-        if (!isset(self::$storage[$fq_classlike_name_lc])) {
-            throw new \InvalidArgumentException('Could not get class storage for ' . $fq_classlike_name);
+        if (!isset(self::$storage[$fqClasslikeNameLc])) {
+            throw new \InvalidArgumentException('Could not get class storage for ' . $fqClasslikeName);
         }
 
-        return self::$storage[$fq_classlike_name_lc];
+        return self::$storage[$fqClasslikeNameLc];
     }
 
     /**
-     * @param  string $fq_classlike_name
+     * @param  string $fqClasslikeName
      *
      * @return bool
      */
-    public function has($fq_classlike_name)
+    public function has($fqClasslikeName)
     {
-        $fq_classlike_name_lc = strtolower($fq_classlike_name);
+        $fqClasslikeNameLc = strtolower($fqClasslikeName);
 
-        return isset(self::$storage[$fq_classlike_name_lc]);
+        return isset(self::$storage[$fqClasslikeNameLc]);
     }
 
     /**
-     * @param  string  $fq_classlike_name
-     * @param  string|null $file_path
-     * @param  string|null $file_contents
+     * @param  string  $fqClasslikeName
+     * @param  string|null $filePath
+     * @param  string|null $fileContents
      *
      * @return ClassLikeStorage
      */
-    public function exhume($fq_classlike_name, $file_path, $file_contents)
+    public function exhume($fqClasslikeName, $filePath, $fileContents)
     {
-        $fq_classlike_name_lc = strtolower($fq_classlike_name);
+        $fqClasslikeNameLc = strtolower($fqClasslikeName);
 
-        if (isset(self::$storage[$fq_classlike_name_lc])) {
-            return self::$storage[$fq_classlike_name_lc];
+        if (isset(self::$storage[$fqClasslikeNameLc])) {
+            return self::$storage[$fqClasslikeNameLc];
         }
 
-        self::$storage[$fq_classlike_name_lc]
-            = $cached_value
-            = $this->cache->getLatestFromCache($fq_classlike_name_lc, $file_path, $file_contents);
+        self::$storage[$fqClasslikeNameLc]
+            = $cachedValue
+            = $this->cache->getLatestFromCache($fqClasslikeNameLc, $filePath, $fileContents);
 
-        return $cached_value;
+        return $cachedValue;
     }
 
     /**
@@ -81,15 +81,15 @@ class ClassLikeStorageProvider
     }
 
     /**
-     * @param  string $fq_classlike_name
+     * @param  string $fqClasslikeName
      *
      * @return ClassLikeStorage
      */
-    public function create($fq_classlike_name)
+    public function create($fqClasslikeName)
     {
-        $fq_classlike_name_lc = strtolower($fq_classlike_name);
+        $fqClasslikeNameLc = strtolower($fqClasslikeName);
 
-        self::$storage[$fq_classlike_name_lc] = $storage = new ClassLikeStorage($fq_classlike_name);
+        self::$storage[$fqClasslikeNameLc] = $storage = new ClassLikeStorage($fqClasslikeName);
 
         return $storage;
     }

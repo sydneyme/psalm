@@ -30,78 +30,78 @@ use Psalm\Type\Atomic\TObject;
 class PropertyFetchChecker
 {
     /**
-     * @param   StatementsChecker                   $statements_checker
+     * @param   StatementsChecker                   $statementsChecker
      * @param   PhpParser\Node\Expr\PropertyFetch   $stmt
      * @param   Context                             $context
      *
      * @return  false|null
      */
     public static function analyzeInstance(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\PropertyFetch $stmt,
         Context $context
     ) {
         if (!$stmt->name instanceof PhpParser\Node\Identifier) {
-            if (ExpressionChecker::analyze($statements_checker, $stmt->name, $context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $stmt->name, $context) === false) {
                 return false;
             }
         }
 
-        if (ExpressionChecker::analyze($statements_checker, $stmt->var, $context) === false) {
+        if (ExpressionChecker::analyze($statementsChecker, $stmt->var, $context) === false) {
             return false;
         }
 
         if ($stmt->name instanceof PhpParser\Node\Identifier) {
-            $prop_name = $stmt->name->name;
+            $propName = $stmt->name->name;
         } elseif (isset($stmt->name->inferredType)
             && $stmt->name->inferredType->isSingleStringLiteral()
         ) {
-            $prop_name = $stmt->name->inferredType->getSingleStringLiteral()->value;
+            $propName = $stmt->name->inferredType->getSingleStringLiteral()->value;
         } else {
-            $prop_name = null;
+            $propName = null;
         }
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
-        $stmt_var_id = ExpressionChecker::getArrayVarId(
+        $stmtVarId = ExpressionChecker::getArrayVarId(
             $stmt->var,
-            $statements_checker->getFQCLN(),
-            $statements_checker
+            $statementsChecker->getFQCLN(),
+            $statementsChecker
         );
 
-        $var_id = ExpressionChecker::getArrayVarId(
+        $varId = ExpressionChecker::getArrayVarId(
             $stmt,
-            $statements_checker->getFQCLN(),
-            $statements_checker
+            $statementsChecker->getFQCLN(),
+            $statementsChecker
         );
 
-        $stmt_var_type = null;
+        $stmtVarType = null;
         $stmt->inferredType = null;
 
-        if ($var_id && $context->hasVariable($var_id, $statements_checker)) {
+        if ($varId && $context->hasVariable($varId, $statementsChecker)) {
             // we don't need to check anything
-            $stmt->inferredType = $context->vars_in_scope[$var_id];
+            $stmt->inferredType = $context->varsInScope[$varId];
 
-            $codebase->analyzer->incrementNonMixedCount($statements_checker->getFilePath());
+            $codebase->analyzer->incrementNonMixedCount($statementsChecker->getFilePath());
 
-            if ($context->collect_references
+            if ($context->collectReferences
                 && isset($stmt->var->inferredType)
                 && $stmt->var->inferredType->hasObjectType()
                 && $stmt->name instanceof PhpParser\Node\Identifier
             ) {
                 // log the appearance
-                foreach ($stmt->var->inferredType->getTypes() as $lhs_type_part) {
-                    if ($lhs_type_part instanceof TNamedObject) {
-                        if (!$codebase->classExists($lhs_type_part->value)) {
+                foreach ($stmt->var->inferredType->getTypes() as $lhsTypePart) {
+                    if ($lhsTypePart instanceof TNamedObject) {
+                        if (!$codebase->classExists($lhsTypePart->value)) {
                             continue;
                         }
 
-                        $property_id = $lhs_type_part->value . '::$' . $stmt->name->name;
+                        $propertyId = $lhsTypePart->value . '::$' . $stmt->name->name;
 
                         $codebase->properties->propertyExists(
-                            $property_id,
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            $propertyId,
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         );
                     }
                 }
@@ -110,23 +110,23 @@ class PropertyFetchChecker
             return null;
         }
 
-        if ($stmt_var_id && $context->hasVariable($stmt_var_id, $statements_checker)) {
-            $stmt_var_type = $context->vars_in_scope[$stmt_var_id];
+        if ($stmtVarId && $context->hasVariable($stmtVarId, $statementsChecker)) {
+            $stmtVarType = $context->varsInScope[$stmtVarId];
         } elseif (isset($stmt->var->inferredType)) {
-            $stmt_var_type = $stmt->var->inferredType;
+            $stmtVarType = $stmt->var->inferredType;
         }
 
-        if (!$stmt_var_type) {
+        if (!$stmtVarType) {
             return null;
         }
 
-        if ($stmt_var_type->isNull()) {
+        if ($stmtVarType->isNull()) {
             if (IssueBuffer::accepts(
                 new NullPropertyFetch(
-                    'Cannot get property on null variable ' . $stmt_var_id,
-                    new CodeLocation($statements_checker->getSource(), $stmt)
+                    'Cannot get property on null variable ' . $stmtVarId,
+                    new CodeLocation($statementsChecker->getSource(), $stmt)
                 ),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSuppressedIssues()
             )) {
                 return false;
             }
@@ -134,13 +134,13 @@ class PropertyFetchChecker
             return null;
         }
 
-        if ($stmt_var_type->isEmpty()) {
+        if ($stmtVarType->isEmpty()) {
             if (IssueBuffer::accepts(
                 new MixedPropertyFetch(
-                    'Cannot fetch property on empty var ' . $stmt_var_id,
-                    new CodeLocation($statements_checker->getSource(), $stmt)
+                    'Cannot fetch property on empty var ' . $stmtVarId,
+                    new CodeLocation($statementsChecker->getSource(), $stmt)
                 ),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSuppressedIssues()
             )) {
                 return false;
             }
@@ -148,15 +148,15 @@ class PropertyFetchChecker
             return null;
         }
 
-        if ($stmt_var_type->isMixed()) {
-            $codebase->analyzer->incrementMixedCount($statements_checker->getFilePath());
+        if ($stmtVarType->isMixed()) {
+            $codebase->analyzer->incrementMixedCount($statementsChecker->getFilePath());
 
             if (IssueBuffer::accepts(
                 new MixedPropertyFetch(
-                    'Cannot fetch property on mixed var ' . $stmt_var_id,
-                    new CodeLocation($statements_checker->getSource(), $stmt)
+                    'Cannot fetch property on mixed var ' . $stmtVarId,
+                    new CodeLocation($statementsChecker->getSource(), $stmt)
                 ),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSuppressedIssues()
             )) {
                 // fall through
             }
@@ -166,15 +166,15 @@ class PropertyFetchChecker
             return null;
         }
 
-        $codebase->analyzer->incrementNonMixedCount($statements_checker->getRootFilePath());
+        $codebase->analyzer->incrementNonMixedCount($statementsChecker->getRootFilePath());
 
-        if ($stmt_var_type->isNullable() && !$stmt_var_type->ignore_nullable_issues && !$context->inside_isset) {
+        if ($stmtVarType->isNullable() && !$stmtVarType->ignoreNullableIssues && !$context->insideIsset) {
             if (IssueBuffer::accepts(
                 new PossiblyNullPropertyFetch(
-                    'Cannot get property on possibly null variable ' . $stmt_var_id . ' of type ' . $stmt_var_type,
-                    new CodeLocation($statements_checker->getSource(), $stmt)
+                    'Cannot get property on possibly null variable ' . $stmtVarId . ' of type ' . $stmtVarType,
+                    new CodeLocation($statementsChecker->getSource(), $stmt)
                 ),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSuppressedIssues()
             )) {
                 // fall through
             }
@@ -182,53 +182,53 @@ class PropertyFetchChecker
             $stmt->inferredType = Type::getNull();
         }
 
-        if (!$prop_name) {
+        if (!$propName) {
             return null;
         }
 
-        $invalid_fetch_types = [];
-        $has_valid_fetch_type = false;
+        $invalidFetchTypes = [];
+        $hasValidFetchType = false;
 
-        foreach ($stmt_var_type->getTypes() as $lhs_type_part) {
-            if ($lhs_type_part instanceof TNull) {
+        foreach ($stmtVarType->getTypes() as $lhsTypePart) {
+            if ($lhsTypePart instanceof TNull) {
                 continue;
             }
 
-            if ($lhs_type_part instanceof Type\Atomic\TFalse && $stmt_var_type->ignore_falsable_issues) {
+            if ($lhsTypePart instanceof Type\Atomic\TFalse && $stmtVarType->ignoreFalsableIssues) {
                 continue;
             }
 
-            if (!$lhs_type_part instanceof TNamedObject && !$lhs_type_part instanceof TObject) {
-                $invalid_fetch_types[] = (string)$lhs_type_part;
+            if (!$lhsTypePart instanceof TNamedObject && !$lhsTypePart instanceof TObject) {
+                $invalidFetchTypes[] = (string)$lhsTypePart;
 
                 continue;
             }
 
-            $has_valid_fetch_type = true;
+            $hasValidFetchType = true;
 
             // stdClass and SimpleXMLElement are special cases where we cannot infer the return types
             // but we don't want to throw an error
             // Hack has a similar issue: https://github.com/facebook/hhvm/issues/5164
-            if ($lhs_type_part instanceof TObject
-                || in_array(strtolower($lhs_type_part->value), ['stdclass', 'simplexmlelement'], true)
+            if ($lhsTypePart instanceof TObject
+                || in_array(strtolower($lhsTypePart->value), ['stdclass', 'simplexmlelement'], true)
             ) {
                 $stmt->inferredType = Type::getMixed();
                 continue;
             }
 
-            if (ExpressionChecker::isMock($lhs_type_part->value)) {
+            if (ExpressionChecker::isMock($lhsTypePart->value)) {
                 $stmt->inferredType = Type::getMixed();
                 continue;
             }
 
-            if (!$codebase->classExists($lhs_type_part->value)) {
-                if ($codebase->interfaceExists($lhs_type_part->value)) {
+            if (!$codebase->classExists($lhsTypePart->value)) {
+                if ($codebase->interfaceExists($lhsTypePart->value)) {
                     if (IssueBuffer::accepts(
                         new NoInterfaceProperties(
                             'Interfaces cannot have properties',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
@@ -238,11 +238,11 @@ class PropertyFetchChecker
 
                 if (IssueBuffer::accepts(
                     new UndefinedClass(
-                        'Cannot get properties of undefined class ' . $lhs_type_part->value,
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $lhs_type_part->value
+                        'Cannot get properties of undefined class ' . $lhsTypePart->value,
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $lhsTypePart->value
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
@@ -250,31 +250,31 @@ class PropertyFetchChecker
                 continue;
             }
 
-            $property_id = $lhs_type_part->value . '::$' . $prop_name;
+            $propertyId = $lhsTypePart->value . '::$' . $propName;
 
-            $statements_checker_source = $statements_checker->getSource();
+            $statementsCheckerSource = $statementsChecker->getSource();
 
-            if ($codebase->methodExists($lhs_type_part->value . '::__get')
-                && (!$statements_checker_source instanceof FunctionLikeChecker
-                    || $statements_checker_source->getMethodId() !== $lhs_type_part->value . '::__get')
-                && (!$context->self || !$codebase->classExtends($context->self, $lhs_type_part->value))
-                && (!$codebase->properties->propertyExists($property_id)
-                    || ($stmt_var_id !== '$this'
-                        && $lhs_type_part->value !== $context->self
+            if ($codebase->methodExists($lhsTypePart->value . '::__get')
+                && (!$statementsCheckerSource instanceof FunctionLikeChecker
+                    || $statementsCheckerSource->getMethodId() !== $lhsTypePart->value . '::__get')
+                && (!$context->self || !$codebase->classExtends($context->self, $lhsTypePart->value))
+                && (!$codebase->properties->propertyExists($propertyId)
+                    || ($stmtVarId !== '$this'
+                        && $lhsTypePart->value !== $context->self
                         && ClassLikeChecker::checkPropertyVisibility(
-                            $property_id,
+                            $propertyId,
                             $context->self,
-                            $statements_checker_source,
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            $statements_checker->getSuppressedIssues(),
+                            $statementsCheckerSource,
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            $statementsChecker->getSuppressedIssues(),
                             false
                         ) !== true)
                 )
             ) {
-                $class_storage = $project_checker->classlike_storage_provider->get((string)$lhs_type_part);
+                $classStorage = $projectChecker->classlikeStorageProvider->get((string)$lhsTypePart);
 
-                if (isset($class_storage->pseudo_property_get_types['$' . $prop_name])) {
-                    $stmt->inferredType = clone $class_storage->pseudo_property_get_types['$' . $prop_name];
+                if (isset($classStorage->pseudoPropertyGetTypes['$' . $propName])) {
+                    $stmt->inferredType = clone $classStorage->pseudoPropertyGetTypes['$' . $propName];
                     continue;
                 }
 
@@ -283,43 +283,43 @@ class PropertyFetchChecker
                  * If we have an explicit list of all allowed magic properties on the class, and we're
                  * not in that list, fall through
                  */
-                if (!$class_storage->sealed_properties) {
+                if (!$classStorage->sealedProperties) {
                     continue;
                 }
             }
 
             if (!$codebase->properties->propertyExists(
-                $property_id,
-                $context->collect_references ? new CodeLocation($statements_checker->getSource(), $stmt) : null
+                $propertyId,
+                $context->collectReferences ? new CodeLocation($statementsChecker->getSource(), $stmt) : null
             )
             ) {
-                if ($context->inside_isset) {
+                if ($context->insideIsset) {
                     return;
                 }
 
-                if ($stmt_var_id === '$this') {
-                    if ($context->collect_mutations) {
+                if ($stmtVarId === '$this') {
+                    if ($context->collectMutations) {
                         return;
                     }
 
                     if (IssueBuffer::accepts(
                         new UndefinedThisPropertyFetch(
-                            'Instance property ' . $property_id . ' is not defined',
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            $property_id
+                            'Instance property ' . $propertyId . ' is not defined',
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            $propertyId
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
                 } else {
                     if (IssueBuffer::accepts(
                         new UndefinedPropertyFetch(
-                            'Instance property ' . $property_id . ' is not defined',
-                            new CodeLocation($statements_checker->getSource(), $stmt),
-                            $property_id
+                            'Instance property ' . $propertyId . ' is not defined',
+                            new CodeLocation($statementsChecker->getSource(), $stmt),
+                            $propertyId
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
@@ -327,146 +327,146 @@ class PropertyFetchChecker
 
                 $stmt->inferredType = Type::getMixed();
 
-                if ($var_id) {
-                    $context->vars_in_scope[$var_id] = $stmt->inferredType;
+                if ($varId) {
+                    $context->varsInScope[$varId] = $stmt->inferredType;
                 }
 
                 return;
             }
 
             if (ClassLikeChecker::checkPropertyVisibility(
-                $property_id,
+                $propertyId,
                 $context->self,
-                $statements_checker->getSource(),
-                new CodeLocation($statements_checker->getSource(), $stmt),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSource(),
+                new CodeLocation($statementsChecker->getSource(), $stmt),
+                $statementsChecker->getSuppressedIssues()
             ) === false) {
                 return false;
             }
 
-            $declaring_property_class = $codebase->properties->getDeclaringClassForProperty($property_id);
+            $declaringPropertyClass = $codebase->properties->getDeclaringClassForProperty($propertyId);
 
-            $declaring_class_storage = $project_checker->classlike_storage_provider->get(
-                (string)$declaring_property_class
+            $declaringClassStorage = $projectChecker->classlikeStorageProvider->get(
+                (string)$declaringPropertyClass
             );
 
-            $property_storage = $declaring_class_storage->properties[$prop_name];
+            $propertyStorage = $declaringClassStorage->properties[$propName];
 
-            if ($property_storage->deprecated) {
+            if ($propertyStorage->deprecated) {
                 if (IssueBuffer::accepts(
                     new DeprecatedProperty(
-                        $property_id . ' is marked deprecated',
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $property_id
+                        $propertyId . ' is marked deprecated',
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $propertyId
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
             }
 
-            $class_property_type = $property_storage->type;
+            $classPropertyType = $propertyStorage->type;
 
-            if ($class_property_type === false) {
+            if ($classPropertyType === false) {
                 if (IssueBuffer::accepts(
                     new MissingPropertyType(
-                        'Property ' . $lhs_type_part->value . '::$' . $prop_name
+                        'Property ' . $lhsTypePart->value . '::$' . $propName
                             . ' does not have a declared type',
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
 
-                $class_property_type = Type::getMixed();
+                $classPropertyType = Type::getMixed();
             } else {
-                $class_property_type = ExpressionChecker::fleshOutType(
-                    $project_checker,
-                    clone $class_property_type,
-                    $declaring_property_class,
-                    $declaring_property_class
+                $classPropertyType = ExpressionChecker::fleshOutType(
+                    $projectChecker,
+                    clone $classPropertyType,
+                    $declaringPropertyClass,
+                    $declaringPropertyClass
                 );
 
-                if ($lhs_type_part instanceof TGenericObject) {
-                    $class_storage = $project_checker->classlike_storage_provider->get($lhs_type_part->value);
+                if ($lhsTypePart instanceof TGenericObject) {
+                    $classStorage = $projectChecker->classlikeStorageProvider->get($lhsTypePart->value);
 
-                    if ($class_storage->template_types) {
-                        $class_template_params = [];
+                    if ($classStorage->templateTypes) {
+                        $classTemplateParams = [];
 
-                        $reversed_class_template_types = array_reverse(array_keys($class_storage->template_types));
+                        $reversedClassTemplateTypes = array_reverse(array_keys($classStorage->templateTypes));
 
-                        $provided_type_param_count = count($lhs_type_part->type_params);
+                        $providedTypeParamCount = count($lhsTypePart->typeParams);
 
-                        foreach ($reversed_class_template_types as $i => $type_name) {
-                            if (isset($lhs_type_part->type_params[$provided_type_param_count - 1 - $i])) {
-                                $class_template_params[$type_name] =
-                                    (string)$lhs_type_part->type_params[$provided_type_param_count - 1 - $i];
+                        foreach ($reversedClassTemplateTypes as $i => $typeName) {
+                            if (isset($lhsTypePart->typeParams[$providedTypeParamCount - 1 - $i])) {
+                                $classTemplateParams[$typeName] =
+                                    (string)$lhsTypePart->typeParams[$providedTypeParamCount - 1 - $i];
                             } else {
-                                $class_template_params[$type_name] = 'mixed';
+                                $classTemplateParams[$typeName] = 'mixed';
                             }
                         }
 
-                        $type_tokens = Type::tokenize((string)$class_property_type);
+                        $typeTokens = Type::tokenize((string)$classPropertyType);
 
-                        foreach ($type_tokens as &$type_token) {
-                            if (isset($class_template_params[$type_token])) {
-                                $type_token = $class_template_params[$type_token];
+                        foreach ($typeTokens as &$typeToken) {
+                            if (isset($classTemplateParams[$typeToken])) {
+                                $typeToken = $classTemplateParams[$typeToken];
                             }
                         }
 
-                        $class_property_type = Type::parseString(implode('', $type_tokens));
+                        $classPropertyType = Type::parseString(implode('', $typeTokens));
                     }
                 }
             }
 
             if (isset($stmt->inferredType)) {
-                $stmt->inferredType = Type::combineUnionTypes($class_property_type, $stmt->inferredType);
+                $stmt->inferredType = Type::combineUnionTypes($classPropertyType, $stmt->inferredType);
             } else {
-                $stmt->inferredType = $class_property_type;
+                $stmt->inferredType = $classPropertyType;
             }
         }
 
-        if ($invalid_fetch_types) {
-            $lhs_type_part = $invalid_fetch_types[0];
+        if ($invalidFetchTypes) {
+            $lhsTypePart = $invalidFetchTypes[0];
 
-            if ($has_valid_fetch_type) {
+            if ($hasValidFetchType) {
                 if (IssueBuffer::accepts(
                     new PossiblyInvalidPropertyFetch(
-                        'Cannot fetch property on possible non-object ' . $stmt_var_id . ' of type ' . $lhs_type_part,
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        'Cannot fetch property on possible non-object ' . $stmtVarId . ' of type ' . $lhsTypePart,
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
             } else {
                 if (IssueBuffer::accepts(
                     new InvalidPropertyFetch(
-                        'Cannot fetch property on non-object ' . $stmt_var_id . ' of type ' . $lhs_type_part,
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        'Cannot fetch property on non-object ' . $stmtVarId . ' of type ' . $lhsTypePart,
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     // fall through
                 }
             }
         }
 
-        if ($var_id) {
-            $context->vars_in_scope[$var_id] = isset($stmt->inferredType) ? $stmt->inferredType : Type::getMixed();
+        if ($varId) {
+            $context->varsInScope[$varId] = isset($stmt->inferredType) ? $stmt->inferredType : Type::getMixed();
         }
     }
 
     /**
-     * @param   StatementsChecker                       $statements_checker
+     * @param   StatementsChecker                       $statementsChecker
      * @param   PhpParser\Node\Expr\StaticPropertyFetch $stmt
      * @param   Context                                 $context
      *
      * @return  null|false
      */
     public static function analyzeStatic(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\StaticPropertyFetch $stmt,
         Context $context
     ) {
@@ -477,25 +477,25 @@ class PropertyFetchChecker
             return null;
         }
 
-        $fq_class_name = null;
+        $fqClassName = null;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
         if ($stmt->class instanceof PhpParser\Node\Name) {
             if (count($stmt->class->parts) === 1
                 && in_array(strtolower($stmt->class->parts[0]), ['self', 'static', 'parent'], true)
             ) {
                 if ($stmt->class->parts[0] === 'parent') {
-                    $fq_class_name = $statements_checker->getParentFQCLN();
+                    $fqClassName = $statementsChecker->getParentFQCLN();
 
-                    if ($fq_class_name === null) {
+                    if ($fqClassName === null) {
                         if (IssueBuffer::accepts(
                             new ParentNotFound(
                                 'Cannot check property fetch on parent as this class does not extend another',
-                                new CodeLocation($statements_checker->getSource(), $stmt)
+                                new CodeLocation($statementsChecker->getSource(), $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -503,28 +503,28 @@ class PropertyFetchChecker
                         return;
                     }
                 } else {
-                    $fq_class_name = (string)$context->self;
+                    $fqClassName = (string)$context->self;
                 }
 
-                if ($context->isPhantomClass($fq_class_name)) {
+                if ($context->isPhantomClass($fqClassName)) {
                     return null;
                 }
             } else {
-                $fq_class_name = ClassLikeChecker::getFQCLNFromNameObject(
+                $fqClassName = ClassLikeChecker::getFQCLNFromNameObject(
                     $stmt->class,
-                    $statements_checker->getAliases()
+                    $statementsChecker->getAliases()
                 );
 
-                if ($context->isPhantomClass($fq_class_name)) {
+                if ($context->isPhantomClass($fqClassName)) {
                     return null;
                 }
 
-                if ($context->check_classes) {
+                if ($context->checkClasses) {
                     if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                        $statements_checker,
-                        $fq_class_name,
-                        new CodeLocation($statements_checker->getSource(), $stmt->class),
-                        $statements_checker->getSuppressedIssues(),
+                        $statementsChecker,
+                        $fqClassName,
+                        new CodeLocation($statementsChecker->getSource(), $stmt->class),
+                        $statementsChecker->getSuppressedIssues(),
                         false
                     ) !== true) {
                         return false;
@@ -532,42 +532,42 @@ class PropertyFetchChecker
                 }
             }
 
-            $stmt->class->inferredType = $fq_class_name ? new Type\Union([new TNamedObject($fq_class_name)]) : null;
+            $stmt->class->inferredType = $fqClassName ? new Type\Union([new TNamedObject($fqClassName)]) : null;
         }
 
         if ($stmt->name instanceof PhpParser\Node\VarLikeIdentifier) {
-            $prop_name = $stmt->name->name;
+            $propName = $stmt->name->name;
         } elseif (isset($stmt->name->inferredType)
             && $stmt->name->inferredType->isSingleStringLiteral()
         ) {
-            $prop_name = $stmt->name->inferredType->getSingleStringLiteral()->value;
+            $propName = $stmt->name->inferredType->getSingleStringLiteral()->value;
         } else {
-            $prop_name = null;
+            $propName = null;
         }
 
-        if ($fq_class_name &&
-            $context->check_classes &&
-            $context->check_variables &&
-            $prop_name &&
-            !ExpressionChecker::isMock($fq_class_name)
+        if ($fqClassName &&
+            $context->checkClasses &&
+            $context->checkVariables &&
+            $propName &&
+            !ExpressionChecker::isMock($fqClassName)
         ) {
-            $var_id = ExpressionChecker::getVarId(
+            $varId = ExpressionChecker::getVarId(
                 $stmt,
-                $statements_checker->getFQCLN(),
-                $statements_checker
+                $statementsChecker->getFQCLN(),
+                $statementsChecker
             );
 
-            $property_id = $fq_class_name . '::$' . $prop_name;
+            $propertyId = $fqClassName . '::$' . $propName;
 
-            if ($var_id && $context->hasVariable($var_id, $statements_checker)) {
+            if ($varId && $context->hasVariable($varId, $statementsChecker)) {
                 // we don't need to check anything
-                $stmt->inferredType = $context->vars_in_scope[$var_id];
+                $stmt->inferredType = $context->varsInScope[$varId];
 
-                if ($context->collect_references) {
+                if ($context->collectReferences) {
                     // log the appearance
                     $codebase->properties->propertyExists(
-                        $property_id,
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        $propertyId,
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     );
                 }
 
@@ -575,17 +575,17 @@ class PropertyFetchChecker
             }
 
             if (!$codebase->properties->propertyExists(
-                $property_id,
-                $context->collect_references ? new CodeLocation($statements_checker->getSource(), $stmt) : null
+                $propertyId,
+                $context->collectReferences ? new CodeLocation($statementsChecker->getSource(), $stmt) : null
             )
             ) {
                 if (IssueBuffer::accepts(
                     new UndefinedPropertyFetch(
-                        'Static property ' . $property_id . ' is not defined',
-                        new CodeLocation($statements_checker->getSource(), $stmt),
-                        $property_id
+                        'Static property ' . $propertyId . ' is not defined',
+                        new CodeLocation($statementsChecker->getSource(), $stmt),
+                        $propertyId
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
@@ -594,28 +594,28 @@ class PropertyFetchChecker
             }
 
             if (ClassLikeChecker::checkPropertyVisibility(
-                $property_id,
+                $propertyId,
                 $context->self,
-                $statements_checker->getSource(),
-                new CodeLocation($statements_checker->getSource(), $stmt),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker->getSource(),
+                new CodeLocation($statementsChecker->getSource(), $stmt),
+                $statementsChecker->getSuppressedIssues()
             ) === false) {
                 return false;
             }
 
-            $declaring_property_class = $codebase->properties->getDeclaringClassForProperty(
-                $fq_class_name . '::$' . $prop_name
+            $declaringPropertyClass = $codebase->properties->getDeclaringClassForProperty(
+                $fqClassName . '::$' . $propName
             );
 
-            $class_storage = $project_checker->classlike_storage_provider->get((string)$declaring_property_class);
-            $property = $class_storage->properties[$prop_name];
+            $classStorage = $projectChecker->classlikeStorageProvider->get((string)$declaringPropertyClass);
+            $property = $classStorage->properties[$propName];
 
-            if ($var_id) {
-                $context->vars_in_scope[$var_id] = $property->type
+            if ($varId) {
+                $context->varsInScope[$varId] = $property->type
                     ? clone $property->type
                     : Type::getMixed();
 
-                $stmt->inferredType = clone $context->vars_in_scope[$var_id];
+                $stmt->inferredType = clone $context->varsInScope[$varId];
             } else {
                 $stmt->inferredType = Type::getMixed();
             }

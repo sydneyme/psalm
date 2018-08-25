@@ -18,257 +18,257 @@ class FunctionDocblockManipulator
      *
      * @var array<string, array<int, FunctionDocblockManipulator>>
      */
-    private static $ordered_manipulators = [];
+    private static $orderedManipulators = [];
 
     /** @var Closure|Function_|ClassMethod */
     private $stmt;
 
     /** @var int */
-    private $docblock_start;
+    private $docblockStart;
 
     /** @var int */
-    private $docblock_end;
+    private $docblockEnd;
 
     /** @var int */
-    private $return_typehint_area_start;
+    private $returnTypehintAreaStart;
 
     /** @var null|int */
-    private $return_typehint_colon_start;
+    private $returnTypehintColonStart;
 
     /** @var null|int */
-    private $return_typehint_start;
+    private $returnTypehintStart;
 
     /** @var null|int */
-    private $return_typehint_end;
+    private $returnTypehintEnd;
 
     /** @var null|string */
-    private $new_php_return_type;
+    private $newPhpReturnType;
 
     /** @var bool */
-    private $return_type_is_php_compatible = false;
+    private $returnTypeIsPhpCompatible = false;
 
     /** @var null|string */
-    private $new_phpdoc_return_type;
+    private $newPhpdocReturnType;
 
     /** @var null|string */
-    private $new_psalm_return_type;
+    private $newPsalmReturnType;
 
     /** @var array<string, int> */
-    private $param_typehint_area_starts = [];
+    private $paramTypehintAreaStarts = [];
 
     /** @var array<string, int> */
-    private $param_typehint_starts = [];
+    private $paramTypehintStarts = [];
 
     /** @var array<string, int> */
-    private $param_typehint_ends = [];
+    private $paramTypehintEnds = [];
 
     /** @var array<string, string> */
-    private $new_php_param_types = [];
+    private $newPhpParamTypes = [];
 
     /** @var array<string, bool> */
-    private $param_type_is_php_compatible = [];
+    private $paramTypeIsPhpCompatible = [];
 
     /** @var array<string, string> */
-    private $new_phpdoc_param_types = [];
+    private $newPhpdocParamTypes = [];
 
     /** @var array<string, string> */
-    private $new_psalm_param_types = [];
+    private $newPsalmParamTypes = [];
 
     /** @var string */
     private $indentation;
 
     /**
-     * @param  string $file_path
-     * @param  string $function_id
+     * @param  string $filePath
+     * @param  string $functionId
      * @param  Closure|Function_|ClassMethod $stmt
      *
      * @return self
      */
     public static function getForFunction(
-        ProjectChecker $project_checker,
-        $file_path,
-        $function_id,
+        ProjectChecker $projectChecker,
+        $filePath,
+        $functionId,
         FunctionLike $stmt
     ) {
-        if (isset(self::$manipulators[$file_path][$function_id])) {
-            return self::$manipulators[$file_path][$function_id];
+        if (isset(self::$manipulators[$filePath][$functionId])) {
+            return self::$manipulators[$filePath][$functionId];
         }
 
         $manipulator
-            = self::$manipulators[$file_path][$function_id]
-            = self::$ordered_manipulators[$file_path][$stmt->getLine()]
-            = new self($file_path, $stmt, $project_checker);
+            = self::$manipulators[$filePath][$functionId]
+            = self::$orderedManipulators[$filePath][$stmt->getLine()]
+            = new self($filePath, $stmt, $projectChecker);
 
         return $manipulator;
     }
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      * @param Closure|Function_|ClassMethod $stmt
      */
-    private function __construct($file_path, FunctionLike $stmt, ProjectChecker $project_checker)
+    private function __construct($filePath, FunctionLike $stmt, ProjectChecker $projectChecker)
     {
         $this->stmt = $stmt;
         $docblock = $stmt->getDocComment();
-        $this->docblock_start = $docblock ? $docblock->getFilePos() : (int)$stmt->getAttribute('startFilePos');
-        $this->docblock_end = $function_start = (int)$stmt->getAttribute('startFilePos');
-        $function_end = (int)$stmt->getAttribute('endFilePos');
+        $this->docblockStart = $docblock ? $docblock->getFilePos() : (int)$stmt->getAttribute('startFilePos');
+        $this->docblockEnd = $functionStart = (int)$stmt->getAttribute('startFilePos');
+        $functionEnd = (int)$stmt->getAttribute('endFilePos');
 
-        $file_contents = $project_checker->codebase->getFileContents($file_path);
+        $fileContents = $projectChecker->codebase->getFileContents($filePath);
 
-        $last_arg_position = $stmt->params
+        $lastArgPosition = $stmt->params
             ? (int) $stmt->params[count($stmt->params) - 1]->getAttribute('endFilePos') + 1
             : null;
 
         if ($stmt instanceof Closure && $stmt->uses) {
-            $last_arg_position = (int) $stmt->uses[count($stmt->uses) - 1]->getAttribute('endFilePos') + 1;
+            $lastArgPosition = (int) $stmt->uses[count($stmt->uses) - 1]->getAttribute('endFilePos') + 1;
         }
 
-        $end_bracket_position = (int) strpos($file_contents, ')', $last_arg_position ?: $function_start);
+        $endBracketPosition = (int) strpos($fileContents, ')', $lastArgPosition ?: $functionStart);
 
-        $this->return_typehint_area_start = $end_bracket_position + 1;
+        $this->returnTypehintAreaStart = $endBracketPosition + 1;
 
-        $function_code = substr($file_contents, $function_start, $function_end);
+        $functionCode = substr($fileContents, $functionStart, $functionEnd);
 
-        $function_code_after_bracket = substr($function_code, $end_bracket_position + 1 - $function_start);
+        $functionCodeAfterBracket = substr($functionCode, $endBracketPosition + 1 - $functionStart);
 
         // do a little parsing here
-        $chars = str_split($function_code_after_bracket);
+        $chars = str_split($functionCodeAfterBracket);
 
-        $in_single_line_comment = $in_multi_line_comment = false;
+        $inSingleLineComment = $inMultiLineComment = false;
 
         for ($i = 0; $i < count($chars); ++$i) {
             $char = $chars[$i];
 
             switch ($char) {
                 case "\n":
-                    $in_single_line_comment = false;
+                    $inSingleLineComment = false;
                     continue 2;
 
                 case ':':
-                    if ($in_multi_line_comment || $in_single_line_comment) {
+                    if ($inMultiLineComment || $inSingleLineComment) {
                         continue 2;
                     }
 
-                    $this->return_typehint_colon_start = $i + $end_bracket_position + 1;
+                    $this->returnTypehintColonStart = $i + $endBracketPosition + 1;
 
                     continue 2;
 
                 case '/':
-                    if ($in_multi_line_comment || $in_single_line_comment) {
+                    if ($inMultiLineComment || $inSingleLineComment) {
                         continue 2;
                     }
 
                     if ($chars[$i + 1] === '*') {
-                        $in_multi_line_comment = true;
+                        $inMultiLineComment = true;
                         ++$i;
                     }
 
                     if ($chars[$i + 1] === '/') {
-                        $in_single_line_comment = true;
+                        $inSingleLineComment = true;
                         ++$i;
                     }
 
                     continue 2;
 
                 case '*':
-                    if ($in_single_line_comment) {
+                    if ($inSingleLineComment) {
                         continue 2;
                     }
 
                     if ($chars[$i + 1] === '/') {
-                        $in_multi_line_comment = false;
+                        $inMultiLineComment = false;
                         ++$i;
                     }
 
                     continue 2;
 
                 case '{':
-                    if ($in_multi_line_comment || $in_single_line_comment) {
+                    if ($inMultiLineComment || $inSingleLineComment) {
                         continue 2;
                     }
 
                     break 2;
 
                 case '?':
-                    if ($in_multi_line_comment || $in_single_line_comment) {
+                    if ($inMultiLineComment || $inSingleLineComment) {
                         continue 2;
                     }
 
-                    $this->return_typehint_start = $i + $end_bracket_position + 1;
+                    $this->returnTypehintStart = $i + $endBracketPosition + 1;
                     break;
             }
 
-            if ($in_multi_line_comment || $in_single_line_comment) {
+            if ($inMultiLineComment || $inSingleLineComment) {
                 continue;
             }
 
             if ($chars[$i] === '\\' || preg_match('/\w/', $char)) {
-                if ($this->return_typehint_start === null) {
-                    $this->return_typehint_start = $i + $end_bracket_position + 1;
+                if ($this->returnTypehintStart === null) {
+                    $this->returnTypehintStart = $i + $endBracketPosition + 1;
                 }
 
                 if ($chars[$i + 1] !== '\\' && !preg_match('/[\w]/', $chars[$i + 1])) {
-                    $this->return_typehint_end = $i + $end_bracket_position + 2;
+                    $this->returnTypehintEnd = $i + $endBracketPosition + 2;
                     break;
                 }
             }
         }
 
-        $preceding_newline_pos = strrpos($file_contents, "\n", $this->docblock_end - strlen($file_contents));
+        $precedingNewlinePos = strrpos($fileContents, "\n", $this->docblockEnd - strlen($fileContents));
 
-        if ($preceding_newline_pos === false) {
+        if ($precedingNewlinePos === false) {
             $this->indentation = '';
 
             return;
         }
 
-        $first_line = substr($file_contents, $preceding_newline_pos + 1, $this->docblock_end - $preceding_newline_pos);
+        $firstLine = substr($fileContents, $precedingNewlinePos + 1, $this->docblockEnd - $precedingNewlinePos);
 
-        $this->indentation = str_replace(ltrim($first_line), '', $first_line);
+        $this->indentation = str_replace(ltrim($firstLine), '', $firstLine);
     }
 
     /**
      * Sets the new return type
      *
-     * @param   ?string     $php_type
-     * @param   string      $new_type
-     * @param   string      $phpdoc_type
-     * @param   bool        $is_php_compatible
+     * @param   ?string     $phpType
+     * @param   string      $newType
+     * @param   string      $phpdocType
+     * @param   bool        $isPhpCompatible
      *
      * @return  void
      */
-    public function setReturnType($php_type, $new_type, $phpdoc_type, $is_php_compatible)
+    public function setReturnType($phpType, $newType, $phpdocType, $isPhpCompatible)
     {
-        $new_type = str_replace(['<mixed, mixed>', '<empty, empty>'], '', $new_type);
+        $newType = str_replace(['<mixed, mixed>', '<empty, empty>'], '', $newType);
 
-        $this->new_php_return_type = $php_type;
-        $this->new_phpdoc_return_type = $phpdoc_type;
-        $this->new_psalm_return_type = $new_type;
-        $this->return_type_is_php_compatible = $is_php_compatible;
+        $this->newPhpReturnType = $phpType;
+        $this->newPhpdocReturnType = $phpdocType;
+        $this->newPsalmReturnType = $newType;
+        $this->returnTypeIsPhpCompatible = $isPhpCompatible;
     }
 
     /**
      * Sets a new param type
      *
-     * @param   string      $param_name
-     * @param   ?string     $php_type
-     * @param   string      $new_type
-     * @param   string      $phpdoc_type
-     * @param   bool        $is_php_compatible
+     * @param   string      $paramName
+     * @param   ?string     $phpType
+     * @param   string      $newType
+     * @param   string      $phpdocType
+     * @param   bool        $isPhpCompatible
      *
      * @return  void
      */
-    public function setParamType($param_name, $php_type, $new_type, $phpdoc_type, $is_php_compatible)
+    public function setParamType($paramName, $phpType, $newType, $phpdocType, $isPhpCompatible)
     {
-        $new_type = str_replace(['<mixed, mixed>', '<empty, empty>'], '', $new_type);
+        $newType = str_replace(['<mixed, mixed>', '<empty, empty>'], '', $newType);
 
-        if ($php_type) {
-            $this->new_php_param_types[$param_name] = $php_type;
+        if ($phpType) {
+            $this->newPhpParamTypes[$paramName] = $phpType;
         }
-        $this->new_phpdoc_param_types[$param_name] = $phpdoc_type;
-        $this->new_psalm_param_types[$param_name] = $new_type;
-        $this->param_type_is_php_compatible[$param_name] = $is_php_compatible;
+        $this->newPhpdocParamTypes[$paramName] = $phpdocType;
+        $this->newPsalmParamTypes[$paramName] = $newType;
+        $this->paramTypeIsPhpCompatible[$paramName] = $isPhpCompatible;
     }
 
     /**
@@ -282,96 +282,96 @@ class FunctionDocblockManipulator
         $docblock = $this->stmt->getDocComment();
 
         if ($docblock) {
-            $parsed_docblock = CommentChecker::parseDocComment((string)$docblock, null, true);
+            $parsedDocblock = CommentChecker::parseDocComment((string)$docblock, null, true);
         } else {
-            $parsed_docblock = ['description' => '', 'specials' => []];
+            $parsedDocblock = ['description' => '', 'specials' => []];
         }
 
-        foreach ($this->new_phpdoc_param_types as $param_name => $phpdoc_type) {
-            $found_in_params = false;
-            $new_param_block = $phpdoc_type . ' ' . '$' . $param_name;
+        foreach ($this->newPhpdocParamTypes as $paramName => $phpdocType) {
+            $foundInParams = false;
+            $newParamBlock = $phpdocType . ' ' . '$' . $paramName;
 
-            if (isset($parsed_docblock['specials']['param'])) {
-                foreach ($parsed_docblock['specials']['param'] as &$param_block) {
-                    $doc_parts = CommentChecker::splitDocLine($param_block);
+            if (isset($parsedDocblock['specials']['param'])) {
+                foreach ($parsedDocblock['specials']['param'] as &$paramBlock) {
+                    $docParts = CommentChecker::splitDocLine($paramBlock);
 
-                    if ($doc_parts[1] === '$' . $param_name) {
-                        $param_block = $new_param_block;
-                        $found_in_params = true;
+                    if ($docParts[1] === '$' . $paramName) {
+                        $paramBlock = $newParamBlock;
+                        $foundInParams = true;
                         break;
                     }
                 }
             }
 
-            if (!$found_in_params) {
-                $parsed_docblock['specials']['params'][] = $new_param_block;
+            if (!$foundInParams) {
+                $parsedDocblock['specials']['params'][] = $newParamBlock;
             }
         }
 
-        if ($this->new_phpdoc_return_type) {
-            $parsed_docblock['specials']['return'] = [$this->new_phpdoc_return_type];
+        if ($this->newPhpdocReturnType) {
+            $parsedDocblock['specials']['return'] = [$this->newPhpdocReturnType];
         }
 
-        if ($this->new_phpdoc_return_type !== $this->new_psalm_return_type && $this->new_psalm_return_type) {
-            $parsed_docblock['specials']['psalm-return'] = [$this->new_psalm_return_type];
+        if ($this->newPhpdocReturnType !== $this->newPsalmReturnType && $this->newPsalmReturnType) {
+            $parsedDocblock['specials']['psalm-return'] = [$this->newPsalmReturnType];
         }
 
-        return CommentChecker::renderDocComment($parsed_docblock, $this->indentation);
+        return CommentChecker::renderDocComment($parsedDocblock, $this->indentation);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return array<int, FileManipulation>
      */
-    public static function getManipulationsForFile($file_path)
+    public static function getManipulationsForFile($filePath)
     {
-        if (!isset(self::$manipulators[$file_path])) {
+        if (!isset(self::$manipulators[$filePath])) {
             return [];
         }
 
-        $file_manipulations = [];
+        $fileManipulations = [];
 
-        foreach (self::$ordered_manipulators[$file_path] as $manipulator) {
-            if ($manipulator->new_php_return_type) {
-                if ($manipulator->return_typehint_start && $manipulator->return_typehint_end) {
-                    $file_manipulations[$manipulator->return_typehint_start] = new FileManipulation(
-                        $manipulator->return_typehint_start,
-                        $manipulator->return_typehint_end,
-                        $manipulator->new_php_return_type
+        foreach (self::$orderedManipulators[$filePath] as $manipulator) {
+            if ($manipulator->newPhpReturnType) {
+                if ($manipulator->returnTypehintStart && $manipulator->returnTypehintEnd) {
+                    $fileManipulations[$manipulator->returnTypehintStart] = new FileManipulation(
+                        $manipulator->returnTypehintStart,
+                        $manipulator->returnTypehintEnd,
+                        $manipulator->newPhpReturnType
                     );
                 } else {
-                    $file_manipulations[$manipulator->return_typehint_area_start] = new FileManipulation(
-                        $manipulator->return_typehint_area_start,
-                        $manipulator->return_typehint_area_start,
-                        ': ' . $manipulator->new_php_return_type
+                    $fileManipulations[$manipulator->returnTypehintAreaStart] = new FileManipulation(
+                        $manipulator->returnTypehintAreaStart,
+                        $manipulator->returnTypehintAreaStart,
+                        ': ' . $manipulator->newPhpReturnType
                     );
                 }
-            } elseif ($manipulator->return_typehint_colon_start
-                && $manipulator->new_phpdoc_return_type
-                && $manipulator->return_typehint_start
-                && $manipulator->return_typehint_end
+            } elseif ($manipulator->returnTypehintColonStart
+                && $manipulator->newPhpdocReturnType
+                && $manipulator->returnTypehintStart
+                && $manipulator->returnTypehintEnd
             ) {
-                $file_manipulations[$manipulator->return_typehint_start] = new FileManipulation(
-                    $manipulator->return_typehint_colon_start,
-                    $manipulator->return_typehint_end,
+                $fileManipulations[$manipulator->returnTypehintStart] = new FileManipulation(
+                    $manipulator->returnTypehintColonStart,
+                    $manipulator->returnTypehintEnd,
                     ''
                 );
             }
 
-            if (!$manipulator->new_php_return_type
-                || !$manipulator->return_type_is_php_compatible
-                || $manipulator->docblock_start !== $manipulator->docblock_end
+            if (!$manipulator->newPhpReturnType
+                || !$manipulator->returnTypeIsPhpCompatible
+                || $manipulator->docblockStart !== $manipulator->docblockEnd
             ) {
-                $file_manipulations[$manipulator->docblock_start] = new FileManipulation(
-                    $manipulator->docblock_start,
-                    $manipulator->docblock_end,
+                $fileManipulations[$manipulator->docblockStart] = new FileManipulation(
+                    $manipulator->docblockStart,
+                    $manipulator->docblockEnd,
                     $manipulator->getDocblock()
                 );
             }
         }
 
-        return $file_manipulations;
+        return $fileManipulations;
     }
 
     /**
@@ -380,6 +380,6 @@ class FunctionDocblockManipulator
     public static function clearCache()
     {
         self::$manipulators = [];
-        self::$ordered_manipulators = [];
+        self::$orderedManipulators = [];
     }
 }

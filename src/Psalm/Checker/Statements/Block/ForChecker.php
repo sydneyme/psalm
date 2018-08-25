@@ -11,112 +11,112 @@ use Psalm\Scope\LoopScope;
 class ForChecker
 {
     /**
-     * @param   StatementsChecker           $statements_checker
+     * @param   StatementsChecker           $statementsChecker
      * @param   PhpParser\Node\Stmt\For_    $stmt
      * @param   Context                     $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Stmt\For_ $stmt,
         Context $context
     ) {
-        $pre_assigned_var_ids = $context->assigned_var_ids;
-        $context->assigned_var_ids = [];
+        $preAssignedVarIds = $context->assignedVarIds;
+        $context->assignedVarIds = [];
 
         foreach ($stmt->init as $init) {
-            if (ExpressionChecker::analyze($statements_checker, $init, $context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $init, $context) === false) {
                 return false;
             }
         }
 
-        $assigned_var_ids = $context->assigned_var_ids;
+        $assignedVarIds = $context->assignedVarIds;
 
-        $context->assigned_var_ids = array_merge(
-            $pre_assigned_var_ids,
-            $assigned_var_ids
+        $context->assignedVarIds = array_merge(
+            $preAssignedVarIds,
+            $assignedVarIds
         );
 
-        $while_true = !$stmt->cond && !$stmt->init && !$stmt->loop;
+        $whileTrue = !$stmt->cond && !$stmt->init && !$stmt->loop;
 
-        $pre_context = $while_true ? clone $context : null;
+        $preContext = $whileTrue ? clone $context : null;
 
-        $for_context = clone $context;
+        $forContext = clone $context;
 
-        $for_context->inside_loop = true;
+        $forContext->insideLoop = true;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
 
-        if ($project_checker->alter_code) {
-            $for_context->branch_point = $for_context->branch_point ?: (int) $stmt->getAttribute('startFilePos');
+        if ($projectChecker->alterCode) {
+            $forContext->branchPoint = $forContext->branchPoint ?: (int) $stmt->getAttribute('startFilePos');
         }
 
-        $loop_scope = new LoopScope($for_context, $context);
+        $loopScope = new LoopScope($forContext, $context);
 
-        $loop_scope->protected_var_ids = array_merge(
-            $assigned_var_ids,
-            $context->protected_var_ids
+        $loopScope->protectedVarIds = array_merge(
+            $assignedVarIds,
+            $context->protectedVarIds
         );
 
         LoopChecker::analyze(
-            $statements_checker,
+            $statementsChecker,
             $stmt->stmts,
             $stmt->cond,
             $stmt->loop,
-            $loop_scope,
-            $inner_loop_context
+            $loopScope,
+            $innerLoopContext
         );
 
-        if ($inner_loop_context && $while_true) {
+        if ($innerLoopContext && $whileTrue) {
             // if we actually leave the loop
-            if (in_array(ScopeChecker::ACTION_BREAK, $loop_scope->final_actions, true)
-                || in_array(ScopeChecker::ACTION_END, $loop_scope->final_actions, true)
+            if (in_array(ScopeChecker::ACTION_BREAK, $loopScope->finalActions, true)
+                || in_array(ScopeChecker::ACTION_END, $loopScope->finalActions, true)
             ) {
-                foreach ($inner_loop_context->vars_in_scope as $var_id => $type) {
-                    if (!isset($context->vars_in_scope[$var_id])) {
-                        $context->vars_in_scope[$var_id] = $type;
+                foreach ($innerLoopContext->varsInScope as $varId => $type) {
+                    if (!isset($context->varsInScope[$varId])) {
+                        $context->varsInScope[$varId] = $type;
                     }
                 }
             }
         }
 
-        if (!$while_true
-            || in_array(ScopeChecker::ACTION_BREAK, $loop_scope->final_actions, true)
-            || in_array(ScopeChecker::ACTION_END, $loop_scope->final_actions, true)
-            || !$pre_context
+        if (!$whileTrue
+            || in_array(ScopeChecker::ACTION_BREAK, $loopScope->finalActions, true)
+            || in_array(ScopeChecker::ACTION_END, $loopScope->finalActions, true)
+            || !$preContext
         ) {
-            $context->vars_possibly_in_scope = array_merge(
-                $context->vars_possibly_in_scope,
-                $for_context->vars_possibly_in_scope
+            $context->varsPossiblyInScope = array_merge(
+                $context->varsPossiblyInScope,
+                $forContext->varsPossiblyInScope
             );
 
-            $context->possibly_assigned_var_ids =
-                $for_context->possibly_assigned_var_ids + $context->possibly_assigned_var_ids;
+            $context->possiblyAssignedVarIds =
+                $forContext->possiblyAssignedVarIds + $context->possiblyAssignedVarIds;
         } else {
-            $context->vars_in_scope = $pre_context->vars_in_scope;
-            $context->vars_possibly_in_scope = $pre_context->vars_possibly_in_scope;
+            $context->varsInScope = $preContext->varsInScope;
+            $context->varsPossiblyInScope = $preContext->varsPossiblyInScope;
         }
 
-        $context->referenced_var_ids =
-            $for_context->referenced_var_ids + $context->referenced_var_ids;
+        $context->referencedVarIds =
+            $forContext->referencedVarIds + $context->referencedVarIds;
 
-        if ($context->collect_references) {
-            $context->unreferenced_vars = array_intersect_key(
-                $for_context->unreferenced_vars,
-                $context->unreferenced_vars
+        if ($context->collectReferences) {
+            $context->unreferencedVars = array_intersect_key(
+                $forContext->unreferencedVars,
+                $context->unreferencedVars
             );
         }
 
-        if ($context->collect_references) {
-            $context->unreferenced_vars = array_intersect_key(
-                $for_context->unreferenced_vars,
-                $context->unreferenced_vars
+        if ($context->collectReferences) {
+            $context->unreferencedVars = array_intersect_key(
+                $forContext->unreferencedVars,
+                $context->unreferencedVars
             );
         }
 
-        if ($context->collect_exceptions) {
-            $context->possibly_thrown_exceptions += $for_context->possibly_thrown_exceptions;
+        if ($context->collectExceptions) {
+            $context->possiblyThrownExceptions += $forContext->possiblyThrownExceptions;
         }
 
         return null;

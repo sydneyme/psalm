@@ -18,70 +18,70 @@ use Psalm\Type;
 class VariableFetchChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PhpParser\Node\Expr\Variable    $stmt
      * @param   Context                         $context
-     * @param   bool                            $passed_by_reference
-     * @param   Type\Union|null                 $by_ref_type
-     * @param   bool                            $array_assignment
-     * @param   bool                            $from_global - when used in a global keyword
+     * @param   bool                            $passedByReference
+     * @param   Type\Union|null                 $byRefType
+     * @param   bool                            $arrayAssignment
+     * @param   bool                            $fromGlobal - when used in a global keyword
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\Variable $stmt,
         Context $context,
-        $passed_by_reference = false,
-        Type\Union $by_ref_type = null,
-        $array_assignment = false,
-        $from_global = false
+        $passedByReference = false,
+        Type\Union $byRefType = null,
+        $arrayAssignment = false,
+        $fromGlobal = false
     ) {
         if ($stmt->name === 'this') {
-            if ($statements_checker->isStatic()) {
+            if ($statementsChecker->isStatic()) {
                 if (IssueBuffer::accepts(
                     new InvalidScope(
                         'Invalid reference to $this in a static context',
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
 
                 return null;
-            } elseif (!isset($context->vars_in_scope['$this'])) {
+            } elseif (!isset($context->varsInScope['$this'])) {
                 if (IssueBuffer::accepts(
                     new InvalidScope(
                         'Invalid reference to $this in a non-class context',
-                        new CodeLocation($statements_checker->getSource(), $stmt)
+                        new CodeLocation($statementsChecker->getSource(), $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
 
-                $context->vars_in_scope['$this'] = Type::getMixed();
-                $context->vars_possibly_in_scope['$this'] = true;
+                $context->varsInScope['$this'] = Type::getMixed();
+                $context->varsPossiblyInScope['$this'] = true;
 
                 return null;
             }
 
-            $stmt->inferredType = clone $context->vars_in_scope['$this'];
+            $stmt->inferredType = clone $context->varsInScope['$this'];
 
             return null;
         }
 
-        if (!$context->check_variables) {
+        if (!$context->checkVariables) {
             if (is_string($stmt->name)) {
-                $var_name = '$' . $stmt->name;
+                $varName = '$' . $stmt->name;
 
-                if (!$context->hasVariable($var_name, $statements_checker)) {
-                    $context->vars_in_scope[$var_name] = Type::getMixed();
-                    $context->vars_possibly_in_scope[$var_name] = true;
+                if (!$context->hasVariable($varName, $statementsChecker)) {
+                    $context->varsInScope[$varName] = Type::getMixed();
+                    $context->varsPossiblyInScope[$varName] = true;
                     $stmt->inferredType = Type::getMixed();
                 } else {
-                    $stmt->inferredType = clone $context->vars_in_scope[$var_name];
+                    $stmt->inferredType = clone $context->varsInScope[$varName];
                 }
             } else {
                 $stmt->inferredType = Type::getMixed();
@@ -107,74 +107,74 @@ class VariableFetchChecker
         )
         ) {
             $stmt->inferredType = Type::getArray();
-            $context->vars_in_scope['$' . $stmt->name] = Type::getArray();
-            $context->vars_possibly_in_scope['$' . $stmt->name] = true;
+            $context->varsInScope['$' . $stmt->name] = Type::getArray();
+            $context->varsPossiblyInScope['$' . $stmt->name] = true;
 
             return null;
         }
 
-        if ($context->is_global && ($stmt->name === 'argv' || $stmt->name === 'argc')) {
-            $var_name = '$' . $stmt->name;
+        if ($context->isGlobal && ($stmt->name === 'argv' || $stmt->name === 'argc')) {
+            $varName = '$' . $stmt->name;
 
-            if (!$context->hasVariable($var_name, $statements_checker)) {
+            if (!$context->hasVariable($varName, $statementsChecker)) {
                 if ($stmt->name === 'argv') {
-                    $context->vars_in_scope[$var_name] = new Type\Union([
+                    $context->varsInScope[$varName] = new Type\Union([
                         new Type\Atomic\TArray([
                             Type::getInt(),
                             Type::getString(),
                         ]),
                     ]);
                 } else {
-                    $context->vars_in_scope[$var_name] = Type::getInt();
+                    $context->varsInScope[$varName] = Type::getInt();
                 }
             }
 
-            $context->vars_possibly_in_scope[$var_name] = true;
-            $stmt->inferredType = clone $context->vars_in_scope[$var_name];
+            $context->varsPossiblyInScope[$varName] = true;
+            $stmt->inferredType = clone $context->varsInScope[$varName];
             return null;
         }
 
         if (!is_string($stmt->name)) {
-            return ExpressionChecker::analyze($statements_checker, $stmt->name, $context);
+            return ExpressionChecker::analyze($statementsChecker, $stmt->name, $context);
         }
 
-        if ($passed_by_reference && $by_ref_type) {
-            ExpressionChecker::assignByRefParam($statements_checker, $stmt, $by_ref_type, $context);
+        if ($passedByReference && $byRefType) {
+            ExpressionChecker::assignByRefParam($statementsChecker, $stmt, $byRefType, $context);
 
             return null;
         }
 
-        $var_name = '$' . $stmt->name;
+        $varName = '$' . $stmt->name;
 
-        if (!$context->hasVariable($var_name, $statements_checker)) {
-            if (!isset($context->vars_possibly_in_scope[$var_name]) ||
-                !$statements_checker->getFirstAppearance($var_name)
+        if (!$context->hasVariable($varName, $statementsChecker)) {
+            if (!isset($context->varsPossiblyInScope[$varName]) ||
+                !$statementsChecker->getFirstAppearance($varName)
             ) {
-                if ($array_assignment) {
+                if ($arrayAssignment) {
                     // if we're in an array assignment, let's assign the variable
                     // because PHP allows it
 
-                    $context->vars_in_scope[$var_name] = Type::getArray();
-                    $context->vars_possibly_in_scope[$var_name] = true;
+                    $context->varsInScope[$varName] = Type::getArray();
+                    $context->varsPossiblyInScope[$varName] = true;
 
                     // it might have been defined first in another if/else branch
-                    if (!$statements_checker->hasVariable($var_name)) {
-                        $statements_checker->registerVariable(
-                            $var_name,
-                            new CodeLocation($statements_checker, $stmt),
-                            $context->branch_point
+                    if (!$statementsChecker->hasVariable($varName)) {
+                        $statementsChecker->registerVariable(
+                            $varName,
+                            new CodeLocation($statementsChecker, $stmt),
+                            $context->branchPoint
                         );
                     }
-                } elseif (!$context->inside_isset
-                    || $statements_checker->getSource() instanceof FunctionLikeChecker
+                } elseif (!$context->insideIsset
+                    || $statementsChecker->getSource() instanceof FunctionLikeChecker
                 ) {
-                    if ($context->is_global || $from_global) {
+                    if ($context->isGlobal || $fromGlobal) {
                         if (IssueBuffer::accepts(
                             new UndefinedGlobalVariable(
-                                'Cannot find referenced variable ' . $var_name . ' in global scope',
-                                new CodeLocation($statements_checker->getSource(), $stmt)
+                                'Cannot find referenced variable ' . $varName . ' in global scope',
+                                new CodeLocation($statementsChecker->getSource(), $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -186,10 +186,10 @@ class VariableFetchChecker
 
                     if (IssueBuffer::accepts(
                         new UndefinedVariable(
-                            'Cannot find referenced variable ' . $var_name,
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Cannot find referenced variable ' . $varName,
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         // fall through
                     }
@@ -200,21 +200,21 @@ class VariableFetchChecker
                 }
             }
 
-            $first_appearance = $statements_checker->getFirstAppearance($var_name);
+            $firstAppearance = $statementsChecker->getFirstAppearance($varName);
 
-            if ($first_appearance && !$context->inside_isset && !$context->inside_unset) {
-                $project_checker = $statements_checker->getFileChecker()->project_checker;
+            if ($firstAppearance && !$context->insideIsset && !$context->insideUnset) {
+                $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
 
-                if ($context->is_global) {
-                    if ($project_checker->alter_code) {
-                        if (!isset($project_checker->getIssuesToFix()['PossiblyUndefinedGlobalVariable'])) {
+                if ($context->isGlobal) {
+                    if ($projectChecker->alterCode) {
+                        if (!isset($projectChecker->getIssuesToFix()['PossiblyUndefinedGlobalVariable'])) {
                             return;
                         }
 
-                        $branch_point = $statements_checker->getBranchPoint($var_name);
+                        $branchPoint = $statementsChecker->getBranchPoint($varName);
 
-                        if ($branch_point) {
-                            $statements_checker->addVariableInitialization($var_name, $branch_point);
+                        if ($branchPoint) {
+                            $statementsChecker->addVariableInitialization($varName, $branchPoint);
                         }
 
                         return;
@@ -222,24 +222,24 @@ class VariableFetchChecker
 
                     if (IssueBuffer::accepts(
                         new PossiblyUndefinedGlobalVariable(
-                            'Possibly undefined global variable ' . $var_name . ', first seen on line ' .
-                                $first_appearance->getLineNumber(),
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Possibly undefined global variable ' . $varName . ', first seen on line ' .
+                                $firstAppearance->getLineNumber(),
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 } else {
-                    if ($project_checker->alter_code) {
-                        if (!isset($project_checker->getIssuesToFix()['PossiblyUndefinedVariable'])) {
+                    if ($projectChecker->alterCode) {
+                        if (!isset($projectChecker->getIssuesToFix()['PossiblyUndefinedVariable'])) {
                             return;
                         }
 
-                        $branch_point = $statements_checker->getBranchPoint($var_name);
+                        $branchPoint = $statementsChecker->getBranchPoint($varName);
 
-                        if ($branch_point) {
-                            $statements_checker->addVariableInitialization($var_name, $branch_point);
+                        if ($branchPoint) {
+                            $statementsChecker->addVariableInitialization($varName, $branchPoint);
                         }
 
                         return;
@@ -247,20 +247,20 @@ class VariableFetchChecker
 
                     if (IssueBuffer::accepts(
                         new PossiblyUndefinedVariable(
-                            'Possibly undefined variable ' . $var_name . ', first seen on line ' .
-                                $first_appearance->getLineNumber(),
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Possibly undefined variable ' . $varName . ', first seen on line ' .
+                                $firstAppearance->getLineNumber(),
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 }
 
-                $statements_checker->registerVariableUses([$first_appearance->getHash() => $first_appearance]);
+                $statementsChecker->registerVariableUses([$firstAppearance->getHash() => $firstAppearance]);
             }
         } else {
-            $stmt->inferredType = clone $context->vars_in_scope[$var_name];
+            $stmt->inferredType = clone $context->varsInScope[$varName];
         }
 
         return null;

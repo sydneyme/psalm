@@ -10,56 +10,56 @@ class LoopScope
     /**
      * @var Context
      */
-    public $loop_context;
+    public $loopContext;
 
     /**
      * @var Context
      */
-    public $loop_parent_context;
+    public $loopParentContext;
 
     /**
      * @var array<string, Type\Union>|null
      */
-    public $redefined_loop_vars = [];
+    public $redefinedLoopVars = [];
 
     /**
      * @var array<string, Type\Union>
      */
-    public $possibly_redefined_loop_vars = [];
+    public $possiblyRedefinedLoopVars = [];
 
     /**
      * @var array<string, Type\Union>|null
      */
-    public $possibly_redefined_loop_parent_vars = null;
+    public $possiblyRedefinedLoopParentVars = null;
 
     /**
      * @var array<string, bool>
      */
-    public $vars_possibly_in_scope = [];
+    public $varsPossiblyInScope = [];
 
     /**
      * @var array<string, bool>
      */
-    public $protected_var_ids = [];
+    public $protectedVarIds = [];
 
     /**
      * @var array<string, array<string, CodeLocation>>
      */
-    public $unreferenced_vars = [];
+    public $unreferencedVars = [];
 
     /**
      * @var array<string, array<string, CodeLocation>>
      */
-    public $possibly_unreferenced_vars = [];
+    public $possiblyUnreferencedVars = [];
 
     /**
      * @var string[]
      */
-    public $final_actions = [];
+    public $finalActions = [];
 
-    public function __construct(Context $loop_context, Context $parent_context)
+    public function __construct(Context $loopContext, Context $parentContext)
     {
-        $this->loop_context = $loop_context;
-        $this->loop_parent_context = $parent_context;
+        $this->loopContext = $loopContext;
+        $this->loopParentContext = $parentContext;
     }
 }

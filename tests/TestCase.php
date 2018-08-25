@@ -9,13 +9,13 @@ use RuntimeException;
 class TestCase extends BaseTestCase
 {
     /** @var string */
-    protected static $src_dir_path;
+    protected static $srcDirPath;
 
     /** @var ProjectChecker */
-    protected $project_checker;
+    protected $projectChecker;
 
     /** @var Provider\FakeFileProvider */
-    protected $file_provider;
+    protected $fileProvider;
 
     /**
      * @return void
@@ -33,7 +33,7 @@ class TestCase extends BaseTestCase
         }
 
         parent::setUpBeforeClass();
-        self::$src_dir_path = getcwd() . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
+        self::$srcDirPath = getcwd() . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
     }
 
     /**
@@ -45,15 +45,15 @@ class TestCase extends BaseTestCase
 
         FileChecker::clearCache();
 
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
 
         $config = new TestConfig();
-        $parser_cache_provider = new Provider\FakeParserCacheProvider();
+        $parserCacheProvider = new Provider\FakeParserCacheProvider();
 
-        $this->project_checker = new ProjectChecker(
+        $this->projectChecker = new ProjectChecker(
             $config,
-            $this->file_provider,
-            $parser_cache_provider,
+            $this->fileProvider,
+            $parserCacheProvider,
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider(),
             false,
@@ -63,42 +63,42 @@ class TestCase extends BaseTestCase
             false
         );
 
-        $this->project_checker->infer_types_from_usage = true;
+        $this->projectChecker->inferTypesFromUsage = true;
     }
 
     /**
-     * @param string $file_path
+     * @param string $filePath
      * @param string $contents
      *
      * @return void
      */
-    public function addFile($file_path, $contents)
+    public function addFile($filePath, $contents)
     {
-        $this->file_provider->registerFile($file_path, $contents);
-        $this->project_checker->getCodeBase()->scanner->addFileToShallowScan($file_path);
+        $this->fileProvider->registerFile($filePath, $contents);
+        $this->projectChecker->getCodeBase()->scanner->addFileToShallowScan($filePath);
     }
 
     /**
-     * @param  string         $file_path
+     * @param  string         $filePath
      * @param  \Psalm\Context $context
      *
      * @return void
      */
-    public function analyzeFile($file_path, \Psalm\Context $context)
+    public function analyzeFile($filePath, \Psalm\Context $context)
     {
-        $codebase = $this->project_checker->getCodebase();
-        $codebase->addFilesToAnalyze([$file_path => $file_path]);
+        $codebase = $this->projectChecker->getCodebase();
+        $codebase->addFilesToAnalyze([$filePath => $filePath]);
 
         $codebase->scanFiles();
 
         $codebase->config->visitStubFiles($codebase);
 
-        $file_checker = new FileChecker(
-            $this->project_checker,
-            $file_path,
-            $codebase->config->shortenFileName($file_path)
+        $fileChecker = new FileChecker(
+            $this->projectChecker,
+            $filePath,
+            $codebase->config->shortenFileName($filePath)
         );
-        $file_checker->analyze($context);
+        $fileChecker->analyze($context);
     }
 
     /**

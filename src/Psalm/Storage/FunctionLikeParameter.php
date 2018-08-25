@@ -14,7 +14,7 @@ class FunctionLikeParameter
     /**
      * @var bool
      */
-    public $by_ref;
+    public $byRef;
 
     /**
      * @var Type\Union|null
@@ -24,22 +24,22 @@ class FunctionLikeParameter
     /**
      * @var Type\Union|null
      */
-    public $signature_type;
+    public $signatureType;
 
     /**
      * @var bool
      */
-    public $is_optional;
+    public $isOptional;
 
     /**
      * @var bool
      */
-    public $is_nullable;
+    public $isNullable;
 
     /**
      * @var Type\Union|null
      */
-    public $default_type;
+    public $defaultType;
 
     /**
      * @var CodeLocation|null
@@ -49,57 +49,57 @@ class FunctionLikeParameter
     /**
      * @var CodeLocation|null
      */
-    public $type_location;
+    public $typeLocation;
 
     /**
      * @var CodeLocation|null
      */
-    public $signature_type_location;
+    public $signatureTypeLocation;
 
     /**
      * @var bool
      */
-    public $is_variadic;
+    public $isVariadic;
 
     /**
      * @param string        $name
-     * @param bool       $by_ref
+     * @param bool       $byRef
      * @param Type\Union|null    $type
      * @param CodeLocation|null  $location
-     * @param bool       $is_optional
-     * @param bool       $is_nullable
-     * @param bool       $is_variadic
-     * @param Type\Union|null    $default_type
+     * @param bool       $isOptional
+     * @param bool       $isNullable
+     * @param bool       $isVariadic
+     * @param Type\Union|null    $defaultType
      */
     public function __construct(
         $name,
-        $by_ref,
+        $byRef,
         Type\Union $type = null,
         CodeLocation $location = null,
-        CodeLocation $type_location = null,
-        $is_optional = true,
-        $is_nullable = false,
-        $is_variadic = false,
-        $default_type = null
+        CodeLocation $typeLocation = null,
+        $isOptional = true,
+        $isNullable = false,
+        $isVariadic = false,
+        $defaultType = null
     ) {
         $this->name = $name;
-        $this->by_ref = $by_ref;
+        $this->byRef = $byRef;
         $this->type = $type;
-        $this->signature_type = $type;
-        $this->is_optional = $is_optional;
-        $this->is_nullable = $is_nullable;
-        $this->is_variadic = $is_variadic;
+        $this->signatureType = $type;
+        $this->isOptional = $isOptional;
+        $this->isNullable = $isNullable;
+        $this->isVariadic = $isVariadic;
         $this->location = $location;
-        $this->type_location = $type_location;
-        $this->signature_type_location = $type_location;
-        $this->default_type = $default_type;
+        $this->typeLocation = $typeLocation;
+        $this->signatureTypeLocation = $typeLocation;
+        $this->defaultType = $defaultType;
     }
 
     public function __toString()
     {
         return ($this->type ?: 'mixed')
-            . ($this->is_variadic ? '...' : '')
-            . ($this->is_optional ? '=' : '');
+            . ($this->isVariadic ? '...' : '')
+            . ($this->isOptional ? '=' : '');
     }
 
     public function __clone()

@@ -60,18 +60,18 @@ class Clause
     }
 
     /**
-     * @param  Clause $other_clause
+     * @param  Clause $otherClause
      *
      * @return bool
      */
-    public function contains(Clause $other_clause)
+    public function contains(Clause $otherClause)
     {
-        if (count($other_clause->possibilities) > count($this->possibilities)) {
+        if (count($otherClause->possibilities) > count($this->possibilities)) {
             return false;
         }
 
-        foreach ($other_clause->possibilities as $var => $possible_types) {
-            if (!isset($this->possibilities[$var]) || count(array_diff($possible_types, $this->possibilities[$var]))) {
+        foreach ($otherClause->possibilities as $var => $possibleTypes) {
+            if (!isset($this->possibilities[$var]) || count(array_diff($possibleTypes, $this->possibilities[$var]))) {
                 return false;
             }
         }
@@ -88,16 +88,16 @@ class Clause
     {
         ksort($this->possibilities);
 
-        foreach ($this->possibilities as &$possible_types) {
-            sort($possible_types);
+        foreach ($this->possibilities as &$possibleTypes) {
+            sort($possibleTypes);
         }
 
-        $possibility_string = json_encode($this->possibilities);
-        if (!$possibility_string) {
+        $possibilityString = json_encode($this->possibilities);
+        if (!$possibilityString) {
             return (string)rand(0, 10000000);
         }
 
-        return md5($possibility_string) .
+        return md5($possibilityString) .
             ($this->wedge || !$this->reconcilable ? spl_object_hash($this) : '');
     }
 
@@ -107,12 +107,12 @@ class Clause
             ' || ',
             array_map(
                 /**
-                 * @param string $var_id
+                 * @param string $varId
                  * @param string[] $values
                  *
                  * @return string
                  */
-                function ($var_id, $values) {
+                function ($varId, $values) {
                     return implode(
                         ' || ',
                         array_map(
@@ -121,16 +121,16 @@ class Clause
                              *
                              * @return string
                              */
-                            function ($value) use ($var_id) {
+                            function ($value) use ($varId) {
                                 if ($value === 'falsy') {
-                                    return '!' . $var_id;
+                                    return '!' . $varId;
                                 }
 
                                 if ($value === '!falsy') {
-                                    return $var_id;
+                                    return $varId;
                                 }
 
-                                return $var_id . '==' . $value;
+                                return $varId . '==' . $value;
                             },
                             $values
                         )

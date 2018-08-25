@@ -11,5 +11,5 @@ class CallableParamTree extends \Psalm\Type\ParseTree
     /**
      * @var bool
      */
-    public $has_default = false;
+    public $hasDefault = false;
 }

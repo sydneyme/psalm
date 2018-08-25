@@ -13,53 +13,53 @@ class ParserCacheProvider
     /**
      * @var int|null
      */
-    protected $last_good_run = null;
+    protected $lastGoodRun = null;
 
     /**
      * A map of filename hashes to contents hashes
      *
      * @var array<string, string>|null
      */
-    protected $file_content_hashes = null;
+    protected $fileContentHashes = null;
 
     /** @var bool */
-    public $use_igbinary = false;
+    public $useIgbinary = false;
 
     /**
-     * @param  int      $file_modified_time
-     * @param  string   $file_content_hash
-     * @param  string   $file_cache_key
+     * @param  int      $fileModifiedTime
+     * @param  string   $fileContentHash
+     * @param  string   $fileCacheKey
      *
      * @return array<int, PhpParser\Node\Stmt>|null
      *
      * @psalm-suppress UndefinedFunction
      */
-    public function loadStatementsFromCache($file_modified_time, $file_content_hash, $file_cache_key)
+    public function loadStatementsFromCache($fileModifiedTime, $fileContentHash, $fileCacheKey)
     {
-        $root_cache_directory = Config::getInstance()->getCacheDirectory();
+        $rootCacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if (!$root_cache_directory) {
+        if (!$rootCacheDirectory) {
             return;
         }
 
-        $parser_cache_directory = $root_cache_directory . DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
+        $parserCacheDirectory = $rootCacheDirectory . DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
 
-        $file_content_hashes = $this->getFileContentHashes();
+        $fileContentHashes = $this->getFileContentHashes();
 
-        $cache_location = $parser_cache_directory . DIRECTORY_SEPARATOR . $file_cache_key;
+        $cacheLocation = $parserCacheDirectory . DIRECTORY_SEPARATOR . $fileCacheKey;
 
-        if (isset($file_content_hashes[$file_cache_key]) &&
-            $file_content_hash === $file_content_hashes[$file_cache_key] &&
-            is_readable($cache_location) &&
-            filemtime($cache_location) > $file_modified_time
+        if (isset($fileContentHashes[$fileCacheKey]) &&
+            $fileContentHash === $fileContentHashes[$fileCacheKey] &&
+            is_readable($cacheLocation) &&
+            filemtime($cacheLocation) > $fileModifiedTime
         ) {
-            if ($this->use_igbinary) {
+            if ($this->useIgbinary) {
                 /** @var array<int, \PhpParser\Node\Stmt> */
-                return igbinary_unserialize((string)file_get_contents($cache_location)) ?: null;
+                return igbinary_unserialize((string)file_get_contents($cacheLocation)) ?: null;
             }
 
             /** @var array<int, \PhpParser\Node\Stmt> */
-            return unserialize((string)file_get_contents($cache_location)) ?: null;
+            return unserialize((string)file_get_contents($cacheLocation)) ?: null;
         }
     }
 
@@ -69,60 +69,60 @@ class ParserCacheProvider
     public function getFileContentHashes()
     {
         $config = Config::getInstance();
-        $root_cache_directory = $config->getCacheDirectory();
+        $rootCacheDirectory = $config->getCacheDirectory();
 
-        if ($this->file_content_hashes === null || !$config->cache_file_hashes_during_run) {
-            $file_hashes_path = $root_cache_directory . DIRECTORY_SEPARATOR . self::FILE_HASHES;
+        if ($this->fileContentHashes === null || !$config->cacheFileHashesDuringRun) {
+            $fileHashesPath = $rootCacheDirectory . DIRECTORY_SEPARATOR . self::FILE_HASHES;
             /** @var array<string, string> */
-            $this->file_content_hashes =
-                $root_cache_directory && is_readable($file_hashes_path)
-                    ? json_decode((string)file_get_contents($file_hashes_path), true)
+            $this->fileContentHashes =
+                $rootCacheDirectory && is_readable($fileHashesPath)
+                    ? json_decode((string)file_get_contents($fileHashesPath), true)
                     : [];
         }
 
-        return $this->file_content_hashes;
+        return $this->fileContentHashes;
     }
 
     /**
-     * @param  string                           $file_cache_key
-     * @param  string                           $file_content_hash
+     * @param  string                           $fileCacheKey
+     * @param  string                           $fileContentHash
      * @param  array<int, PhpParser\Node\Stmt>  $stmts
-     * @param  bool                             $touch_only
+     * @param  bool                             $touchOnly
      *
      * @return void
      *
      * @psalm-suppress UndefinedFunction
      */
-    public function saveStatementsToCache($file_cache_key, $file_content_hash, array $stmts, $touch_only)
+    public function saveStatementsToCache($fileCacheKey, $fileContentHash, array $stmts, $touchOnly)
     {
-        $root_cache_directory = Config::getInstance()->getCacheDirectory();
+        $rootCacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if (!$root_cache_directory) {
+        if (!$rootCacheDirectory) {
             return;
         }
 
-        $parser_cache_directory = $root_cache_directory . DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
+        $parserCacheDirectory = $rootCacheDirectory . DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
 
-        $cache_location = $parser_cache_directory . DIRECTORY_SEPARATOR . $file_cache_key;
+        $cacheLocation = $parserCacheDirectory . DIRECTORY_SEPARATOR . $fileCacheKey;
 
-        if ($touch_only) {
-            touch($cache_location);
+        if ($touchOnly) {
+            touch($cacheLocation);
         } else {
-            if (!is_dir($parser_cache_directory)) {
-                mkdir($parser_cache_directory, 0777, true);
+            if (!is_dir($parserCacheDirectory)) {
+                mkdir($parserCacheDirectory, 0777, true);
             }
 
-            if ($this->use_igbinary) {
-                file_put_contents($cache_location, igbinary_serialize($stmts));
+            if ($this->useIgbinary) {
+                file_put_contents($cacheLocation, igbinary_serialize($stmts));
             } else {
-                file_put_contents($cache_location, serialize($stmts));
+                file_put_contents($cacheLocation, serialize($stmts));
             }
 
-            $this->file_content_hashes[$file_cache_key] = $file_content_hash;
+            $this->fileContentHashes[$fileCacheKey] = $fileContentHash;
 
             file_put_contents(
-                $root_cache_directory . DIRECTORY_SEPARATOR . self::FILE_HASHES,
-                json_encode($this->file_content_hashes)
+                $rootCacheDirectory . DIRECTORY_SEPARATOR . self::FILE_HASHES,
+                json_encode($this->fileContentHashes)
             );
         }
     }
@@ -132,43 +132,43 @@ class ParserCacheProvider
      */
     public function canDiffFiles()
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        return $cache_directory && file_exists($cache_directory . DIRECTORY_SEPARATOR . self::GOOD_RUN_NAME);
+        return $cacheDirectory && file_exists($cacheDirectory . DIRECTORY_SEPARATOR . self::GOOD_RUN_NAME);
     }
 
     /**
-     * @param float $start_time
+     * @param float $startTime
      *
      * @return void
      */
-    public function processSuccessfulRun($start_time)
+    public function processSuccessfulRun($startTime)
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if (!$cache_directory) {
+        if (!$cacheDirectory) {
             return;
         }
 
-        $run_cache_location = $cache_directory . DIRECTORY_SEPARATOR . self::GOOD_RUN_NAME;
+        $runCacheLocation = $cacheDirectory . DIRECTORY_SEPARATOR . self::GOOD_RUN_NAME;
 
-        touch($run_cache_location, (int)$start_time);
+        touch($runCacheLocation, (int)$startTime);
 
         FileReferenceProvider::removeDeletedFilesFromReferences();
 
-        $cache_directory .= DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
+        $cacheDirectory .= DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
 
-        if (is_dir($cache_directory)) {
-            $directory_files = scandir($cache_directory);
+        if (is_dir($cacheDirectory)) {
+            $directoryFiles = scandir($cacheDirectory);
 
-            foreach ($directory_files as $directory_file) {
-                $full_path = $cache_directory . DIRECTORY_SEPARATOR . $directory_file;
+            foreach ($directoryFiles as $directoryFile) {
+                $fullPath = $cacheDirectory . DIRECTORY_SEPARATOR . $directoryFile;
 
-                if ($directory_file[0] === '.') {
+                if ($directoryFile[0] === '.') {
                     continue;
                 }
 
-                touch($full_path);
+                touch($fullPath);
             }
         }
     }
@@ -178,76 +178,76 @@ class ParserCacheProvider
      */
     public function getLastGoodRun()
     {
-        if ($this->last_good_run === null) {
-            $cache_directory = Config::getInstance()->getCacheDirectory();
+        if ($this->lastGoodRun === null) {
+            $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-            $this->last_good_run = filemtime($cache_directory . DIRECTORY_SEPARATOR . self::GOOD_RUN_NAME) ?: 0;
+            $this->lastGoodRun = filemtime($cacheDirectory . DIRECTORY_SEPARATOR . self::GOOD_RUN_NAME) ?: 0;
         }
 
-        return $this->last_good_run;
+        return $this->lastGoodRun;
     }
 
     /**
-     * @param  float $time_before
+     * @param  float $timeBefore
      *
      * @return int
      */
-    public function deleteOldParserCaches($time_before)
+    public function deleteOldParserCaches($timeBefore)
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if ($cache_directory) {
+        if ($cacheDirectory) {
             return 0;
         }
 
-        $removed_count = 0;
+        $removedCount = 0;
 
-        $cache_directory .= DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
+        $cacheDirectory .= DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
 
-        if (is_dir($cache_directory)) {
-            $directory_files = scandir($cache_directory);
+        if (is_dir($cacheDirectory)) {
+            $directoryFiles = scandir($cacheDirectory);
 
-            foreach ($directory_files as $directory_file) {
-                $full_path = $cache_directory . DIRECTORY_SEPARATOR . $directory_file;
+            foreach ($directoryFiles as $directoryFile) {
+                $fullPath = $cacheDirectory . DIRECTORY_SEPARATOR . $directoryFile;
 
-                if ($directory_file[0] === '.') {
+                if ($directoryFile[0] === '.') {
                     continue;
                 }
 
-                if (filemtime($full_path) < $time_before && is_writable($full_path)) {
-                    unlink($full_path);
-                    ++$removed_count;
+                if (filemtime($fullPath) < $timeBefore && is_writable($fullPath)) {
+                    unlink($fullPath);
+                    ++$removedCount;
                 }
             }
         }
 
-        return $removed_count;
+        return $removedCount;
     }
 
     /**
-     * @param  array<string>    $file_names
-     * @param  int              $min_time
+     * @param  array<string>    $fileNames
+     * @param  int              $minTime
      *
      * @return void
      */
-    public function touchParserCaches(array $file_names, $min_time)
+    public function touchParserCaches(array $fileNames, $minTime)
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if (!$cache_directory) {
+        if (!$cacheDirectory) {
             return;
         }
 
-        $cache_directory .= DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
+        $cacheDirectory .= DIRECTORY_SEPARATOR . self::PARSER_CACHE_DIRECTORY;
 
-        if (is_dir($cache_directory)) {
-            foreach ($file_names as $file_name) {
-                $hash_file_name =
-                    $cache_directory . DIRECTORY_SEPARATOR . $this->getParserCacheKey($file_name, $this->use_igbinary);
+        if (is_dir($cacheDirectory)) {
+            foreach ($fileNames as $fileName) {
+                $hashFileName =
+                    $cacheDirectory . DIRECTORY_SEPARATOR . $this->getParserCacheKey($fileName, $this->useIgbinary);
 
-                if (file_exists($hash_file_name)) {
-                    if (filemtime($hash_file_name) < $min_time) {
-                        touch($hash_file_name, $min_time);
+                if (file_exists($hashFileName)) {
+                    if (filemtime($hashFileName) < $minTime) {
+                        touch($hashFileName, $minTime);
                     }
                 }
             }
@@ -255,13 +255,13 @@ class ParserCacheProvider
     }
 
     /**
-     * @param  string  $file_name
-     * @param  bool $use_igbinary
+     * @param  string  $fileName
+     * @param  bool $useIgbinary
      *
      * @return string
      */
-    public static function getParserCacheKey($file_name, $use_igbinary)
+    public static function getParserCacheKey($fileName, $useIgbinary)
     {
-        return md5($file_name) . ($use_igbinary ? '-igbinary' : '') . '-r';
+        return md5($fileName) . ($useIgbinary ? '-igbinary' : '') . '-r';
     }
 }

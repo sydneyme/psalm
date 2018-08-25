@@ -10,92 +10,92 @@ trait GenericTrait
     /**
      * @var array<int, Union>
      */
-    public $type_params;
+    public $typeParams;
 
     public function __toString()
     {
         $s = '';
-        foreach ($this->type_params as $type_param) {
-            $s .= $type_param . ', ';
+        foreach ($this->typeParams as $typeParam) {
+            $s .= $typeParam . ', ';
         }
 
-        $extra_types = '';
+        $extraTypes = '';
 
-        if ($this instanceof TNamedObject && $this->extra_types) {
-            $extra_types = '&' . implode('&', $this->extra_types);
+        if ($this instanceof TNamedObject && $this->extraTypes) {
+            $extraTypes = '&' . implode('&', $this->extraTypes);
         }
 
-        return $this->value . '<' . substr($s, 0, -2) . '>' . $extra_types;
+        return $this->value . '<' . substr($s, 0, -2) . '>' . $extraTypes;
     }
 
     public function getId()
     {
         $s = '';
-        foreach ($this->type_params as $type_param) {
-            $s .= $type_param->getId() . ', ';
+        foreach ($this->typeParams as $typeParam) {
+            $s .= $typeParam->getId() . ', ';
         }
 
-        $extra_types = '';
+        $extraTypes = '';
 
-        if ($this instanceof TNamedObject && $this->extra_types) {
-            $extra_types = '&' . implode('&', $this->extra_types);
+        if ($this instanceof TNamedObject && $this->extraTypes) {
+            $extraTypes = '&' . implode('&', $this->extraTypes);
         }
 
-        return $this->value . '<' . substr($s, 0, -2) . '>' . $extra_types;
+        return $this->value . '<' . substr($s, 0, -2) . '>' . $extraTypes;
     }
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  bool          $use_phpdoc_format
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  bool          $usePhpdocFormat
      *
      * @return string
      */
-    public function toNamespacedString($namespace, array $aliased_classes, $this_class, $use_phpdoc_format)
+    public function toNamespacedString($namespace, array $aliasedClasses, $thisClass, $usePhpdocFormat)
     {
-        $base_value = $this instanceof TNamedObject
-            ? parent::toNamespacedString($namespace, $aliased_classes, $this_class, $use_phpdoc_format)
+        $baseValue = $this instanceof TNamedObject
+            ? parent::toNamespacedString($namespace, $aliasedClasses, $thisClass, $usePhpdocFormat)
             : $this->value;
 
-        if ($use_phpdoc_format) {
+        if ($usePhpdocFormat) {
             if ($this instanceof TNamedObject) {
-                return $base_value;
+                return $baseValue;
             }
 
-            $value_type = $this->type_params[1];
+            $valueType = $this->typeParams[1];
 
-            if ($value_type->isMixed()) {
+            if ($valueType->isMixed()) {
                 return $this->value;
             }
 
-            $value_type_string = $value_type->toNamespacedString($namespace, $aliased_classes, $this_class, true);
+            $valueTypeString = $valueType->toNamespacedString($namespace, $aliasedClasses, $thisClass, true);
 
-            if (!$value_type->isSingle()) {
-                return '(' . $value_type_string . ')[]';
+            if (!$valueType->isSingle()) {
+                return '(' . $valueTypeString . ')[]';
             }
 
-            return $value_type_string . '[]';
+            return $valueTypeString . '[]';
         }
 
-        $extra_types = '';
+        $extraTypes = '';
 
-        if ($this instanceof TNamedObject && $this->extra_types) {
-            $extra_types = '&' . implode(
+        if ($this instanceof TNamedObject && $this->extraTypes) {
+            $extraTypes = '&' . implode(
                 '&',
                 array_map(
                     /**
                      * @return string
                      */
-                    function (Atomic $extra_type) use ($namespace, $aliased_classes, $this_class) {
-                        return $extra_type->toNamespacedString($namespace, $aliased_classes, $this_class, false);
+                    function (Atomic $extraType) use ($namespace, $aliasedClasses, $thisClass) {
+                        return $extraType->toNamespacedString($namespace, $aliasedClasses, $thisClass, false);
                     },
-                    $this->extra_types
+                    $this->extraTypes
                 )
             );
         }
 
-        return $base_value .
+        return $baseValue .
                 '<' .
                 implode(
                     ', ',
@@ -103,19 +103,19 @@ trait GenericTrait
                         /**
                          * @return string
                          */
-                        function (Union $type_param) use ($namespace, $aliased_classes, $this_class) {
-                            return $type_param->toNamespacedString($namespace, $aliased_classes, $this_class, false);
+                        function (Union $typeParam) use ($namespace, $aliasedClasses, $thisClass) {
+                            return $typeParam->toNamespacedString($namespace, $aliasedClasses, $thisClass, false);
                         },
-                        $this->type_params
+                        $this->typeParams
                     )
                 ) .
-                '>' . $extra_types;
+                '>' . $extraTypes;
     }
 
     public function __clone()
     {
-        foreach ($this->type_params as &$type_param) {
-            $type_param = clone $type_param;
+        foreach ($this->typeParams as &$typeParam) {
+            $typeParam = clone $typeParam;
         }
     }
 
@@ -124,61 +124,61 @@ trait GenericTrait
      */
     public function setFromDocblock()
     {
-        $this->from_docblock = true;
+        $this->fromDocblock = true;
 
-        foreach ($this->type_params as $type_param) {
-            $type_param->setFromDocblock();
+        foreach ($this->typeParams as $typeParam) {
+            $typeParam->setFromDocblock();
         }
     }
 
     /**
-     * @param  array<string, Union>     $template_types
-     * @param  array<string, Union>     $generic_params
-     * @param  Atomic|null              $input_type
+     * @param  array<string, Union>     $templateTypes
+     * @param  array<string, Union>     $genericParams
+     * @param  Atomic|null              $inputType
      *
      * @return void
      */
     public function replaceTemplateTypesWithStandins(
-        array $template_types,
-        array &$generic_params,
+        array $templateTypes,
+        array &$genericParams,
         Codebase $codebase = null,
-        Atomic $input_type = null
+        Atomic $inputType = null
     ) {
-        foreach ($this->type_params as $offset => $type_param) {
-            $input_type_param = null;
+        foreach ($this->typeParams as $offset => $typeParam) {
+            $inputTypeParam = null;
 
-            if (($input_type instanceof Atomic\TGenericObject || $input_type instanceof Atomic\TArray) &&
-                    isset($input_type->type_params[$offset])
+            if (($inputType instanceof Atomic\TGenericObject || $inputType instanceof Atomic\TArray) &&
+                    isset($inputType->typeParams[$offset])
             ) {
-                $input_type_param = $input_type->type_params[$offset];
-            } elseif ($input_type instanceof Atomic\ObjectLike) {
+                $inputTypeParam = $inputType->typeParams[$offset];
+            } elseif ($inputType instanceof Atomic\ObjectLike) {
                 if ($offset === 0) {
-                    $input_type_param = $input_type->getGenericKeyType();
+                    $inputTypeParam = $inputType->getGenericKeyType();
                 } elseif ($offset === 1) {
-                    $input_type_param = $input_type->getGenericValueType();
+                    $inputTypeParam = $inputType->getGenericValueType();
                 } else {
                     throw new \UnexpectedValueException('Not expecting offset of ' . $offset);
                 }
             }
 
-            $type_param->replaceTemplateTypesWithStandins(
-                $template_types,
-                $generic_params,
+            $typeParam->replaceTemplateTypesWithStandins(
+                $templateTypes,
+                $genericParams,
                 $codebase,
-                $input_type_param
+                $inputTypeParam
             );
         }
     }
 
     /**
-     * @param  array<string, Union>     $template_types
+     * @param  array<string, Union>     $templateTypes
      *
      * @return void
      */
-    public function replaceTemplateTypesWithArgTypes(array $template_types)
+    public function replaceTemplateTypesWithArgTypes(array $templateTypes)
     {
-        foreach ($this->type_params as $type_param) {
-            $type_param->replaceTemplateTypesWithArgTypes($template_types);
+        foreach ($this->typeParams as $typeParam) {
+            $typeParam->replaceTemplateTypesWithArgTypes($templateTypes);
         }
     }
 }

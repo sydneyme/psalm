@@ -17,7 +17,7 @@ class PropertyTypeTest extends TestCase
      */
     public function testForgetPropertyAssignments()
     {
-        Config::getInstance()->remember_property_assignments_after_call = false;
+        Config::getInstance()->rememberPropertyAssignmentsAfterCall = false;
 
         $this->addFile(
             'somefile.php',
@@ -48,7 +48,7 @@ class PropertyTypeTest extends TestCase
      */
     public function testForgetPropertyAssignmentsInBranchWithThrow()
     {
-        Config::getInstance()->remember_property_assignments_after_call = false;
+        Config::getInstance()->rememberPropertyAssignmentsAfterCall = false;
 
         $this->addFile(
             'somefile.php',
@@ -82,7 +82,7 @@ class PropertyTypeTest extends TestCase
      */
     public function testRemovePropertyAfterReassignment()
     {
-        Config::getInstance()->remember_property_assignments_after_call = false;
+        Config::getInstance()->rememberPropertyAssignmentsAfterCall = false;
 
         $this->addFile(
             'somefile.php',
@@ -109,8 +109,8 @@ class PropertyTypeTest extends TestCase
 
         $this->analyzeFile('somefile.php', $context);
 
-        $this->assertSame('A', (string) $context->vars_in_scope['$a']);
-        $this->assertFalse(isset($context->vars_in_scope['$a->parent']));
+        $this->assertSame('A', (string) $context->varsInScope['$a']);
+        $this->assertFalse(isset($context->varsInScope['$a->parent']));
     }
 
     /**
@@ -118,7 +118,7 @@ class PropertyTypeTest extends TestCase
      */
     public function testRemoveClauseAfterReassignment()
     {
-        Config::getInstance()->remember_property_assignments_after_call = false;
+        Config::getInstance()->rememberPropertyAssignmentsAfterCall = false;
 
         $this->addFile(
             'somefile.php',

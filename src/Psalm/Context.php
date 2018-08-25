@@ -12,12 +12,12 @@ class Context
     /**
      * @var array<string, Type\Union>
      */
-    public $vars_in_scope = [];
+    public $varsInScope = [];
 
     /**
      * @var array<string, bool>
      */
-    public $vars_possibly_in_scope = [];
+    public $varsPossiblyInScope = [];
 
     /**
      * Whether or not we're inside the conditional of an if/where etc.
@@ -26,14 +26,14 @@ class Context
      *
      * @var bool
      */
-    public $inside_conditional = false;
+    public $insideConditional = false;
 
     /**
      * Whether or not we're inside a __construct function
      *
      * @var bool
      */
-    public $inside_constructor = false;
+    public $insideConstructor = false;
 
     /**
      * Whether or not we're inside an isset call
@@ -42,7 +42,7 @@ class Context
      *
      * @var bool
      */
-    public $inside_isset = false;
+    public $insideIsset = false;
 
     /**
      * Whether or not we're inside an unset call, where
@@ -50,7 +50,7 @@ class Context
      *
      * @var bool
      */
-    public $inside_unset = false;
+    public $insideUnset = false;
 
     /**
      * Whether or not we're inside an class_exists call, where
@@ -58,12 +58,12 @@ class Context
      *
      * @var bool
      */
-    public $inside_class_exists = false;
+    public $insideClassExists = false;
 
     /**
      * @var null|CodeLocation
      */
-    public $include_location = null;
+    public $includeLocation = null;
 
     /**
      * @var string|null
@@ -78,41 +78,41 @@ class Context
     /**
      * @var bool
      */
-    public $check_classes = true;
+    public $checkClasses = true;
 
     /**
      * @var bool
      */
-    public $check_variables = true;
+    public $checkVariables = true;
 
     /**
      * @var bool
      */
-    public $check_methods = true;
+    public $checkMethods = true;
 
     /**
      * @var bool
      */
-    public $check_consts = true;
+    public $checkConsts = true;
 
     /**
      * @var bool
      */
-    public $check_functions = true;
+    public $checkFunctions = true;
 
     /**
      * A list of classes checked with class_exists
      *
      * @var array<string,bool>
      */
-    public $phantom_classes = [];
+    public $phantomClasses = [];
 
     /**
      * A list of files checked with file_exists
      *
      * @var array<string,bool>
      */
-    public $phantom_files = [];
+    public $phantomFiles = [];
 
     /**
      * A list of clauses in Conjunctive Normal Form
@@ -126,21 +126,21 @@ class Context
      *
      * @var bool
      */
-    public $collect_mutations = false;
+    public $collectMutations = false;
 
     /**
      * Whether or not to do a deep analysis and collect initializations from private methods
      *
      * @var bool
      */
-    public $collect_initializations = false;
+    public $collectInitializations = false;
 
     /**
      * Stored to prevent re-analysing methods when checking for initialised properties
      *
      * @var array<string, bool>|null
      */
-    public $initialized_methods = null;
+    public $initializedMethods = null;
 
     /**
      * @var array<string, Type\Union>
@@ -152,107 +152,107 @@ class Context
      *
      * @var bool
      */
-    public $collect_references = false;
+    public $collectReferences = false;
 
     /**
      * Whether or not to track exceptions
      *
      * @var bool
      */
-    public $collect_exceptions = false;
+    public $collectExceptions = false;
 
     /**
      * A list of variables that have been referenced
      *
      * @var array<string, bool>
      */
-    public $referenced_var_ids = [];
+    public $referencedVarIds = [];
 
     /**
      * A list of variables that have never been referenced
      *
      * @var array<string, array<string, CodeLocation>>
      */
-    public $unreferenced_vars = [];
+    public $unreferencedVars = [];
 
     /**
      * A list of variables that have been passed by reference (where we know their type)
      *
      * @var array<string, \Psalm\ReferenceConstraint>|null
      */
-    public $byref_constraints;
+    public $byrefConstraints;
 
     /**
      * If this context inherits from a context, it is here
      *
      * @var Context|null
      */
-    public $parent_context;
+    public $parentContext;
 
     /**
      * @var array<string, Type\Union>
      */
-    public $possible_param_types = [];
+    public $possibleParamTypes = [];
 
     /**
      * A list of vars that have been assigned to
      *
      * @var array<string, bool>
      */
-    public $assigned_var_ids = [];
+    public $assignedVarIds = [];
 
     /**
      * A list of vars that have been may have been assigned to
      *
      * @var array<string, bool>
      */
-    public $possibly_assigned_var_ids = [];
+    public $possiblyAssignedVarIds = [];
 
     /**
      * A list of classes or interfaces that may have been thrown
      *
      * @var array<string, bool>
      */
-    public $possibly_thrown_exceptions = [];
+    public $possiblyThrownExceptions = [];
 
     /**
      * @var bool
      */
-    public $is_global = false;
+    public $isGlobal = false;
 
     /**
      * @var array<string, bool>
      */
-    public $protected_var_ids = [];
+    public $protectedVarIds = [];
 
     /**
      * If we've branched from the main scope, a byte offset for where that branch happened
      *
      * @var int|null
      */
-    public $branch_point;
+    public $branchPoint;
 
     /**
      * If we're inside case statements we allow continue; statements as an alias of break;
      *
      * @var bool
      */
-    public $inside_case = false;
+    public $insideCase = false;
 
     /**
      * @var bool
      */
-    public $inside_loop = false;
+    public $insideLoop = false;
 
     /**
      * @var Scope\LoopScope|null
      */
-    public $loop_scope = null;
+    public $loopScope = null;
 
     /**
      * @var Scope\SwitchScope|null
      */
-    public $switch_scope = null;
+    public $switchScope = null;
 
     /**
      * @param string|null $self
@@ -267,7 +267,7 @@ class Context
      */
     public function __clone()
     {
-        foreach ($this->vars_in_scope as &$type) {
+        foreach ($this->varsInScope as &$type) {
             $type = clone $type;
         }
 
@@ -284,36 +284,36 @@ class Context
      * Updates the parent context, looking at the changes within a block and then applying those changes, where
      * necessary, to the parent context
      *
-     * @param  Context     $start_context
-     * @param  Context     $end_context
-     * @param  bool        $has_leaving_statements   whether or not the parent scope is abandoned between
-     *                                               $start_context and $end_context
-     * @param  array       $vars_to_update
-     * @param  array       $updated_vars
+     * @param  Context     $startContext
+     * @param  Context     $endContext
+     * @param  bool        $hasLeavingStatements   whether or not the parent scope is abandoned between
+     *                                               $startContext and $endContext
+     * @param  array       $varsToUpdate
+     * @param  array       $updatedVars
      *
      * @return void
      */
     public function update(
-        Context $start_context,
-        Context $end_context,
-        $has_leaving_statements,
-        array $vars_to_update,
-        array &$updated_vars
+        Context $startContext,
+        Context $endContext,
+        $hasLeavingStatements,
+        array $varsToUpdate,
+        array &$updatedVars
     ) {
-        foreach ($start_context->vars_in_scope as $var_id => $old_type) {
+        foreach ($startContext->varsInScope as $varId => $oldType) {
             // this is only true if there was some sort of type negation
-            if (in_array($var_id, $vars_to_update, true)) {
+            if (in_array($varId, $varsToUpdate, true)) {
                 // if we're leaving, we're effectively deleting the possibility of the if types
-                $new_type = !$has_leaving_statements && $end_context->hasVariable($var_id)
-                    ? $end_context->vars_in_scope[$var_id]
+                $newType = !$hasLeavingStatements && $endContext->hasVariable($varId)
+                    ? $endContext->varsInScope[$varId]
                     : null;
 
-                $existing_type = isset($this->vars_in_scope[$var_id]) ? $this->vars_in_scope[$var_id] : null;
+                $existingType = isset($this->varsInScope[$varId]) ? $this->varsInScope[$varId] : null;
 
-                if (!$existing_type) {
-                    if ($new_type) {
-                        $this->vars_in_scope[$var_id] = clone $new_type;
-                        $updated_vars[$var_id] = true;
+                if (!$existingType) {
+                    if ($newType) {
+                        $this->varsInScope[$varId] = clone $newType;
+                        $updatedVars[$varId] = true;
                     }
 
                     continue;
@@ -321,51 +321,51 @@ class Context
 
                 // if the type changed within the block of statements, process the replacement
                 // also never allow ourselves to remove all types from a union
-                if ((!$new_type || !$old_type->equals($new_type))
-                    && ($new_type || count($existing_type->getTypes()) > 1)
+                if ((!$newType || !$oldType->equals($newType))
+                    && ($newType || count($existingType->getTypes()) > 1)
                 ) {
-                    $existing_type->substitute($old_type, $new_type);
+                    $existingType->substitute($oldType, $newType);
 
-                    if ($new_type && $new_type->from_docblock) {
-                        $existing_type->setFromDocblock();
+                    if ($newType && $newType->fromDocblock) {
+                        $existingType->setFromDocblock();
                     }
 
-                    $updated_vars[$var_id] = true;
+                    $updatedVars[$varId] = true;
                 }
             }
         }
     }
 
     /**
-     * @param  array<string, Type\Union> $new_vars_in_scope
-     * @param  bool $include_new_vars
+     * @param  array<string, Type\Union> $newVarsInScope
+     * @param  bool $includeNewVars
      *
      * @return array<string,Type\Union>
      */
-    public function getRedefinedVars(array $new_vars_in_scope, $include_new_vars = false)
+    public function getRedefinedVars(array $newVarsInScope, $includeNewVars = false)
     {
-        $redefined_vars = [];
+        $redefinedVars = [];
 
-        foreach ($this->vars_in_scope as $var_id => $this_type) {
-            if (!isset($new_vars_in_scope[$var_id])) {
-                if ($include_new_vars) {
-                    $redefined_vars[$var_id] = $this_type;
+        foreach ($this->varsInScope as $varId => $thisType) {
+            if (!isset($newVarsInScope[$varId])) {
+                if ($includeNewVars) {
+                    $redefinedVars[$varId] = $thisType;
                 }
                 continue;
             }
 
-            $new_type = $new_vars_in_scope[$var_id];
+            $newType = $newVarsInScope[$varId];
 
-            if (!$this_type->failed_reconciliation
-                && !$this_type->isEmpty()
-                && !$new_type->isEmpty()
-                && !$this_type->equals($new_type)
+            if (!$thisType->failedReconciliation
+                && !$thisType->isEmpty()
+                && !$newType->isEmpty()
+                && !$thisType->equals($newType)
             ) {
-                $redefined_vars[$var_id] = $this_type;
+                $redefinedVars[$varId] = $thisType;
             }
         }
 
-        return $redefined_vars;
+        return $redefinedVars;
     }
 
     /**
@@ -373,230 +373,230 @@ class Context
      */
     public function inferType(
         PhpParser\Node\Expr $expr,
-        FunctionLikeStorage $function_storage,
-        Type\Union $inferred_type
+        FunctionLikeStorage $functionStorage,
+        Type\Union $inferredType
     ) {
         if (!isset($expr->inferredType)) {
             return;
         }
 
-        $expr_type = $expr->inferredType;
+        $exprType = $expr->inferredType;
 
-        if (($expr_type->isMixed() || $expr_type->getId() === $inferred_type->getId())
+        if (($exprType->isMixed() || $exprType->getId() === $inferredType->getId())
             && $expr instanceof PhpParser\Node\Expr\Variable
             && is_string($expr->name)
-            && !isset($this->assigned_var_ids['$' . $expr->name])
-            && array_key_exists($expr->name, $function_storage->param_types)
-            && !$function_storage->param_types[$expr->name]
+            && !isset($this->assignedVarIds['$' . $expr->name])
+            && array_key_exists($expr->name, $functionStorage->paramTypes)
+            && !$functionStorage->paramTypes[$expr->name]
         ) {
-            if (isset($this->possible_param_types[$expr->name])) {
-                $this->possible_param_types[$expr->name] = Type::combineUnionTypes(
-                    $this->possible_param_types[$expr->name],
-                    $inferred_type
+            if (isset($this->possibleParamTypes[$expr->name])) {
+                $this->possibleParamTypes[$expr->name] = Type::combineUnionTypes(
+                    $this->possibleParamTypes[$expr->name],
+                    $inferredType
                 );
             } else {
-                $this->possible_param_types[$expr->name] = $inferred_type;
-                $this->vars_in_scope['$' . $expr->name] = clone $inferred_type;
+                $this->possibleParamTypes[$expr->name] = $inferredType;
+                $this->varsInScope['$' . $expr->name] = clone $inferredType;
             }
         }
     }
 
     /**
-     * @param  Context $original_context
-     * @param  Context $new_context
+     * @param  Context $originalContext
+     * @param  Context $newContext
      *
      * @return array<int, string>
      */
-    public static function getNewOrUpdatedVarIds(Context $original_context, Context $new_context)
+    public static function getNewOrUpdatedVarIds(Context $originalContext, Context $newContext)
     {
-        $redefined_var_ids = [];
+        $redefinedVarIds = [];
 
-        foreach ($new_context->vars_in_scope as $var_id => $context_type) {
-            if (!isset($original_context->vars_in_scope[$var_id])
-                || !$original_context->vars_in_scope[$var_id]->equals($context_type)
+        foreach ($newContext->varsInScope as $varId => $contextType) {
+            if (!isset($originalContext->varsInScope[$varId])
+                || !$originalContext->varsInScope[$varId]->equals($contextType)
             ) {
-                $redefined_var_ids[] = $var_id;
+                $redefinedVarIds[] = $varId;
             }
         }
 
-        return $redefined_var_ids;
+        return $redefinedVarIds;
     }
 
     /**
-     * @param  string $remove_var_id
+     * @param  string $removeVarId
      *
      * @return void
      */
-    public function remove($remove_var_id)
+    public function remove($removeVarId)
     {
         unset(
-            $this->referenced_var_ids[$remove_var_id],
-            $this->vars_possibly_in_scope[$remove_var_id]
+            $this->referencedVarIds[$removeVarId],
+            $this->varsPossiblyInScope[$removeVarId]
         );
 
-        if (isset($this->vars_in_scope[$remove_var_id])) {
-            $existing_type = $this->vars_in_scope[$remove_var_id];
-            unset($this->vars_in_scope[$remove_var_id]);
+        if (isset($this->varsInScope[$removeVarId])) {
+            $existingType = $this->varsInScope[$removeVarId];
+            unset($this->varsInScope[$removeVarId]);
 
-            $this->removeDescendents($remove_var_id, $existing_type);
+            $this->removeDescendents($removeVarId, $existingType);
         }
     }
 
     /**
-     * @param  string[]             $changed_var_ids
+     * @param  string[]             $changedVarIds
      *
      * @return void
      */
-    public function removeReconciledClauses(array $changed_var_ids)
+    public function removeReconciledClauses(array $changedVarIds)
     {
         $this->clauses = array_filter(
             $this->clauses,
             /** @return bool */
-            function (Clause $c) use ($changed_var_ids) {
+            function (Clause $c) use ($changedVarIds) {
                 return count($c->possibilities) > 1
                     || $c->wedge
-                    || !in_array(array_keys($c->possibilities)[0], $changed_var_ids, true);
+                    || !in_array(array_keys($c->possibilities)[0], $changedVarIds, true);
             }
         );
     }
 
     /**
-     * @param  string                 $remove_var_id
+     * @param  string                 $removeVarId
      * @param  Clause[]               $clauses
-     * @param  Union|null             $new_type
-     * @param  StatementsChecker|null $statements_checker
+     * @param  Union|null             $newType
+     * @param  StatementsChecker|null $statementsChecker
      *
      * @return array<int, Clause>
      */
     public static function filterClauses(
-        $remove_var_id,
+        $removeVarId,
         array $clauses,
-        Union $new_type = null,
-        StatementsChecker $statements_checker = null
+        Union $newType = null,
+        StatementsChecker $statementsChecker = null
     ) {
-        $new_type_string = $new_type ? $new_type->getId() : '';
+        $newTypeString = $newType ? $newType->getId() : '';
 
-        $clauses_to_keep = [];
+        $clausesToKeep = [];
 
         foreach ($clauses as $clause) {
             \Psalm\Type\Algebra::calculateNegation($clause);
 
-            $quoted_remove_var_id = preg_quote($remove_var_id, '/');
+            $quotedRemoveVarId = preg_quote($removeVarId, '/');
 
-            foreach ($clause->possibilities as $var_id => $_) {
-                if (preg_match('/' . $quoted_remove_var_id . '[\]\[\-]/', $var_id)) {
+            foreach ($clause->possibilities as $varId => $_) {
+                if (preg_match('/' . $quotedRemoveVarId . '[\]\[\-]/', $varId)) {
                     break 2;
                 }
             }
 
-            if (!isset($clause->possibilities[$remove_var_id]) ||
-                $clause->possibilities[$remove_var_id] === [$new_type_string]
+            if (!isset($clause->possibilities[$removeVarId]) ||
+                $clause->possibilities[$removeVarId] === [$newTypeString]
             ) {
-                $clauses_to_keep[] = $clause;
-            } elseif ($statements_checker &&
-                $new_type &&
-                !$new_type->isMixed()
+                $clausesToKeep[] = $clause;
+            } elseif ($statementsChecker &&
+                $newType &&
+                !$newType->isMixed()
             ) {
-                $type_changed = false;
+                $typeChanged = false;
 
                 // if the clause contains any possibilities that would be altered
                 // by the new type
-                foreach ($clause->possibilities[$remove_var_id] as $type) {
+                foreach ($clause->possibilities[$removeVarId] as $type) {
                     // empty and !empty are not definitive for arrays and scalar types
                     if (($type === '!falsy' || $type === 'falsy') &&
-                        ($new_type->hasArray() || $new_type->hasPossiblyNumericType())
+                        ($newType->hasArray() || $newType->hasPossiblyNumericType())
                     ) {
-                        $type_changed = true;
+                        $typeChanged = true;
                         break;
                     }
 
-                    $result_type = Reconciler::reconcileTypes(
+                    $resultType = Reconciler::reconcileTypes(
                         $type,
-                        clone $new_type,
+                        clone $newType,
                         null,
-                        $statements_checker,
+                        $statementsChecker,
                         null,
                         [],
-                        $failed_reconciliation
+                        $failedReconciliation
                     );
 
-                    if ($result_type->getId() !== $new_type_string) {
-                        $type_changed = true;
+                    if ($resultType->getId() !== $newTypeString) {
+                        $typeChanged = true;
                         break;
                     }
                 }
 
-                if (!$type_changed) {
-                    $clauses_to_keep[] = $clause;
+                if (!$typeChanged) {
+                    $clausesToKeep[] = $clause;
                 }
             }
         }
 
-        return $clauses_to_keep;
+        return $clausesToKeep;
     }
 
     /**
-     * @param  string               $remove_var_id
-     * @param  Union|null           $new_type
-     * @param  null|StatementsChecker   $statements_checker
+     * @param  string               $removeVarId
+     * @param  Union|null           $newType
+     * @param  null|StatementsChecker   $statementsChecker
      *
      * @return void
      */
     public function removeVarFromConflictingClauses(
-        $remove_var_id,
-        Union $new_type = null,
-        StatementsChecker $statements_checker = null
+        $removeVarId,
+        Union $newType = null,
+        StatementsChecker $statementsChecker = null
     ) {
-        $this->clauses = self::filterClauses($remove_var_id, $this->clauses, $new_type, $statements_checker);
+        $this->clauses = self::filterClauses($removeVarId, $this->clauses, $newType, $statementsChecker);
 
-        if ($this->parent_context) {
-            $this->parent_context->removeVarFromConflictingClauses($remove_var_id);
+        if ($this->parentContext) {
+            $this->parentContext->removeVarFromConflictingClauses($removeVarId);
         }
     }
 
     /**
-     * @param  string                 $remove_var_id
-     * @param  \Psalm\Type\Union|null $existing_type
-     * @param  \Psalm\Type\Union|null $new_type
-     * @param  null|StatementsChecker     $statements_checker
+     * @param  string                 $removeVarId
+     * @param  \Psalm\Type\Union|null $existingType
+     * @param  \Psalm\Type\Union|null $newType
+     * @param  null|StatementsChecker     $statementsChecker
      *
      * @return void
      */
     public function removeDescendents(
-        $remove_var_id,
-        Union $existing_type = null,
-        Union $new_type = null,
-        StatementsChecker $statements_checker = null
+        $removeVarId,
+        Union $existingType = null,
+        Union $newType = null,
+        StatementsChecker $statementsChecker = null
     ) {
-        if (!$existing_type && isset($this->vars_in_scope[$remove_var_id])) {
-            $existing_type = $this->vars_in_scope[$remove_var_id];
+        if (!$existingType && isset($this->varsInScope[$removeVarId])) {
+            $existingType = $this->varsInScope[$removeVarId];
         }
 
-        if (!$existing_type) {
+        if (!$existingType) {
             return;
         }
 
         if ($this->clauses) {
             $this->removeVarFromConflictingClauses(
-                $remove_var_id,
-                $existing_type->isMixed()
-                    || ($new_type && $existing_type->from_docblock !== $new_type->from_docblock)
+                $removeVarId,
+                $existingType->isMixed()
+                    || ($newType && $existingType->fromDocblock !== $newType->fromDocblock)
                     ? null
-                    : $new_type,
-                $statements_checker
+                    : $newType,
+                $statementsChecker
             );
         }
 
-        $vars_to_remove = [];
+        $varsToRemove = [];
 
-        foreach ($this->vars_in_scope as $var_id => $_) {
-            if (preg_match('/' . preg_quote($remove_var_id, '/') . '[\]\[\-]/', $var_id)) {
-                $vars_to_remove[] = $var_id;
+        foreach ($this->varsInScope as $varId => $_) {
+            if (preg_match('/' . preg_quote($removeVarId, '/') . '[\]\[\-]/', $varId)) {
+                $varsToRemove[] = $varId;
             }
         }
 
-        foreach ($vars_to_remove as $var_id) {
-            unset($this->vars_in_scope[$var_id]);
+        foreach ($varsToRemove as $varId) {
+            unset($this->varsInScope[$varId]);
         }
     }
 
@@ -605,94 +605,94 @@ class Context
      */
     public function removeAllObjectVars()
     {
-        $vars_to_remove = [];
+        $varsToRemove = [];
 
-        foreach ($this->vars_in_scope as $var_id => $_) {
-            if (strpos($var_id, '->') !== false || strpos($var_id, '::') !== false) {
-                $vars_to_remove[] = $var_id;
+        foreach ($this->varsInScope as $varId => $_) {
+            if (strpos($varId, '->') !== false || strpos($varId, '::') !== false) {
+                $varsToRemove[] = $varId;
             }
         }
 
-        if (!$vars_to_remove) {
+        if (!$varsToRemove) {
             return;
         }
 
-        foreach ($vars_to_remove as $var_id) {
-            unset($this->vars_in_scope[$var_id], $this->vars_possibly_in_scope[$var_id]);
+        foreach ($varsToRemove as $varId) {
+            unset($this->varsInScope[$varId], $this->varsPossiblyInScope[$varId]);
         }
 
-        $clauses_to_keep = [];
+        $clausesToKeep = [];
 
         foreach ($this->clauses as $clause) {
-            $abandon_clause = false;
+            $abandonClause = false;
 
             foreach (array_keys($clause->possibilities) as $key) {
                 if (strpos($key, '->') !== false || strpos($key, '::') !== false) {
-                    $abandon_clause = true;
+                    $abandonClause = true;
                     break;
                 }
             }
 
-            if (!$abandon_clause) {
-                $clauses_to_keep[] = $clause;
+            if (!$abandonClause) {
+                $clausesToKeep[] = $clause;
             }
         }
 
-        $this->clauses = $clauses_to_keep;
+        $this->clauses = $clausesToKeep;
     }
 
     /**
-     * @param   Context $op_context
+     * @param   Context $opContext
      *
      * @return  void
      */
-    public function updateChecks(Context $op_context)
+    public function updateChecks(Context $opContext)
     {
-        $this->check_classes = $this->check_classes && $op_context->check_classes;
-        $this->check_variables = $this->check_variables && $op_context->check_variables;
-        $this->check_methods = $this->check_methods && $op_context->check_methods;
-        $this->check_functions = $this->check_functions && $op_context->check_functions;
-        $this->check_consts = $this->check_consts && $op_context->check_consts;
+        $this->checkClasses = $this->checkClasses && $opContext->checkClasses;
+        $this->checkVariables = $this->checkVariables && $opContext->checkVariables;
+        $this->checkMethods = $this->checkMethods && $opContext->checkMethods;
+        $this->checkFunctions = $this->checkFunctions && $opContext->checkFunctions;
+        $this->checkConsts = $this->checkConsts && $opContext->checkConsts;
     }
 
     /**
-     * @param   string $class_name
+     * @param   string $className
      *
      * @return  bool
      */
-    public function isPhantomClass($class_name)
+    public function isPhantomClass($className)
     {
-        return isset($this->phantom_classes[strtolower($class_name)]);
+        return isset($this->phantomClasses[strtolower($className)]);
     }
 
     /**
-     * @param  string|null  $var_name
+     * @param  string|null  $varName
      *
      * @return bool
      */
-    public function hasVariable($var_name, StatementsChecker $statements_checker = null)
+    public function hasVariable($varName, StatementsChecker $statementsChecker = null)
     {
-        if (!$var_name ||
-            (!isset($this->vars_possibly_in_scope[$var_name]) &&
-                !isset($this->vars_in_scope[$var_name]))
+        if (!$varName ||
+            (!isset($this->varsPossiblyInScope[$varName]) &&
+                !isset($this->varsInScope[$varName]))
         ) {
             return false;
         }
 
-        $stripped_var = preg_replace('/(->|\[).*$/', '', $var_name);
+        $strippedVar = preg_replace('/(->|\[).*$/', '', $varName);
 
-        if ($stripped_var[0] === '$' && ($stripped_var !== '$this' || $var_name !== $stripped_var)) {
-            $this->referenced_var_ids[$var_name] = true;
+        if ($strippedVar[0] === '$' && ($strippedVar !== '$this' || $varName !== $strippedVar)) {
+            $this->referencedVarIds[$varName] = true;
 
-            if ($this->collect_references && $statements_checker) {
-                if (isset($this->unreferenced_vars[$var_name])) {
-                    $statements_checker->registerVariableUses($this->unreferenced_vars[$var_name]);
+            if ($this->collectReferences && $statementsChecker) {
+                if (isset($this->unreferencedVars[$varName])) {
+                    $statementsChecker->registerVariableUses($this->unreferencedVars[$varName]);
                 }
 
-                unset($this->unreferenced_vars[$var_name]);
+                unset($this->unreferencedVars[$varName]);
             }
         }
 
-        return isset($this->vars_in_scope[$var_name]);
+        return isset($this->varsInScope[$varName]);
     }
 }

@@ -36,19 +36,19 @@ use Psalm\Type\Union;
 class TypeCombination
 {
     /** @var array<string, Atomic> */
-    private $value_types = [];
+    private $valueTypes = [];
 
     /** @var array<string, array<int, Union>> */
-    private $type_params = [];
+    private $typeParams = [];
 
     /** @var array<int, bool>|null */
-    private $array_counts = [];
+    private $arrayCounts = [];
 
     /** @var array<string|int, Union> */
-    private $objectlike_entries = [];
+    private $objectlikeEntries = [];
 
     /** @var bool */
-    private $objectlike_sealed = true;
+    private $objectlikeSealed = true;
 
     /** @var array<int, Atomic\TLiteralString>|null */
     private $strings = [];
@@ -80,13 +80,13 @@ class TypeCombination
         }
 
         if (count($types) === 1) {
-            $union_type = new Union([$types[0]]);
+            $unionType = new Union([$types[0]]);
 
-            if ($types[0]->from_docblock) {
-                $union_type->from_docblock = true;
+            if ($types[0]->fromDocblock) {
+                $unionType->fromDocblock = true;
             }
 
-            return $union_type;
+            return $unionType;
         }
 
         if (!$types) {
@@ -95,191 +95,191 @@ class TypeCombination
 
         $combination = new TypeCombination();
 
-        $from_docblock = false;
+        $fromDocblock = false;
 
-        $has_null = false;
-        $has_mixed = false;
-        $has_non_mixed = false;
+        $hasNull = false;
+        $hasMixed = false;
+        $hasNonMixed = false;
 
         foreach ($types as $type) {
-            $from_docblock = $from_docblock || $type->from_docblock;
+            $fromDocblock = $fromDocblock || $type->fromDocblock;
 
             $result = self::scrapeTypeProperties($type, $combination);
 
             if ($type instanceof TNull) {
-                $has_null = true;
+                $hasNull = true;
             }
 
             if ($type instanceof TMixed) {
-                $has_mixed = true;
+                $hasMixed = true;
             } else {
-                $has_non_mixed = true;
+                $hasNonMixed = true;
             }
 
             if ($result) {
-                if ($from_docblock) {
-                    $result->from_docblock = true;
+                if ($fromDocblock) {
+                    $result->fromDocblock = true;
                 }
 
                 return $result;
             }
         }
 
-        if ($has_null && $has_mixed) {
+        if ($hasNull && $hasMixed) {
             return Type::getMixed();
         }
 
-        if (!$has_non_mixed) {
+        if (!$hasNonMixed) {
             return Type::getMixed(true);
         }
 
-        if (count($combination->value_types) === 1
-            && !count($combination->objectlike_entries)
-            && !count($combination->type_params)
+        if (count($combination->valueTypes) === 1
+            && !count($combination->objectlikeEntries)
+            && !count($combination->typeParams)
             && !$combination->strings
             && !$combination->ints
             && !$combination->floats
         ) {
-            if (isset($combination->value_types['false'])) {
-                $union_type = Type::getFalse();
+            if (isset($combination->valueTypes['false'])) {
+                $unionType = Type::getFalse();
 
-                if ($from_docblock) {
-                    $union_type->from_docblock = true;
+                if ($fromDocblock) {
+                    $unionType->fromDocblock = true;
                 }
 
-                return $union_type;
+                return $unionType;
             }
 
-            if (isset($combination->value_types['true'])) {
-                $union_type = Type::getTrue();
+            if (isset($combination->valueTypes['true'])) {
+                $unionType = Type::getTrue();
 
-                if ($from_docblock) {
-                    $union_type->from_docblock = true;
+                if ($fromDocblock) {
+                    $unionType->fromDocblock = true;
                 }
 
-                return $union_type;
+                return $unionType;
             }
-        } elseif (isset($combination->value_types['void'])) {
-            unset($combination->value_types['void']);
+        } elseif (isset($combination->valueTypes['void'])) {
+            unset($combination->valueTypes['void']);
 
             // if we're merging with another type, we cannot represent it in PHP
-            $from_docblock = true;
+            $fromDocblock = true;
 
-            if (!isset($combination->value_types['null'])) {
-                $combination->value_types['null'] = new TNull();
+            if (!isset($combination->valueTypes['null'])) {
+                $combination->valueTypes['null'] = new TNull();
             }
         }
 
-        if (isset($combination->value_types['true']) && isset($combination->value_types['false'])) {
-            unset($combination->value_types['true'], $combination->value_types['false']);
+        if (isset($combination->valueTypes['true']) && isset($combination->valueTypes['false'])) {
+            unset($combination->valueTypes['true'], $combination->valueTypes['false']);
 
-            $combination->value_types['bool'] = new TBool();
+            $combination->valueTypes['bool'] = new TBool();
         }
 
-        $new_types = [];
+        $newTypes = [];
 
-        if (count($combination->objectlike_entries) &&
-            (!isset($combination->type_params['array'])
-                || $combination->type_params['array'][1]->isEmpty())
+        if (count($combination->objectlikeEntries) &&
+            (!isset($combination->typeParams['array'])
+                || $combination->typeParams['array'][1]->isEmpty())
         ) {
-            $objectlike = new ObjectLike($combination->objectlike_entries);
+            $objectlike = new ObjectLike($combination->objectlikeEntries);
 
-            if ($combination->objectlike_sealed && !isset($combination->type_params['array'])) {
+            if ($combination->objectlikeSealed && !isset($combination->typeParams['array'])) {
                 $objectlike->sealed = true;
             }
 
-            $new_types[] = $objectlike;
+            $newTypes[] = $objectlike;
 
             // if we're merging an empty array with an object-like, clobber empty array
-            unset($combination->type_params['array']);
+            unset($combination->typeParams['array']);
         }
 
-        foreach ($combination->type_params as $generic_type => $generic_type_params) {
-            if ($generic_type === 'array') {
-                if ($combination->objectlike_entries) {
-                    $objectlike_generic_type = null;
+        foreach ($combination->typeParams as $genericType => $genericTypeParams) {
+            if ($genericType === 'array') {
+                if ($combination->objectlikeEntries) {
+                    $objectlikeGenericType = null;
 
-                    $objectlike_keys = [];
+                    $objectlikeKeys = [];
 
-                    foreach ($combination->objectlike_entries as $property_name => $property_type) {
-                        if ($objectlike_generic_type) {
-                            $objectlike_generic_type = Type::combineUnionTypes(
-                                $property_type,
-                                $objectlike_generic_type
+                    foreach ($combination->objectlikeEntries as $propertyName => $propertyType) {
+                        if ($objectlikeGenericType) {
+                            $objectlikeGenericType = Type::combineUnionTypes(
+                                $propertyType,
+                                $objectlikeGenericType
                             );
                         } else {
-                            $objectlike_generic_type = clone $property_type;
+                            $objectlikeGenericType = clone $propertyType;
                         }
 
-                        if (is_int($property_name)) {
-                            if (!isset($objectlike_keys['int'])) {
-                                $objectlike_keys['int'] = new TInt;
+                        if (is_int($propertyName)) {
+                            if (!isset($objectlikeKeys['int'])) {
+                                $objectlikeKeys['int'] = new TInt;
                             }
                         } else {
-                            if (!isset($objectlike_keys['string'])) {
-                                $objectlike_keys['string'] = new TString;
+                            if (!isset($objectlikeKeys['string'])) {
+                                $objectlikeKeys['string'] = new TString;
                             }
                         }
                     }
 
-                    if (!$objectlike_generic_type) {
+                    if (!$objectlikeGenericType) {
                         throw new \InvalidArgumentException('Cannot be null');
                     }
 
-                    $objectlike_generic_type->possibly_undefined = false;
+                    $objectlikeGenericType->possiblyUndefined = false;
 
-                    $objectlike_key_type = new Type\Union(array_values($objectlike_keys));
+                    $objectlikeKeyType = new Type\Union(array_values($objectlikeKeys));
 
-                    $generic_type_params[0] = Type::combineUnionTypes(
-                        $generic_type_params[0],
-                        $objectlike_key_type
+                    $genericTypeParams[0] = Type::combineUnionTypes(
+                        $genericTypeParams[0],
+                        $objectlikeKeyType
                     );
-                    $generic_type_params[1] = Type::combineUnionTypes(
-                        $generic_type_params[1],
-                        $objectlike_generic_type
+                    $genericTypeParams[1] = Type::combineUnionTypes(
+                        $genericTypeParams[1],
+                        $objectlikeGenericType
                     );
                 }
 
-                $array_type = new TArray($generic_type_params);
+                $arrayType = new TArray($genericTypeParams);
 
-                if ($combination->array_counts && count($combination->array_counts) === 1) {
-                    $array_type->count = array_keys($combination->array_counts)[0];
+                if ($combination->arrayCounts && count($combination->arrayCounts) === 1) {
+                    $arrayType->count = array_keys($combination->arrayCounts)[0];
                 }
 
-                $new_types[] = $array_type;
-            } elseif (!isset($combination->value_types[$generic_type])) {
-                $new_types[] = new TGenericObject($generic_type, $generic_type_params);
+                $newTypes[] = $arrayType;
+            } elseif (!isset($combination->valueTypes[$genericType])) {
+                $newTypes[] = new TGenericObject($genericType, $genericTypeParams);
             }
         }
 
         if ($combination->strings) {
-            $new_types = array_merge($new_types, $combination->strings);
+            $newTypes = array_merge($newTypes, $combination->strings);
         }
 
         if ($combination->ints) {
-            $new_types = array_merge($new_types, $combination->ints);
+            $newTypes = array_merge($newTypes, $combination->ints);
         }
 
         if ($combination->floats) {
-            $new_types = array_merge($new_types, $combination->floats);
+            $newTypes = array_merge($newTypes, $combination->floats);
         }
 
-        foreach ($combination->value_types as $type) {
+        foreach ($combination->valueTypes as $type) {
             if (!($type instanceof TEmpty)
-                || (count($combination->value_types) === 1
-                    && !count($new_types))
+                || (count($combination->valueTypes) === 1
+                    && !count($newTypes))
             ) {
-                $new_types[] = $type;
+                $newTypes[] = $type;
             }
         }
 
-        $union_type = new Union($new_types);
+        $unionType = new Union($newTypes);
 
-        if ($from_docblock) {
-            $union_type->from_docblock = true;
+        if ($fromDocblock) {
+            $unionType->fromDocblock = true;
         }
 
-        return $union_type;
+        return $unionType;
     }
 
     /**
@@ -291,7 +291,7 @@ class TypeCombination
     private static function scrapeTypeProperties(Atomic $type, TypeCombination $combination)
     {
         if ($type instanceof TMixed) {
-            if ($type->from_isset || $type instanceof TEmptyMixed) {
+            if ($type->fromIsset || $type instanceof TEmptyMixed) {
                 return null;
             }
 
@@ -299,70 +299,70 @@ class TypeCombination
         }
 
         // deal with false|bool => bool
-        if (($type instanceof TFalse || $type instanceof TTrue) && isset($combination->value_types['bool'])) {
+        if (($type instanceof TFalse || $type instanceof TTrue) && isset($combination->valueTypes['bool'])) {
             return null;
         }
 
-        if (get_class($type) === TBool::class && isset($combination->value_types['false'])) {
-            unset($combination->value_types['false']);
+        if (get_class($type) === TBool::class && isset($combination->valueTypes['false'])) {
+            unset($combination->valueTypes['false']);
         }
 
-        if (get_class($type) === TBool::class && isset($combination->value_types['true'])) {
-            unset($combination->value_types['true']);
+        if (get_class($type) === TBool::class && isset($combination->valueTypes['true'])) {
+            unset($combination->valueTypes['true']);
         }
 
-        $type_key = $type->getKey();
+        $typeKey = $type->getKey();
 
         if ($type instanceof TArray || $type instanceof TGenericObject) {
-            foreach ($type->type_params as $i => $type_param) {
-                if (isset($combination->type_params[$type_key][$i])) {
-                    $combination->type_params[$type_key][$i] = Type::combineUnionTypes(
-                        $combination->type_params[$type_key][$i],
-                        $type_param
+            foreach ($type->typeParams as $i => $typeParam) {
+                if (isset($combination->typeParams[$typeKey][$i])) {
+                    $combination->typeParams[$typeKey][$i] = Type::combineUnionTypes(
+                        $combination->typeParams[$typeKey][$i],
+                        $typeParam
                     );
                 } else {
-                    $combination->type_params[$type_key][$i] = $type_param;
+                    $combination->typeParams[$typeKey][$i] = $typeParam;
                 }
             }
 
-            if ($type instanceof TArray && $combination->array_counts !== null) {
+            if ($type instanceof TArray && $combination->arrayCounts !== null) {
                 if ($type->count === null) {
-                    $combination->array_counts = null;
+                    $combination->arrayCounts = null;
                 } else {
-                    $combination->array_counts[$type->count] = true;
+                    $combination->arrayCounts[$type->count] = true;
                 }
             }
         } elseif ($type instanceof ObjectLike) {
-            $existing_objectlike_entries = (bool) $combination->objectlike_entries;
-            $possibly_undefined_entries = $combination->objectlike_entries;
-            $combination->objectlike_sealed = $combination->objectlike_sealed && $type->sealed;
+            $existingObjectlikeEntries = (bool) $combination->objectlikeEntries;
+            $possiblyUndefinedEntries = $combination->objectlikeEntries;
+            $combination->objectlikeSealed = $combination->objectlikeSealed && $type->sealed;
 
-            foreach ($type->properties as $candidate_property_name => $candidate_property_type) {
-                $value_type = isset($combination->objectlike_entries[$candidate_property_name])
-                    ? $combination->objectlike_entries[$candidate_property_name]
+            foreach ($type->properties as $candidatePropertyName => $candidatePropertyType) {
+                $valueType = isset($combination->objectlikeEntries[$candidatePropertyName])
+                    ? $combination->objectlikeEntries[$candidatePropertyName]
                     : null;
 
-                if (!$value_type) {
-                    $combination->objectlike_entries[$candidate_property_name] = clone $candidate_property_type;
+                if (!$valueType) {
+                    $combination->objectlikeEntries[$candidatePropertyName] = clone $candidatePropertyType;
                     // it's possibly undefined if there are existing objectlike entries
-                    $combination->objectlike_entries[$candidate_property_name]->possibly_undefined
-                        = $existing_objectlike_entries || $candidate_property_type->possibly_undefined;
+                    $combination->objectlikeEntries[$candidatePropertyName]->possiblyUndefined
+                        = $existingObjectlikeEntries || $candidatePropertyType->possiblyUndefined;
                 } else {
-                    $combination->objectlike_entries[$candidate_property_name] = Type::combineUnionTypes(
-                        $value_type,
-                        $candidate_property_type
+                    $combination->objectlikeEntries[$candidatePropertyName] = Type::combineUnionTypes(
+                        $valueType,
+                        $candidatePropertyType
                     );
                 }
 
-                unset($possibly_undefined_entries[$candidate_property_name]);
+                unset($possiblyUndefinedEntries[$candidatePropertyName]);
             }
 
-            if ($combination->array_counts !== null) {
-                $combination->array_counts[count($type->properties)] = true;
+            if ($combination->arrayCounts !== null) {
+                $combination->arrayCounts[count($type->properties)] = true;
             }
 
-            foreach ($possibly_undefined_entries as $type) {
-                $type->possibly_undefined = true;
+            foreach ($possiblyUndefinedEntries as $type) {
+                $type->possiblyUndefined = true;
             }
         } else {
             if ($type instanceof TString) {
@@ -372,27 +372,27 @@ class TypeCombination
                     } else {
                         $combination->strings = null;
 
-                        if (isset($combination->value_types['string'])
-                            && $combination->value_types['string'] instanceof TClassString
+                        if (isset($combination->valueTypes['string'])
+                            && $combination->valueTypes['string'] instanceof TClassString
                             && $type instanceof TLiteralClassString
                         ) {
                             // do nothing
                         } elseif ($type instanceof TLiteralClassString) {
-                            $combination->value_types['string'] = new TClassString();
+                            $combination->valueTypes['string'] = new TClassString();
                         } else {
-                            $combination->value_types['string'] = new TString();
+                            $combination->valueTypes['string'] = new TString();
                         }
                     }
                 } else {
                     $combination->strings = null;
 
-                    if (!isset($combination->value_types['string'])) {
-                        $combination->value_types[$type_key] = $type;
-                    } elseif (get_class($combination->value_types['string']) !== TString::class) {
+                    if (!isset($combination->valueTypes['string'])) {
+                        $combination->valueTypes[$typeKey] = $type;
+                    } elseif (get_class($combination->valueTypes['string']) !== TString::class) {
                         if (get_class($type) === TString::class) {
-                            $combination->value_types[$type_key] = $type;
-                        } elseif (get_class($combination->value_types['string']) !== get_class($type)) {
-                            $combination->value_types[$type_key] = new TString();
+                            $combination->valueTypes[$typeKey] = $type;
+                        } elseif (get_class($combination->valueTypes['string']) !== get_class($type)) {
+                            $combination->valueTypes[$typeKey] = new TString();
                         }
                     }
                 }
@@ -402,11 +402,11 @@ class TypeCombination
                         $combination->ints[] = $type;
                     } else {
                         $combination->ints = null;
-                        $combination->value_types['int'] = new TInt();
+                        $combination->valueTypes['int'] = new TInt();
                     }
                 } else {
                     $combination->ints = null;
-                    $combination->value_types[$type_key] = $type;
+                    $combination->valueTypes[$typeKey] = $type;
                 }
             } elseif ($type instanceof TFloat) {
                 if ($type instanceof TLiteralFloat) {
@@ -414,14 +414,14 @@ class TypeCombination
                         $combination->floats[] = $type;
                     } else {
                         $combination->floats = null;
-                        $combination->value_types['float'] = new TFloat();
+                        $combination->valueTypes['float'] = new TFloat();
                     }
                 } else {
                     $combination->floats = null;
-                    $combination->value_types[$type_key] = $type;
+                    $combination->valueTypes[$typeKey] = $type;
                 }
             } else {
-                $combination->value_types[$type_key] = $type;
+                $combination->valueTypes[$typeKey] = $type;
             }
         }
     }

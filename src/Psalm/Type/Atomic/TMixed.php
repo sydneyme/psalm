@@ -4,14 +4,14 @@ namespace Psalm\Type\Atomic;
 class TMixed extends \Psalm\Type\Atomic
 {
     /** @var bool */
-    public $from_isset = false;
+    public $fromIsset = false;
 
     /**
-     * @param bool $from_isset
+     * @param bool $fromIsset
      */
-    public function __construct($from_isset = false)
+    public function __construct($fromIsset = false)
     {
-        $this->from_isset = $from_isset;
+        $this->fromIsset = $fromIsset;
     }
 
     public function __toString()
@@ -29,19 +29,19 @@ class TMixed extends \Psalm\Type\Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return null|string
      */
     public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     ) {
         return null;
     }

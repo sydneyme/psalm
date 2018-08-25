@@ -37,85 +37,85 @@ class TypeChecker
     /**
      * Does the input param type match the given param type
      *
-     * @param  Type\Union   $input_type
-     * @param  Type\Union   $container_type
-     * @param  bool         $ignore_null
-     * @param  bool         $ignore_false
-     * @param  bool         &$has_scalar_match
-     * @param  bool         &$type_coerced    whether or not there was type coercion involved
-     * @param  bool         &$type_coerced_from_mixed
-     * @param  bool         &$to_string_cast
-     * @param  bool         &$type_coerced_from_scalar
+     * @param  Type\Union   $inputType
+     * @param  Type\Union   $containerType
+     * @param  bool         $ignoreNull
+     * @param  bool         $ignoreFalse
+     * @param  bool         &$hasScalarMatch
+     * @param  bool         &$typeCoerced    whether or not there was type coercion involved
+     * @param  bool         &$typeCoercedFromMixed
+     * @param  bool         &$toStringCast
+     * @param  bool         &$typeCoercedFromScalar
      *
      * @return bool
      */
     public static function isContainedBy(
         Codebase $codebase,
-        Type\Union $input_type,
-        Type\Union $container_type,
-        $ignore_null = false,
-        $ignore_false = false,
-        &$has_scalar_match = null,
-        &$type_coerced = null,
-        &$type_coerced_from_mixed = null,
-        &$to_string_cast = null,
-        &$type_coerced_from_scalar = null
+        Type\Union $inputType,
+        Type\Union $containerType,
+        $ignoreNull = false,
+        $ignoreFalse = false,
+        &$hasScalarMatch = null,
+        &$typeCoerced = null,
+        &$typeCoercedFromMixed = null,
+        &$toStringCast = null,
+        &$typeCoercedFromScalar = null
     ) {
-        $has_scalar_match = true;
+        $hasScalarMatch = true;
 
-        if ($container_type->isMixed() && !$container_type->isEmptyMixed()) {
+        if ($containerType->isMixed() && !$containerType->isEmptyMixed()) {
             return true;
         }
 
-        if ($input_type->possibly_undefined && !$container_type->possibly_undefined) {
+        if ($inputType->possiblyUndefined && !$containerType->possiblyUndefined) {
             return false;
         }
 
-        foreach ($input_type->getTypes() as $input_type_part) {
-            if ($input_type_part instanceof TNull && $ignore_null) {
+        foreach ($inputType->getTypes() as $inputTypePart) {
+            if ($inputTypePart instanceof TNull && $ignoreNull) {
                 continue;
             }
 
-            if ($input_type_part instanceof TFalse && $ignore_false) {
+            if ($inputTypePart instanceof TFalse && $ignoreFalse) {
                 continue;
             }
 
-            $type_match_found = false;
-            $scalar_type_match_found = false;
-            $all_to_string_cast = true;
-            $atomic_to_string_cast = false;
+            $typeMatchFound = false;
+            $scalarTypeMatchFound = false;
+            $allToStringCast = true;
+            $atomicToStringCast = false;
 
-            foreach ($container_type->getTypes() as $container_type_part) {
-                $is_atomic_contained_by = self::isAtomicContainedBy(
+            foreach ($containerType->getTypes() as $containerTypePart) {
+                $isAtomicContainedBy = self::isAtomicContainedBy(
                     $codebase,
-                    $input_type_part,
-                    $container_type_part,
-                    $scalar_type_match_found,
-                    $type_coerced,
-                    $type_coerced_from_mixed,
-                    $atomic_to_string_cast,
-                    $type_coerced_from_scalar
+                    $inputTypePart,
+                    $containerTypePart,
+                    $scalarTypeMatchFound,
+                    $typeCoerced,
+                    $typeCoercedFromMixed,
+                    $atomicToStringCast,
+                    $typeCoercedFromScalar
                 );
 
-                if ($is_atomic_contained_by) {
-                    $type_match_found = true;
+                if ($isAtomicContainedBy) {
+                    $typeMatchFound = true;
                 }
 
-                if ($atomic_to_string_cast !== true && $type_match_found) {
-                    $all_to_string_cast = false;
+                if ($atomicToStringCast !== true && $typeMatchFound) {
+                    $allToStringCast = false;
                 }
             }
 
             // only set this flag if we're definite that the only
             // reason the type match has been found is because there
             // was a __toString cast
-            if ($all_to_string_cast && $type_match_found) {
-                $to_string_cast = true;
+            if ($allToStringCast && $typeMatchFound) {
+                $toStringCast = true;
             }
 
-            if (!$type_match_found) {
-                if (!$scalar_type_match_found) {
-                    $has_scalar_match = false;
+            if (!$typeMatchFound) {
+                if (!$scalarTypeMatchFound) {
+                    $hasScalarMatch = false;
                 }
 
                 return false;
@@ -128,38 +128,38 @@ class TypeChecker
     /**
      * Used for comparing signature typehints, uses PHP's light contravariance rules
      *
-     * @param  Type\Union   $input_type
-     * @param  Type\Union   $container_type
+     * @param  Type\Union   $inputType
+     * @param  Type\Union   $containerType
      *
      * @return bool
      */
     public static function isContainedByInPhp(
-        Type\Union $input_type = null,
-        Type\Union $container_type
+        Type\Union $inputType = null,
+        Type\Union $containerType
     ) {
-        if (!$input_type) {
+        if (!$inputType) {
             return false;
         }
 
-        if ($input_type->getId() === $container_type->getId()) {
+        if ($inputType->getId() === $containerType->getId()) {
             return true;
         }
 
-        if ($input_type->isNullable() && !$container_type->isNullable()) {
+        if ($inputType->isNullable() && !$containerType->isNullable()) {
             return false;
         }
 
-        $input_type_not_null = clone $input_type;
-        $input_type_not_null->removeType('null');
+        $inputTypeNotNull = clone $inputType;
+        $inputTypeNotNull->removeType('null');
 
-        $container_type_not_null = clone $container_type;
-        $container_type_not_null->removeType('null');
+        $containerTypeNotNull = clone $containerType;
+        $containerTypeNotNull->removeType('null');
 
-        if ($input_type_not_null->getId() === $container_type_not_null->getId()) {
+        if ($inputTypeNotNull->getId() === $containerTypeNotNull->getId()) {
             return true;
         }
 
-        if ($input_type_not_null->hasArray() && $container_type_not_null->hasType('iterable')) {
+        if ($inputTypeNotNull->hasArray() && $containerTypeNotNull->hasType('iterable')) {
             return true;
         }
 
@@ -169,56 +169,56 @@ class TypeChecker
     /**
      * Does the input param type match the given param type
      *
-     * @param  Type\Union   $input_type
-     * @param  Type\Union   $container_type
-     * @param  bool         $ignore_null
-     * @param  bool         $ignore_false
-     * @param  bool         &$has_scalar_match
-     * @param  bool         &$type_coerced    whether or not there was type coercion involved
-     * @param  bool         &$type_coerced_from_mixed
-     * @param  bool         &$to_string_cast
+     * @param  Type\Union   $inputType
+     * @param  Type\Union   $containerType
+     * @param  bool         $ignoreNull
+     * @param  bool         $ignoreFalse
+     * @param  bool         &$hasScalarMatch
+     * @param  bool         &$typeCoerced    whether or not there was type coercion involved
+     * @param  bool         &$typeCoercedFromMixed
+     * @param  bool         &$toStringCast
      *
      * @return bool
      */
     public static function canBeContainedBy(
         Codebase $codebase,
-        Type\Union $input_type,
-        Type\Union $container_type,
-        $ignore_null = false,
-        $ignore_false = false
+        Type\Union $inputType,
+        Type\Union $containerType,
+        $ignoreNull = false,
+        $ignoreFalse = false
     ) {
-        if ($container_type->isMixed()) {
+        if ($containerType->isMixed()) {
             return true;
         }
 
-        if ($input_type->possibly_undefined && !$container_type->possibly_undefined) {
+        if ($inputType->possiblyUndefined && !$containerType->possiblyUndefined) {
             return false;
         }
 
-        foreach ($container_type->getTypes() as $container_type_part) {
-            if ($container_type_part instanceof TNull && $ignore_null) {
+        foreach ($containerType->getTypes() as $containerTypePart) {
+            if ($containerTypePart instanceof TNull && $ignoreNull) {
                 continue;
             }
 
-            if ($container_type_part instanceof TFalse && $ignore_false) {
+            if ($containerTypePart instanceof TFalse && $ignoreFalse) {
                 continue;
             }
 
-            $scalar_type_match_found = false;
-            $atomic_to_string_cast = false;
+            $scalarTypeMatchFound = false;
+            $atomicToStringCast = false;
 
-            foreach ($input_type->getTypes() as $input_type_part) {
-                $is_atomic_contained_by = self::isAtomicContainedBy(
+            foreach ($inputType->getTypes() as $inputTypePart) {
+                $isAtomicContainedBy = self::isAtomicContainedBy(
                     $codebase,
-                    $input_type_part,
-                    $container_type_part,
-                    $scalar_type_match_found,
-                    $type_coerced,
-                    $type_coerced_from_mixed,
-                    $atomic_to_string_cast
+                    $inputTypePart,
+                    $containerTypePart,
+                    $scalarTypeMatchFound,
+                    $typeCoerced,
+                    $typeCoercedFromMixed,
+                    $atomicToStringCast
                 );
 
-                if ($is_atomic_contained_by) {
+                if ($isAtomicContainedBy) {
                     return true;
                 }
             }
@@ -245,27 +245,27 @@ class TypeChecker
             return true;
         }
 
-        foreach ($type1->getTypes() as $type1_part) {
-            if ($type1_part instanceof TNull) {
+        foreach ($type1->getTypes() as $type1Part) {
+            if ($type1Part instanceof TNull) {
                 continue;
             }
 
-            foreach ($type2->getTypes() as $type2_part) {
-                if ($type2_part instanceof TNull) {
+            foreach ($type2->getTypes() as $type2Part) {
+                if ($type2Part instanceof TNull) {
                     continue;
                 }
 
-                $either_contains = self::isAtomicContainedBy(
+                $eitherContains = self::isAtomicContainedBy(
                     $codebase,
-                    $type1_part,
-                    $type2_part
+                    $type1Part,
+                    $type2Part
                 ) || self::isAtomicContainedBy(
                     $codebase,
-                    $type2_part,
-                    $type1_part
+                    $type2Part,
+                    $type1Part
                 );
 
-                if ($either_contains) {
+                if ($eitherContains) {
                     return true;
                 }
             }
@@ -276,57 +276,57 @@ class TypeChecker
 
     /**
      * @param  Codebase       $codebase
-     * @param  TNamedObject   $input_type_part
-     * @param  TNamedObject   $container_type_part
+     * @param  TNamedObject   $inputTypePart
+     * @param  TNamedObject   $containerTypePart
      *
      * @return bool
      */
     private static function isObjectContainedByObject(
         Codebase $codebase,
-        TNamedObject $input_type_part,
-        TNamedObject $container_type_part
+        TNamedObject $inputTypePart,
+        TNamedObject $containerTypePart
     ) {
-        $intersection_input_types = $input_type_part->extra_types ?: [];
-        $intersection_input_types[] = $input_type_part;
+        $intersectionInputTypes = $inputTypePart->extraTypes ?: [];
+        $intersectionInputTypes[] = $inputTypePart;
 
-        $intersection_container_types = $container_type_part->extra_types ?: [];
-        $intersection_container_types[] = $container_type_part;
+        $intersectionContainerTypes = $containerTypePart->extraTypes ?: [];
+        $intersectionContainerTypes[] = $containerTypePart;
 
-        foreach ($intersection_container_types as $intersection_container_type) {
-            $intersection_container_type_lower = strtolower($intersection_container_type->value);
+        foreach ($intersectionContainerTypes as $intersectionContainerType) {
+            $intersectionContainerTypeLower = strtolower($intersectionContainerType->value);
 
-            foreach ($intersection_input_types as $intersection_input_type) {
-                $intersection_input_type_lower = strtolower($intersection_input_type->value);
+            foreach ($intersectionInputTypes as $intersectionInputType) {
+                $intersectionInputTypeLower = strtolower($intersectionInputType->value);
 
-                if ($intersection_container_type_lower === $intersection_input_type_lower) {
+                if ($intersectionContainerTypeLower === $intersectionInputTypeLower) {
                     continue 2;
                 }
 
-                if ($intersection_input_type_lower === 'generator'
-                    && in_array($intersection_container_type_lower, ['iterator', 'traversable', 'iterable'], true)
+                if ($intersectionInputTypeLower === 'generator'
+                    && in_array($intersectionContainerTypeLower, ['iterator', 'traversable', 'iterable'], true)
                 ) {
                     continue 2;
                 }
 
-                if ($codebase->classExists($intersection_input_type->value)
+                if ($codebase->classExists($intersectionInputType->value)
                     && $codebase->classExtendsOrImplements(
-                        $intersection_input_type->value,
-                        $intersection_container_type->value
+                        $intersectionInputType->value,
+                        $intersectionContainerType->value
                     )
                 ) {
                     continue 2;
                 }
 
-                if ($codebase->interfaceExists($intersection_input_type->value)
+                if ($codebase->interfaceExists($intersectionInputType->value)
                     && $codebase->interfaceExtends(
-                        $intersection_input_type->value,
-                        $intersection_container_type->value
+                        $intersectionInputType->value,
+                        $intersectionContainerType->value
                     )
                 ) {
                     continue 2;
                 }
 
-                if (ExpressionChecker::isMock($intersection_input_type->value)) {
+                if (ExpressionChecker::isMock($intersectionInputType->value)) {
                     return true;
                 }
             }
@@ -341,32 +341,32 @@ class TypeChecker
      * Does the input param atomic type match the given param atomic type
      *
      * @param  Codebase     $codebase
-     * @param  Type\Atomic  $input_type_part
-     * @param  Type\Atomic  $container_type_part
-     * @param  bool         &$has_scalar_match
-     * @param  bool         &$type_coerced    whether or not there was type coercion involved
-     * @param  bool         &$type_coerced_from_mixed
-     * @param  bool         &$to_string_cast
-     * @param  bool         &$type_coerced_from_scalar
+     * @param  Type\Atomic  $inputTypePart
+     * @param  Type\Atomic  $containerTypePart
+     * @param  bool         &$hasScalarMatch
+     * @param  bool         &$typeCoerced    whether or not there was type coercion involved
+     * @param  bool         &$typeCoercedFromMixed
+     * @param  bool         &$toStringCast
+     * @param  bool         &$typeCoercedFromScalar
      *
      * @return bool
      */
     public static function isAtomicContainedBy(
         Codebase $codebase,
-        Type\Atomic $input_type_part,
-        Type\Atomic $container_type_part,
-        &$has_scalar_match = null,
-        &$type_coerced = null,
-        &$type_coerced_from_mixed = null,
-        &$to_string_cast = null,
-        &$type_coerced_from_scalar = null
+        Type\Atomic $inputTypePart,
+        Type\Atomic $containerTypePart,
+        &$hasScalarMatch = null,
+        &$typeCoerced = null,
+        &$typeCoercedFromMixed = null,
+        &$toStringCast = null,
+        &$typeCoercedFromScalar = null
     ) {
-        if ($container_type_part instanceof TMixed || $container_type_part instanceof TGenericParam) {
-            if (get_class($container_type_part) === TEmptyMixed::class
-                && get_class($input_type_part) === TMixed::class
+        if ($containerTypePart instanceof TMixed || $containerTypePart instanceof TGenericParam) {
+            if (get_class($containerTypePart) === TEmptyMixed::class
+                && get_class($inputTypePart) === TMixed::class
             ) {
-                $type_coerced = true;
-                $type_coerced_from_mixed = true;
+                $typeCoerced = true;
+                $typeCoercedFromMixed = true;
 
                 return false;
             }
@@ -374,49 +374,49 @@ class TypeChecker
             return true;
         }
 
-        if ($input_type_part instanceof TMixed || $input_type_part instanceof TGenericParam) {
-            $type_coerced = true;
-            $type_coerced_from_mixed = true;
+        if ($inputTypePart instanceof TMixed || $inputTypePart instanceof TGenericParam) {
+            $typeCoerced = true;
+            $typeCoercedFromMixed = true;
 
             return false;
         }
 
-        if ($input_type_part instanceof TNull && $container_type_part instanceof TNull) {
+        if ($inputTypePart instanceof TNull && $containerTypePart instanceof TNull) {
             return true;
         }
 
-        if ($input_type_part instanceof TNull || $container_type_part instanceof TNull) {
+        if ($inputTypePart instanceof TNull || $containerTypePart instanceof TNull) {
             return false;
         }
 
-        if ($input_type_part->shallowEquals($container_type_part) ||
+        if ($inputTypePart->shallowEquals($containerTypePart) ||
             (
-                $input_type_part instanceof TNamedObject
-                && $container_type_part instanceof TNamedObject
-                && self::isObjectContainedByObject($codebase, $input_type_part, $container_type_part)
+                $inputTypePart instanceof TNamedObject
+                && $containerTypePart instanceof TNamedObject
+                && self::isObjectContainedByObject($codebase, $inputTypePart, $containerTypePart)
             )
         ) {
             return self::isMatchingTypeContainedBy(
                 $codebase,
-                $input_type_part,
-                $container_type_part,
-                $has_scalar_match,
-                $type_coerced,
-                $type_coerced_from_mixed,
-                $to_string_cast
+                $inputTypePart,
+                $containerTypePart,
+                $hasScalarMatch,
+                $typeCoerced,
+                $typeCoercedFromMixed,
+                $toStringCast
             );
         }
 
-        if ($input_type_part instanceof TFalse
-            && $container_type_part instanceof TBool
-            && !($container_type_part instanceof TTrue)
+        if ($inputTypePart instanceof TFalse
+            && $containerTypePart instanceof TBool
+            && !($containerTypePart instanceof TTrue)
         ) {
             return true;
         }
 
-        if ($input_type_part instanceof TTrue
-            && $container_type_part instanceof TBool
-            && !($container_type_part instanceof TFalse)
+        if ($inputTypePart instanceof TTrue
+            && $containerTypePart instanceof TBool
+            && !($containerTypePart instanceof TFalse)
         ) {
             return true;
         }
@@ -424,104 +424,104 @@ class TypeChecker
         // from https://wiki.php.net/rfc/scalar_type_hints_v5:
         //
         // > int types can resolve a parameter type of float
-        if ($input_type_part instanceof TInt && $container_type_part instanceof TFloat) {
+        if ($inputTypePart instanceof TInt && $containerTypePart instanceof TFloat) {
             return true;
         }
 
-        if ($input_type_part instanceof TNamedObject
-            && $input_type_part->value === 'static'
-            && $container_type_part instanceof TNamedObject
-            && strtolower($container_type_part->value) === 'self'
+        if ($inputTypePart instanceof TNamedObject
+            && $inputTypePart->value === 'static'
+            && $containerTypePart instanceof TNamedObject
+            && strtolower($containerTypePart->value) === 'self'
         ) {
             return true;
         }
 
-        if ($container_type_part instanceof TCallable && $input_type_part instanceof Type\Atomic\Fn) {
-            $all_types_contain = true;
+        if ($containerTypePart instanceof TCallable && $inputTypePart instanceof Type\Atomic\Fn) {
+            $allTypesContain = true;
 
             if (self::compareCallable(
                 $codebase,
-                $input_type_part,
-                $container_type_part,
-                $type_coerced,
-                $type_coerced_from_mixed,
-                $has_scalar_match,
-                $all_types_contain
+                $inputTypePart,
+                $containerTypePart,
+                $typeCoerced,
+                $typeCoercedFromMixed,
+                $hasScalarMatch,
+                $allTypesContain
             ) === false
             ) {
                 return false;
             }
 
-            if (!$all_types_contain) {
+            if (!$allTypesContain) {
                 return false;
             }
         }
 
-        if ($input_type_part instanceof TNamedObject &&
-            $input_type_part->value === 'Closure' &&
-            $container_type_part instanceof TCallable
+        if ($inputTypePart instanceof TNamedObject &&
+            $inputTypePart->value === 'Closure' &&
+            $containerTypePart instanceof TCallable
         ) {
             return true;
         }
 
-        if ($container_type_part instanceof TNumeric &&
-            ($input_type_part->isNumericType() || $input_type_part instanceof TString)
+        if ($containerTypePart instanceof TNumeric &&
+            ($inputTypePart->isNumericType() || $inputTypePart instanceof TString)
         ) {
             return true;
         }
 
-        if ($container_type_part instanceof ObjectLike && $input_type_part instanceof ObjectLike) {
-            $all_types_contain = true;
+        if ($containerTypePart instanceof ObjectLike && $inputTypePart instanceof ObjectLike) {
+            $allTypesContain = true;
 
-            foreach ($container_type_part->properties as $key => $container_property_type) {
-                if (!isset($input_type_part->properties[$key])) {
-                    if (!$container_property_type->possibly_undefined) {
-                        $all_types_contain = false;
+            foreach ($containerTypePart->properties as $key => $containerPropertyType) {
+                if (!isset($inputTypePart->properties[$key])) {
+                    if (!$containerPropertyType->possiblyUndefined) {
+                        $allTypesContain = false;
                     }
 
                     continue;
                 }
 
-                $input_property_type = $input_type_part->properties[$key];
+                $inputPropertyType = $inputTypePart->properties[$key];
 
-                if (!$input_property_type->isEmpty()
+                if (!$inputPropertyType->isEmpty()
                     && !self::isContainedBy(
                         $codebase,
-                        $input_property_type,
-                        $container_property_type,
-                        $input_property_type->ignore_nullable_issues,
-                        $input_property_type->ignore_falsable_issues,
-                        $property_has_scalar_match,
-                        $property_type_coerced,
-                        $property_type_coerced_from_mixed,
-                        $property_type_to_string_cast,
-                        $property_type_coerced_from_scalar
+                        $inputPropertyType,
+                        $containerPropertyType,
+                        $inputPropertyType->ignoreNullableIssues,
+                        $inputPropertyType->ignoreFalsableIssues,
+                        $propertyHasScalarMatch,
+                        $propertyTypeCoerced,
+                        $propertyTypeCoercedFromMixed,
+                        $propertyTypeToStringCast,
+                        $propertyTypeCoercedFromScalar
                     )
-                    && !$property_type_coerced_from_scalar
+                    && !$propertyTypeCoercedFromScalar
                 ) {
                     if (self::isContainedBy(
                         $codebase,
-                        $container_property_type,
-                        $input_property_type,
+                        $containerPropertyType,
+                        $inputPropertyType,
                         false,
                         false,
-                        $inverse_property_has_scalar_match,
-                        $inverse_property_type_coerced,
-                        $inverse_property_type_coerced_from_mixed,
-                        $inverse_property_type_to_string_cast,
-                        $inverse_property_type_coerced_from_scalar
+                        $inversePropertyHasScalarMatch,
+                        $inversePropertyTypeCoerced,
+                        $inversePropertyTypeCoercedFromMixed,
+                        $inversePropertyTypeToStringCast,
+                        $inversePropertyTypeCoercedFromScalar
                     )
-                    || $inverse_property_type_coerced_from_scalar
+                    || $inversePropertyTypeCoercedFromScalar
                     ) {
-                        $type_coerced = true;
+                        $typeCoerced = true;
                     }
 
-                    $all_types_contain = false;
+                    $allTypesContain = false;
                 }
             }
 
-            if ($all_types_contain) {
-                $to_string_cast = false;
+            if ($allTypesContain) {
+                $toStringCast = false;
 
                 return true;
             }
@@ -529,58 +529,58 @@ class TypeChecker
             return false;
         }
 
-        if ($container_type_part instanceof TNamedObject
-            && strtolower($container_type_part->value) === 'iterable'
+        if ($containerTypePart instanceof TNamedObject
+            && strtolower($containerTypePart->value) === 'iterable'
         ) {
-            if ($input_type_part instanceof TArray || $input_type_part instanceof ObjectLike) {
-                if (!$container_type_part instanceof TGenericObject) {
+            if ($inputTypePart instanceof TArray || $inputTypePart instanceof ObjectLike) {
+                if (!$containerTypePart instanceof TGenericObject) {
                     return true;
                 }
 
-                if ($input_type_part instanceof ObjectLike) {
-                    $input_type_part = $input_type_part->getGenericArrayType();
+                if ($inputTypePart instanceof ObjectLike) {
+                    $inputTypePart = $inputTypePart->getGenericArrayType();
                 }
 
-                $all_types_contain = true;
+                $allTypesContain = true;
 
-                foreach ($input_type_part->type_params as $i => $input_param) {
-                    $container_param_offset = $i - (2 - count($container_type_part->type_params));
+                foreach ($inputTypePart->typeParams as $i => $inputParam) {
+                    $containerParamOffset = $i - (2 - count($containerTypePart->typeParams));
 
-                    if ($container_param_offset === -1) {
+                    if ($containerParamOffset === -1) {
                         continue;
                     }
 
-                    $container_param = $container_type_part->type_params[$container_param_offset];
+                    $containerParam = $containerTypePart->typeParams[$containerParamOffset];
 
                     if ($i === 0
-                        && $input_param->isMixed()
-                        && $container_param->hasString()
-                        && $container_param->hasInt()
+                        && $inputParam->isMixed()
+                        && $containerParam->hasString()
+                        && $containerParam->hasInt()
                     ) {
                         continue;
                     }
 
-                    if (!$input_param->isEmpty()
+                    if (!$inputParam->isEmpty()
                         && !self::isContainedBy(
                             $codebase,
-                            $input_param,
-                            $container_param,
-                            $input_param->ignore_nullable_issues,
-                            $input_param->ignore_falsable_issues,
-                            $array_has_scalar_match,
-                            $array_type_coerced,
-                            $type_coerced_from_mixed,
-                            $array_to_string_cast,
-                            $array_type_coerced_from_scalar
+                            $inputParam,
+                            $containerParam,
+                            $inputParam->ignoreNullableIssues,
+                            $inputParam->ignoreFalsableIssues,
+                            $arrayHasScalarMatch,
+                            $arrayTypeCoerced,
+                            $typeCoercedFromMixed,
+                            $arrayToStringCast,
+                            $arrayTypeCoercedFromScalar
                         )
-                        && !$array_type_coerced_from_scalar
+                        && !$arrayTypeCoercedFromScalar
                     ) {
-                        $all_types_contain = false;
+                        $allTypesContain = false;
                     }
                 }
 
-                if ($all_types_contain) {
-                    $to_string_cast = false;
+                if ($allTypesContain) {
+                    $toStringCast = false;
 
                     return true;
                 }
@@ -588,136 +588,136 @@ class TypeChecker
                 return false;
             }
 
-            if ($input_type_part->isTraversable($codebase)) {
+            if ($inputTypePart->isTraversable($codebase)) {
                 return true;
             }
         }
 
-        if ($container_type_part instanceof TScalar && $input_type_part instanceof Scalar) {
+        if ($containerTypePart instanceof TScalar && $inputTypePart instanceof Scalar) {
             return true;
         }
 
-        if (get_class($container_type_part) === TInt::class && $input_type_part instanceof TLiteralInt) {
+        if (get_class($containerTypePart) === TInt::class && $inputTypePart instanceof TLiteralInt) {
             return true;
         }
 
-        if (get_class($container_type_part) === TFloat::class && $input_type_part instanceof TLiteralFloat) {
+        if (get_class($containerTypePart) === TFloat::class && $inputTypePart instanceof TLiteralFloat) {
             return true;
         }
 
-        if ((get_class($container_type_part) === TString::class
-                || get_class($container_type_part) === TSingleLetter::class)
-            && $input_type_part instanceof TLiteralString
+        if ((get_class($containerTypePart) === TString::class
+                || get_class($containerTypePart) === TSingleLetter::class)
+            && $inputTypePart instanceof TLiteralString
         ) {
             return true;
         }
 
-        if (get_class($input_type_part) === TInt::class && $container_type_part instanceof TLiteralInt) {
-            $type_coerced = true;
-            $type_coerced_from_scalar = true;
+        if (get_class($inputTypePart) === TInt::class && $containerTypePart instanceof TLiteralInt) {
+            $typeCoerced = true;
+            $typeCoercedFromScalar = true;
 
             return false;
         }
 
-        if (get_class($input_type_part) === TFloat::class && $container_type_part instanceof TLiteralFloat) {
-            $type_coerced = true;
-            $type_coerced_from_scalar = true;
+        if (get_class($inputTypePart) === TFloat::class && $containerTypePart instanceof TLiteralFloat) {
+            $typeCoerced = true;
+            $typeCoercedFromScalar = true;
 
             return false;
         }
 
-        if ((get_class($input_type_part) === TString::class || get_class($container_type_part) === TSingleLetter::class)
-            && $container_type_part instanceof TLiteralString
+        if ((get_class($inputTypePart) === TString::class || get_class($containerTypePart) === TSingleLetter::class)
+            && $containerTypePart instanceof TLiteralString
         ) {
-            $type_coerced = true;
-            $type_coerced_from_scalar = true;
+            $typeCoerced = true;
+            $typeCoercedFromScalar = true;
 
             return false;
         }
 
-        if (($container_type_part instanceof TClassString || $container_type_part instanceof TLiteralClassString)
-            && ($input_type_part instanceof TClassString || $input_type_part instanceof TLiteralClassString)
+        if (($containerTypePart instanceof TClassString || $containerTypePart instanceof TLiteralClassString)
+            && ($inputTypePart instanceof TClassString || $inputTypePart instanceof TLiteralClassString)
         ) {
-            if ($container_type_part instanceof TClassString) {
+            if ($containerTypePart instanceof TClassString) {
                 return true;
             }
 
-            if ($input_type_part instanceof TClassString) {
-                $type_coerced = true;
-                $type_coerced_from_scalar = true;
+            if ($inputTypePart instanceof TClassString) {
+                $typeCoerced = true;
+                $typeCoercedFromScalar = true;
 
                 return false;
             }
 
-            $fake_container_object = new TNamedObject($container_type_part->value);
-            $fake_input_object = new TNamedObject($input_type_part->value);
+            $fakeContainerObject = new TNamedObject($containerTypePart->value);
+            $fakeInputObject = new TNamedObject($inputTypePart->value);
 
-            return self::isObjectContainedByObject($codebase, $fake_input_object, $fake_container_object);
+            return self::isObjectContainedByObject($codebase, $fakeInputObject, $fakeContainerObject);
         }
 
-        if (($input_type_part instanceof TClassString || $input_type_part instanceof TLiteralClassString)
-            && (get_class($container_type_part) === TString::class
-                || get_class($container_type_part) === TSingleLetter::class
-                || get_class($container_type_part) === Type\Atomic\GetClassT::class)
+        if (($inputTypePart instanceof TClassString || $inputTypePart instanceof TLiteralClassString)
+            && (get_class($containerTypePart) === TString::class
+                || get_class($containerTypePart) === TSingleLetter::class
+                || get_class($containerTypePart) === Type\Atomic\GetClassT::class)
         ) {
             return true;
         }
 
-        if ($container_type_part instanceof TString && $input_type_part instanceof TNumericString) {
+        if ($containerTypePart instanceof TString && $inputTypePart instanceof TNumericString) {
             return true;
         }
 
-        if ($container_type_part instanceof TNumericString && $input_type_part instanceof TString) {
-            $type_coerced = true;
+        if ($containerTypePart instanceof TNumericString && $inputTypePart instanceof TString) {
+            $typeCoerced = true;
 
             return false;
         }
 
-        if (($container_type_part instanceof TClassString || $container_type_part instanceof TLiteralClassString)
-            && $input_type_part instanceof TString
+        if (($containerTypePart instanceof TClassString || $containerTypePart instanceof TLiteralClassString)
+            && $inputTypePart instanceof TString
         ) {
-            if (\Psalm\Config::getInstance()->allow_coercion_from_string_to_class_const) {
-                $type_coerced = true;
+            if (\Psalm\Config::getInstance()->allowCoercionFromStringToClassConst) {
+                $typeCoerced = true;
             }
 
             return false;
         }
 
-        if ($container_type_part instanceof TString &&
-            $input_type_part instanceof TNamedObject
+        if ($containerTypePart instanceof TString &&
+            $inputTypePart instanceof TNamedObject
         ) {
             // check whether the object has a __toString method
-            if ($codebase->classOrInterfaceExists($input_type_part->value)
-                && $codebase->methodExists($input_type_part->value . '::__toString')
+            if ($codebase->classOrInterfaceExists($inputTypePart->value)
+                && $codebase->methodExists($inputTypePart->value . '::__toString')
             ) {
-                $to_string_cast = true;
+                $toStringCast = true;
 
                 return true;
             }
 
             // PHP 5.6 doesn't support this natively, so this introduces a bug *just* when checking PHP 5.6 code
-            if ($input_type_part->value === 'ReflectionType') {
-                $to_string_cast = true;
+            if ($inputTypePart->value === 'ReflectionType') {
+                $toStringCast = true;
 
                 return true;
             }
         }
 
-        if ($container_type_part instanceof Type\Atomic\Fn && $input_type_part instanceof TCallable) {
-            $type_coerced = true;
+        if ($containerTypePart instanceof Type\Atomic\Fn && $inputTypePart instanceof TCallable) {
+            $typeCoerced = true;
 
             return false;
         }
 
-        if ($container_type_part instanceof TCallable &&
+        if ($containerTypePart instanceof TCallable &&
             (
-                $input_type_part instanceof TString ||
-                $input_type_part instanceof TArray ||
-                $input_type_part instanceof ObjectLike ||
+                $inputTypePart instanceof TString ||
+                $inputTypePart instanceof TArray ||
+                $inputTypePart instanceof ObjectLike ||
                 (
-                    $input_type_part instanceof TNamedObject &&
-                    $codebase->classExists($input_type_part->value) &&
-                    $codebase->methodExists($input_type_part->value . '::__invoke')
+                    $inputTypePart instanceof TNamedObject &&
+                    $codebase->classExists($inputTypePart->value) &&
+                    $codebase->methodExists($inputTypePart->value . '::__invoke')
                 )
             )
         ) {
@@ -725,49 +725,49 @@ class TypeChecker
             return true;
         }
 
-        if ($input_type_part instanceof TNumeric) {
-            if ($container_type_part->isNumericType()) {
-                $has_scalar_match = true;
+        if ($inputTypePart instanceof TNumeric) {
+            if ($containerTypePart->isNumericType()) {
+                $hasScalarMatch = true;
             }
         }
 
-        if ($input_type_part instanceof Scalar) {
-            if ($container_type_part instanceof Scalar
-                && !$container_type_part instanceof TLiteralInt
-                && !$container_type_part instanceof TLiteralString
-                && !$container_type_part instanceof TLiteralFloat
+        if ($inputTypePart instanceof Scalar) {
+            if ($containerTypePart instanceof Scalar
+                && !$containerTypePart instanceof TLiteralInt
+                && !$containerTypePart instanceof TLiteralString
+                && !$containerTypePart instanceof TLiteralFloat
             ) {
-                $has_scalar_match = true;
+                $hasScalarMatch = true;
             }
-        } elseif ($container_type_part instanceof TObject &&
-            !$input_type_part instanceof TArray &&
-            !$input_type_part instanceof TResource
+        } elseif ($containerTypePart instanceof TObject &&
+            !$inputTypePart instanceof TArray &&
+            !$inputTypePart instanceof TResource
         ) {
             return true;
-        } elseif ($input_type_part instanceof TObject && $container_type_part instanceof TNamedObject) {
-            $type_coerced = true;
-        } elseif ($container_type_part instanceof TNamedObject
-            && $input_type_part instanceof TNamedObject
-            && $codebase->classOrInterfaceExists($input_type_part->value)
+        } elseif ($inputTypePart instanceof TObject && $containerTypePart instanceof TNamedObject) {
+            $typeCoerced = true;
+        } elseif ($containerTypePart instanceof TNamedObject
+            && $inputTypePart instanceof TNamedObject
+            && $codebase->classOrInterfaceExists($inputTypePart->value)
             && (
                 (
-                    $codebase->classExists($container_type_part->value)
+                    $codebase->classExists($containerTypePart->value)
                     && $codebase->classExtendsOrImplements(
-                        $container_type_part->value,
-                        $input_type_part->value
+                        $containerTypePart->value,
+                        $inputTypePart->value
                     )
                 )
                 ||
                 (
-                    $codebase->interfaceExists($container_type_part->value)
+                    $codebase->interfaceExists($containerTypePart->value)
                     && $codebase->interfaceExtends(
-                        $container_type_part->value,
-                        $input_type_part->value
+                        $containerTypePart->value,
+                        $inputTypePart->value
                     )
                 )
             )
         ) {
-            $type_coerced = true;
+            $typeCoerced = true;
         }
 
         return false;
@@ -775,145 +775,145 @@ class TypeChecker
 
     /**
      * @param  Codebase    $codebase
-     * @param  Type\Atomic $input_type_part
-     * @param  Type\Atomic $container_type_part
-     * @param  bool        &$has_scalar_match
-     * @param  bool        &$type_coerced
-     * @param  bool        &$type_coerced_from_mixed
-     * @param  bool        &$to_string_cast
+     * @param  Type\Atomic $inputTypePart
+     * @param  Type\Atomic $containerTypePart
+     * @param  bool        &$hasScalarMatch
+     * @param  bool        &$typeCoerced
+     * @param  bool        &$typeCoercedFromMixed
+     * @param  bool        &$toStringCast
      *
      * @return bool
      */
     private static function isMatchingTypeContainedBy(
         Codebase $codebase,
-        Type\Atomic $input_type_part,
-        Type\Atomic $container_type_part,
-        &$has_scalar_match,
-        &$type_coerced,
-        &$type_coerced_from_mixed,
-        &$to_string_cast
+        Type\Atomic $inputTypePart,
+        Type\Atomic $containerTypePart,
+        &$hasScalarMatch,
+        &$typeCoerced,
+        &$typeCoercedFromMixed,
+        &$toStringCast
     ) {
-        $all_types_contain = true;
+        $allTypesContain = true;
 
-        if ($container_type_part instanceof TGenericObject) {
-            if (!$input_type_part instanceof TGenericObject) {
-                $type_coerced = true;
-                $type_coerced_from_mixed = true;
+        if ($containerTypePart instanceof TGenericObject) {
+            if (!$inputTypePart instanceof TGenericObject) {
+                $typeCoerced = true;
+                $typeCoercedFromMixed = true;
 
                 return false;
             }
 
-            foreach ($input_type_part->type_params as $i => $input_param) {
-                if (!isset($container_type_part->type_params[$i])) {
+            foreach ($inputTypePart->typeParams as $i => $inputParam) {
+                if (!isset($containerTypePart->typeParams[$i])) {
                     break;
                 }
 
-                $container_param = $container_type_part->type_params[$i];
+                $containerParam = $containerTypePart->typeParams[$i];
 
-                if (!$input_param->isEmpty() &&
+                if (!$inputParam->isEmpty() &&
                     !self::isContainedBy(
                         $codebase,
-                        $input_param,
-                        $container_param,
-                        $input_param->ignore_nullable_issues,
-                        $input_param->ignore_falsable_issues,
-                        $has_scalar_match,
-                        $type_coerced,
-                        $type_coerced_from_mixed
+                        $inputParam,
+                        $containerParam,
+                        $inputParam->ignoreNullableIssues,
+                        $inputParam->ignoreFalsableIssues,
+                        $hasScalarMatch,
+                        $typeCoerced,
+                        $typeCoercedFromMixed
                     )
                 ) {
-                    $all_types_contain = false;
+                    $allTypesContain = false;
                 }
             }
         }
 
-        if ($container_type_part instanceof Type\Atomic\Fn) {
-            if (!$input_type_part instanceof Type\Atomic\Fn) {
-                $type_coerced = true;
-                $type_coerced_from_mixed = true;
+        if ($containerTypePart instanceof Type\Atomic\Fn) {
+            if (!$inputTypePart instanceof Type\Atomic\Fn) {
+                $typeCoerced = true;
+                $typeCoercedFromMixed = true;
 
                 return false;
             }
 
             if (self::compareCallable(
                 $codebase,
-                $input_type_part,
-                $container_type_part,
-                $type_coerced,
-                $type_coerced_from_mixed,
-                $has_scalar_match,
-                $all_types_contain
+                $inputTypePart,
+                $containerTypePart,
+                $typeCoerced,
+                $typeCoercedFromMixed,
+                $hasScalarMatch,
+                $allTypesContain
             ) === false
             ) {
                 return false;
             }
         }
 
-        if (($input_type_part instanceof TArray || $input_type_part instanceof ObjectLike)
-            && ($container_type_part instanceof TArray || $container_type_part instanceof ObjectLike)
+        if (($inputTypePart instanceof TArray || $inputTypePart instanceof ObjectLike)
+            && ($containerTypePart instanceof TArray || $containerTypePart instanceof ObjectLike)
         ) {
-            if ($container_type_part instanceof ObjectLike) {
-                $generic_container_type_part = $container_type_part->getGenericArrayType();
+            if ($containerTypePart instanceof ObjectLike) {
+                $genericContainerTypePart = $containerTypePart->getGenericArrayType();
 
-                $container_params_can_be_undefined = (bool) array_reduce(
-                    $container_type_part->properties,
+                $containerParamsCanBeUndefined = (bool) array_reduce(
+                    $containerTypePart->properties,
                     /**
                      * @param bool $carry
                      *
                      * @return bool
                      */
                     function ($carry, Type\Union $item) {
-                        return $carry || $item->possibly_undefined;
+                        return $carry || $item->possiblyUndefined;
                     },
                     false
                 );
 
-                if (!$input_type_part instanceof ObjectLike
-                    && !$input_type_part->type_params[0]->isMixed()
-                    && !($input_type_part->type_params[1]->isEmpty()
-                        && $container_params_can_be_undefined)
+                if (!$inputTypePart instanceof ObjectLike
+                    && !$inputTypePart->typeParams[0]->isMixed()
+                    && !($inputTypePart->typeParams[1]->isEmpty()
+                        && $containerParamsCanBeUndefined)
                 ) {
-                    $all_types_contain = false;
-                    $type_coerced = true;
+                    $allTypesContain = false;
+                    $typeCoerced = true;
                 }
 
-                $container_type_part = $generic_container_type_part;
+                $containerTypePart = $genericContainerTypePart;
             }
 
-            if ($input_type_part instanceof ObjectLike) {
-                $input_type_part = $input_type_part->getGenericArrayType();
+            if ($inputTypePart instanceof ObjectLike) {
+                $inputTypePart = $inputTypePart->getGenericArrayType();
             }
 
-            foreach ($input_type_part->type_params as $i => $input_param) {
-                $container_param = $container_type_part->type_params[$i];
+            foreach ($inputTypePart->typeParams as $i => $inputParam) {
+                $containerParam = $containerTypePart->typeParams[$i];
 
                 if ($i === 0
-                    && $input_param->isMixed()
-                    && $container_param->hasString()
-                    && $container_param->hasInt()
+                    && $inputParam->isMixed()
+                    && $containerParam->hasString()
+                    && $containerParam->hasInt()
                 ) {
                     continue;
                 }
 
-                if (!$input_param->isEmpty() &&
+                if (!$inputParam->isEmpty() &&
                     !self::isContainedBy(
                         $codebase,
-                        $input_param,
-                        $container_param,
-                        $input_param->ignore_nullable_issues,
-                        $input_param->ignore_falsable_issues,
-                        $has_scalar_match,
-                        $type_coerced,
-                        $type_coerced_from_mixed
+                        $inputParam,
+                        $containerParam,
+                        $inputParam->ignoreNullableIssues,
+                        $inputParam->ignoreFalsableIssues,
+                        $hasScalarMatch,
+                        $typeCoerced,
+                        $typeCoercedFromMixed
                     )
                 ) {
-                    $all_types_contain = false;
+                    $allTypesContain = false;
                 }
             }
         }
 
-        if ($all_types_contain) {
-            $to_string_cast = false;
+        if ($allTypesContain) {
+            $toStringCast = false;
 
             return true;
         }
@@ -922,12 +922,12 @@ class TypeChecker
     }
 
     /**
-     * @param  TCallable|Type\Atomic\Fn   $input_type_part
-     * @param  TCallable|Type\Atomic\Fn   $container_type_part
-     * @param  bool   &$type_coerced
-     * @param  bool   &$type_coerced_from_mixed
-     * @param  bool   $has_scalar_match
-     * @param  bool   &$all_types_contain
+     * @param  TCallable|Type\Atomic\Fn   $inputTypePart
+     * @param  TCallable|Type\Atomic\Fn   $containerTypePart
+     * @param  bool   &$typeCoerced
+     * @param  bool   &$typeCoercedFromMixed
+     * @param  bool   $hasScalarMatch
+     * @param  bool   &$allTypesContain
      *
      * @return null|false
      *
@@ -935,71 +935,71 @@ class TypeChecker
      */
     private static function compareCallable(
         Codebase $codebase,
-        $input_type_part,
-        $container_type_part,
-        &$type_coerced,
-        &$type_coerced_from_mixed,
-        &$has_scalar_match,
-        &$all_types_contain
+        $inputTypePart,
+        $containerTypePart,
+        &$typeCoerced,
+        &$typeCoercedFromMixed,
+        &$hasScalarMatch,
+        &$allTypesContain
     ) {
-        if ($container_type_part->params !== null && $input_type_part->params === null) {
-            $type_coerced = true;
-            $type_coerced_from_mixed = true;
+        if ($containerTypePart->params !== null && $inputTypePart->params === null) {
+            $typeCoerced = true;
+            $typeCoercedFromMixed = true;
 
             return false;
         }
 
-        if ($container_type_part->params !== null) {
-            foreach ($container_type_part->params as $i => $container_param) {
-                if (!isset($input_type_part->params[$i])) {
-                    if ($container_param->is_optional) {
+        if ($containerTypePart->params !== null) {
+            foreach ($containerTypePart->params as $i => $containerParam) {
+                if (!isset($inputTypePart->params[$i])) {
+                    if ($containerParam->isOptional) {
                         break;
                     }
 
-                    $type_coerced = true;
-                    $type_coerced_from_mixed = true;
+                    $typeCoerced = true;
+                    $typeCoercedFromMixed = true;
 
-                    $all_types_contain = false;
+                    $allTypesContain = false;
                     break;
                 }
 
-                $input_param = $input_type_part->params[$i];
+                $inputParam = $inputTypePart->params[$i];
 
                 if (!self::isContainedBy(
                     $codebase,
-                    $input_param->type ?: Type::getMixed(),
-                    $container_param->type ?: Type::getMixed(),
+                    $inputParam->type ?: Type::getMixed(),
+                    $containerParam->type ?: Type::getMixed(),
                     false,
                     false,
-                    $has_scalar_match,
-                    $type_coerced,
-                    $type_coerced_from_mixed
+                    $hasScalarMatch,
+                    $typeCoerced,
+                    $typeCoercedFromMixed
                 )
                 ) {
-                    $all_types_contain = false;
+                    $allTypesContain = false;
                 }
             }
 
-            if (isset($container_type_part->return_type)) {
-                if (!isset($input_type_part->return_type)) {
-                    $type_coerced = true;
-                    $type_coerced_from_mixed = true;
+            if (isset($containerTypePart->returnType)) {
+                if (!isset($inputTypePart->returnType)) {
+                    $typeCoerced = true;
+                    $typeCoercedFromMixed = true;
 
-                    $all_types_contain = false;
+                    $allTypesContain = false;
                 } else {
-                    if (!$container_type_part->return_type->isVoid()
+                    if (!$containerTypePart->returnType->isVoid()
                         && !self::isContainedBy(
                             $codebase,
-                            $input_type_part->return_type,
-                            $container_type_part->return_type,
+                            $inputTypePart->returnType,
+                            $containerTypePart->returnType,
                             false,
                             false,
-                            $has_scalar_match,
-                            $type_coerced,
-                            $type_coerced_from_mixed
+                            $hasScalarMatch,
+                            $typeCoerced,
+                            $typeCoercedFromMixed
                         )
                     ) {
-                        $all_types_contain = false;
+                        $allTypesContain = false;
                     }
                 }
             }
@@ -1009,48 +1009,48 @@ class TypeChecker
     /**
      * Takes two arrays of types and merges them
      *
-     * @param  array<string, Type\Union>  $new_types
-     * @param  array<string, Type\Union>  $existing_types
+     * @param  array<string, Type\Union>  $newTypes
+     * @param  array<string, Type\Union>  $existingTypes
      *
      * @return array<string, Type\Union>
      */
-    public static function combineKeyedTypes(array $new_types, array $existing_types)
+    public static function combineKeyedTypes(array $newTypes, array $existingTypes)
     {
-        $keys = array_merge(array_keys($new_types), array_keys($existing_types));
+        $keys = array_merge(array_keys($newTypes), array_keys($existingTypes));
         $keys = array_unique($keys);
 
-        $result_types = [];
+        $resultTypes = [];
 
-        if (empty($new_types)) {
-            return $existing_types;
+        if (empty($newTypes)) {
+            return $existingTypes;
         }
 
-        if (empty($existing_types)) {
-            return $new_types;
+        if (empty($existingTypes)) {
+            return $newTypes;
         }
 
         foreach ($keys as $key) {
-            if (!isset($existing_types[$key])) {
-                $result_types[$key] = $new_types[$key];
+            if (!isset($existingTypes[$key])) {
+                $resultTypes[$key] = $newTypes[$key];
                 continue;
             }
 
-            if (!isset($new_types[$key])) {
-                $result_types[$key] = $existing_types[$key];
+            if (!isset($newTypes[$key])) {
+                $resultTypes[$key] = $existingTypes[$key];
                 continue;
             }
 
-            $existing_var_types = $existing_types[$key];
-            $new_var_types = $new_types[$key];
+            $existingVarTypes = $existingTypes[$key];
+            $newVarTypes = $newTypes[$key];
 
-            if ($new_var_types->getId() === $existing_var_types->getId()) {
-                $result_types[$key] = $new_var_types;
+            if ($newVarTypes->getId() === $existingVarTypes->getId()) {
+                $resultTypes[$key] = $newVarTypes;
             } else {
-                $result_types[$key] = Type::combineUnionTypes($new_var_types, $existing_var_types);
+                $resultTypes[$key] = Type::combineUnionTypes($newVarTypes, $existingVarTypes);
             }
         }
 
-        return $result_types;
+        return $resultTypes;
     }
 
     /**
@@ -1058,76 +1058,76 @@ class TypeChecker
      */
     public static function simplifyUnionType(Codebase $codebase, Type\Union $union)
     {
-        $union_type_count = count($union->getTypes());
+        $unionTypeCount = count($union->getTypes());
 
-        if ($union_type_count === 1 || ($union_type_count === 2 && $union->isNullable())) {
+        if ($unionTypeCount === 1 || ($unionTypeCount === 2 && $union->isNullable())) {
             return $union;
         }
 
-        $from_docblock = $union->from_docblock;
-        $ignore_nullable_issues = $union->ignore_nullable_issues;
-        $ignore_falsable_issues = $union->ignore_falsable_issues;
-        $possibly_undefined = $union->possibly_undefined;
+        $fromDocblock = $union->fromDocblock;
+        $ignoreNullableIssues = $union->ignoreNullableIssues;
+        $ignoreFalsableIssues = $union->ignoreFalsableIssues;
+        $possiblyUndefined = $union->possiblyUndefined;
 
-        $unique_types = [];
+        $uniqueTypes = [];
 
-        $inverse_contains = [];
+        $inverseContains = [];
 
-        foreach ($union->getTypes() as $type_part) {
-            $is_contained_by_other = false;
+        foreach ($union->getTypes() as $typePart) {
+            $isContainedByOther = false;
 
             // don't try to simplify intersection types
-            if ($type_part instanceof TNamedObject && $type_part->extra_types) {
+            if ($typePart instanceof TNamedObject && $typePart->extraTypes) {
                 return $union;
             }
 
-            foreach ($union->getTypes() as $container_type_part) {
-                $string_container_part = $container_type_part->getId();
-                $string_input_part = $type_part->getId();
+            foreach ($union->getTypes() as $containerTypePart) {
+                $stringContainerPart = $containerTypePart->getId();
+                $stringInputPart = $typePart->getId();
 
-                if ($type_part !== $container_type_part &&
+                if ($typePart !== $containerTypePart &&
                     !(
-                        $container_type_part instanceof TInt
-                        || $container_type_part instanceof TFloat
-                        || $container_type_part instanceof TCallable
-                        || ($container_type_part instanceof TString && $type_part instanceof TCallable)
-                        || ($container_type_part instanceof TArray && $type_part instanceof TCallable)
+                        $containerTypePart instanceof TInt
+                        || $containerTypePart instanceof TFloat
+                        || $containerTypePart instanceof TCallable
+                        || ($containerTypePart instanceof TString && $typePart instanceof TCallable)
+                        || ($containerTypePart instanceof TArray && $typePart instanceof TCallable)
                     ) &&
-                    !isset($inverse_contains[$string_input_part][$string_container_part]) &&
+                    !isset($inverseContains[$stringInputPart][$stringContainerPart]) &&
                     TypeChecker::isAtomicContainedBy(
                         $codebase,
-                        $type_part,
-                        $container_type_part,
-                        $has_scalar_match,
-                        $type_coerced,
-                        $type_coerced_from_mixed,
-                        $to_string_cast
+                        $typePart,
+                        $containerTypePart,
+                        $hasScalarMatch,
+                        $typeCoerced,
+                        $typeCoercedFromMixed,
+                        $toStringCast
                     ) &&
-                    !$to_string_cast
+                    !$toStringCast
                 ) {
-                    $inverse_contains[$string_container_part][$string_input_part] = true;
+                    $inverseContains[$stringContainerPart][$stringInputPart] = true;
 
-                    $is_contained_by_other = true;
+                    $isContainedByOther = true;
                     break;
                 }
             }
 
-            if (!$is_contained_by_other) {
-                $unique_types[] = $type_part;
+            if (!$isContainedByOther) {
+                $uniqueTypes[] = $typePart;
             }
         }
 
-        if (count($unique_types) === 0) {
+        if (count($uniqueTypes) === 0) {
             throw new \UnexpectedValueException('There must be more than one unique type');
         }
 
-        $unique_type = new Type\Union($unique_types);
+        $uniqueType = new Type\Union($uniqueTypes);
 
-        $unique_type->from_docblock = $from_docblock;
-        $unique_type->ignore_nullable_issues = $ignore_nullable_issues;
-        $unique_type->ignore_falsable_issues = $ignore_falsable_issues;
-        $unique_type->possibly_undefined = $possibly_undefined;
+        $uniqueType->fromDocblock = $fromDocblock;
+        $uniqueType->ignoreNullableIssues = $ignoreNullableIssues;
+        $uniqueType->ignoreFalsableIssues = $ignoreFalsableIssues;
+        $uniqueType->possiblyUndefined = $possiblyUndefined;
 
-        return $unique_type;
+        return $uniqueType;
     }
 }

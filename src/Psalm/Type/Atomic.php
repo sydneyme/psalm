@@ -48,16 +48,16 @@ abstract class Atomic
      *
      * @var bool
      */
-    public $from_docblock = false;
+    public $fromDocblock = false;
 
     /**
      * @param  string $value
-     * @param  bool   $php_compatible
-     * @param  array<string, string> $template_type_names
+     * @param  bool   $phpCompatible
+     * @param  array<string, string> $templateTypeNames
      *
      * @return Atomic
      */
-    public static function create($value, $php_compatible = false, array $template_type_names = [])
+    public static function create($value, $phpCompatible = false, array $templateTypeNames = [])
     {
         switch ($value) {
             case 'int':
@@ -85,28 +85,28 @@ abstract class Atomic
                 return new TArray([new Union([new TMixed]), new Union([new TMixed])]);
 
             case 'resource':
-                return $php_compatible ? new TNamedObject($value) : new TResource();
+                return $phpCompatible ? new TNamedObject($value) : new TResource();
 
             case 'numeric':
-                return $php_compatible ? new TNamedObject($value) : new TNumeric();
+                return $phpCompatible ? new TNamedObject($value) : new TNumeric();
 
             case 'true':
-                return $php_compatible ? new TNamedObject($value) : new TTrue();
+                return $phpCompatible ? new TNamedObject($value) : new TTrue();
 
             case 'false':
-                return $php_compatible ? new TNamedObject($value) : new TFalse();
+                return $phpCompatible ? new TNamedObject($value) : new TFalse();
 
             case 'empty':
-                return $php_compatible ? new TNamedObject($value) : new TEmpty();
+                return $phpCompatible ? new TNamedObject($value) : new TEmpty();
 
             case 'scalar':
-                return $php_compatible ? new TNamedObject($value) : new TScalar();
+                return $phpCompatible ? new TNamedObject($value) : new TScalar();
 
             case 'null':
-                return $php_compatible ? new TNamedObject($value) : new TNull();
+                return $phpCompatible ? new TNamedObject($value) : new TNull();
 
             case 'mixed':
-                return $php_compatible ? new TNamedObject($value) : new TMixed();
+                return $phpCompatible ? new TNamedObject($value) : new TMixed();
 
             case 'class-string':
                 return new TClassString();
@@ -126,7 +126,7 @@ abstract class Atomic
                     throw new \Psalm\Exception\TypeParseTreeException('First character of type cannot be numeric');
                 }
 
-                if (isset($template_type_names[$value])) {
+                if (isset($templateTypeNames[$value])) {
                     return new TGenericParam($value);
                 }
 
@@ -188,18 +188,18 @@ abstract class Atomic
 
     /**
      * @param  StatementsSource $source
-     * @param  CodeLocation     $code_location
-     * @param  array<string>    $suppressed_issues
-     * @param  array<string, bool> $phantom_classes
+     * @param  CodeLocation     $codeLocation
+     * @param  array<string>    $suppressedIssues
+     * @param  array<string, bool> $phantomClasses
      * @param  bool             $inferred
      *
      * @return false|null
      */
     public function check(
         StatementsSource $source,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        array $phantom_classes = [],
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        array $phantomClasses = [],
         $inferred = true
     ) {
         if ($this->checked) {
@@ -207,26 +207,26 @@ abstract class Atomic
         }
 
         if ($this instanceof TNamedObject) {
-            if (!isset($phantom_classes[strtolower($this->value)]) &&
+            if (!isset($phantomClasses[strtolower($this->value)]) &&
                 ClassLikeChecker::checkFullyQualifiedClassLikeName(
                     $source,
                     $this->value,
-                    $code_location,
-                    $suppressed_issues,
+                    $codeLocation,
+                    $suppressedIssues,
                     $inferred
                 ) === false
             ) {
                 return false;
             }
 
-            if ($this->extra_types) {
-                foreach ($this->extra_types as $extra_type) {
-                    if (!isset($phantom_classes[strtolower($extra_type->value)]) &&
+            if ($this->extraTypes) {
+                foreach ($this->extraTypes as $extraType) {
+                    if (!isset($phantomClasses[strtolower($extraType->value)]) &&
                         ClassLikeChecker::checkFullyQualifiedClassLikeName(
                             $source,
-                            $extra_type->value,
-                            $code_location,
-                            $suppressed_issues,
+                            $extraType->value,
+                            $codeLocation,
+                            $suppressedIssues,
                             $inferred
                         ) === false
                     ) {
@@ -239,9 +239,9 @@ abstract class Atomic
         if ($this instanceof TScalarClassConstant) {
             if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
                 $source,
-                $this->fq_classlike_name,
-                $code_location,
-                $suppressed_issues,
+                $this->fqClasslikeName,
+                $codeLocation,
+                $suppressedIssues,
                 $inferred
             ) === false
             ) {
@@ -249,11 +249,11 @@ abstract class Atomic
             }
         }
 
-        if ($this instanceof TResource && !$this->from_docblock) {
+        if ($this instanceof TResource && !$this->fromDocblock) {
             if (IssueBuffer::accepts(
                 new ReservedWord(
                     '\'resource\' is a reserved word',
-                    $code_location,
+                    $codeLocation,
                     'resource'
                 ),
                 $source->getSuppressedIssues()
@@ -263,8 +263,8 @@ abstract class Atomic
         }
 
         if ($this instanceof Type\Atomic\TArray || $this instanceof Type\Atomic\TGenericObject) {
-            foreach ($this->type_params as $type_param) {
-                $type_param->check($source, $code_location, $suppressed_issues, $phantom_classes, $inferred);
+            foreach ($this->typeParams as $typeParam) {
+                $typeParam->check($source, $codeLocation, $suppressedIssues, $phantomClasses, $inferred);
             }
         }
 
@@ -272,24 +272,24 @@ abstract class Atomic
     }
 
     /**
-     * @param  array<string, mixed> $phantom_classes
+     * @param  array<string, mixed> $phantomClasses
      *
      * @return void
      */
     public function queueClassLikesForScanning(
         Codebase $codebase,
-        FileStorage $file_storage = null,
-        array $phantom_classes = []
+        FileStorage $fileStorage = null,
+        array $phantomClasses = []
     ) {
-        if ($this instanceof TNamedObject && !isset($phantom_classes[strtolower($this->value)])) {
+        if ($this instanceof TNamedObject && !isset($phantomClasses[strtolower($this->value)])) {
             $codebase->scanner->queueClassLikeForScanning(
                 $this->value,
-                $file_storage ? $file_storage->file_path : null,
+                $fileStorage ? $fileStorage->filePath : null,
                 false,
-                !$this->from_docblock
+                !$this->fromDocblock
             );
-            if ($file_storage) {
-                $file_storage->referenced_classlikes[] = $this->value;
+            if ($fileStorage) {
+                $fileStorage->referencedClasslikes[] = $this->value;
             }
 
             return;
@@ -297,22 +297,22 @@ abstract class Atomic
 
         if ($this instanceof TScalarClassConstant) {
             $codebase->scanner->queueClassLikeForScanning(
-                $this->fq_classlike_name,
-                $file_storage ? $file_storage->file_path : null,
+                $this->fqClasslikeName,
+                $fileStorage ? $fileStorage->filePath : null,
                 false,
-                !$this->from_docblock
+                !$this->fromDocblock
             );
-            if ($file_storage) {
-                $file_storage->referenced_classlikes[] = $this->fq_classlike_name;
+            if ($fileStorage) {
+                $fileStorage->referencedClasslikes[] = $this->fqClasslikeName;
             }
         }
 
         if ($this instanceof Type\Atomic\TArray || $this instanceof Type\Atomic\TGenericObject) {
-            foreach ($this->type_params as $type_param) {
-                $type_param->queueClassLikesForScanning(
+            foreach ($this->typeParams as $typeParam) {
+                $typeParam->queueClassLikesForScanning(
                     $codebase,
-                    $file_storage,
-                    $phantom_classes
+                    $fileStorage,
+                    $phantomClasses
                 );
             }
         }
@@ -344,32 +344,32 @@ abstract class Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  bool          $use_phpdoc_format
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  bool          $usePhpdocFormat
      *
      * @return string
      */
-    public function toNamespacedString($namespace, array $aliased_classes, $this_class, $use_phpdoc_format)
+    public function toNamespacedString($namespace, array $aliasedClasses, $thisClass, $usePhpdocFormat)
     {
         return $this->getKey();
     }
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return null|string
      */
     abstract public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     );
 
     /**
@@ -382,31 +382,31 @@ abstract class Atomic
      */
     public function setFromDocblock()
     {
-        $this->from_docblock = true;
+        $this->fromDocblock = true;
     }
 
     /**
-     * @param  array<string, Type\Union> $template_types
-     * @param  array<string, Type\Union> $generic_params
-     * @param  Type\Atomic|null          $input_type
+     * @param  array<string, Type\Union> $templateTypes
+     * @param  array<string, Type\Union> $genericParams
+     * @param  Type\Atomic|null          $inputType
      *
      * @return void
      */
     public function replaceTemplateTypesWithStandins(
-        array $template_types,
-        array &$generic_params,
+        array $templateTypes,
+        array &$genericParams,
         Codebase $codebase = null,
-        Type\Atomic $input_type = null
+        Type\Atomic $inputType = null
     ) {
         // do nothing
     }
 
     /**
-     * @param  array<string, Type\Union>     $template_types
+     * @param  array<string, Type\Union>     $templateTypes
      *
      * @return void
      */
-    public function replaceTemplateTypesWithArgTypes(array $template_types)
+    public function replaceTemplateTypesWithArgTypes(array $templateTypes)
     {
         // do nothing
     }
@@ -414,9 +414,9 @@ abstract class Atomic
     /**
      * @return bool
      */
-    public function equals(Atomic $other_type)
+    public function equals(Atomic $otherType)
     {
-        if (get_class($other_type) !== get_class($this)) {
+        if (get_class($otherType) !== get_class($this)) {
             return false;
         }
 

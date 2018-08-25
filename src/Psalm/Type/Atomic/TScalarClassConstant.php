@@ -6,19 +6,19 @@ use Psalm\Type\Atomic;
 class TScalarClassConstant extends Scalar
 {
     /** @var string */
-    public $fq_classlike_name;
+    public $fqClasslikeName;
 
     /** @var string */
-    public $const_name;
+    public $constName;
 
     /**
-     * @param string $fq_classlike_name
-     * @param string $const_name
+     * @param string $fqClasslikeName
+     * @param string $constName
      */
-    public function __construct($fq_classlike_name, $const_name)
+    public function __construct($fqClasslikeName, $constName)
     {
-        $this->fq_classlike_name = $fq_classlike_name;
-        $this->const_name = $const_name;
+        $this->fqClasslikeName = $fqClasslikeName;
+        $this->constName = $constName;
     }
 
     /**
@@ -26,7 +26,7 @@ class TScalarClassConstant extends Scalar
      */
     public function getKey()
     {
-        return 'scalar-class-constant(' . $this->fq_classlike_name . '::' . $this->const_name . ')';
+        return 'scalar-class-constant(' . $this->fqClasslikeName . '::' . $this->constName . ')';
     }
 
     /**
@@ -47,19 +47,19 @@ class TScalarClassConstant extends Scalar
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return string|null
      */
     public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     ) {
         return null;
     }

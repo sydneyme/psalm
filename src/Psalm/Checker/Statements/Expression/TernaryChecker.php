@@ -13,64 +13,64 @@ use Psalm\Type\Reconciler;
 class TernaryChecker
 {
     /**
-     * @param   StatementsChecker           $statements_checker
+     * @param   StatementsChecker           $statementsChecker
      * @param   PhpParser\Node\Expr\Ternary $stmt
      * @param   Context                     $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr\Ternary $stmt,
         Context $context
     ) {
-        $pre_referenced_var_ids = $context->referenced_var_ids;
-        $context->referenced_var_ids = [];
+        $preReferencedVarIds = $context->referencedVarIds;
+        $context->referencedVarIds = [];
 
-        $context->inside_conditional = true;
-        if (ExpressionChecker::analyze($statements_checker, $stmt->cond, $context) === false) {
+        $context->insideConditional = true;
+        if (ExpressionChecker::analyze($statementsChecker, $stmt->cond, $context) === false) {
             return false;
         }
 
-        $new_referenced_var_ids = $context->referenced_var_ids;
-        $context->referenced_var_ids = array_merge($pre_referenced_var_ids, $new_referenced_var_ids);
+        $newReferencedVarIds = $context->referencedVarIds;
+        $context->referencedVarIds = array_merge($preReferencedVarIds, $newReferencedVarIds);
 
-        $context->inside_conditional = false;
+        $context->insideConditional = false;
 
-        $t_if_context = clone $context;
+        $tIfContext = clone $context;
 
-        $if_clauses = \Psalm\Type\Algebra::getFormula(
+        $ifClauses = \Psalm\Type\Algebra::getFormula(
             $stmt->cond,
-            $statements_checker->getFQCLN(),
-            $statements_checker
+            $statementsChecker->getFQCLN(),
+            $statementsChecker
         );
 
-        $mixed_var_ids = [];
+        $mixedVarIds = [];
 
-        foreach ($context->vars_in_scope as $var_id => $type) {
+        foreach ($context->varsInScope as $varId => $type) {
             if ($type->isMixed()) {
-                $mixed_var_ids[] = $var_id;
+                $mixedVarIds[] = $varId;
             }
         }
 
-        foreach ($context->vars_possibly_in_scope as $var_id => $_) {
-            if (!isset($context->vars_in_scope[$var_id])) {
-                $mixed_var_ids[] = $var_id;
+        foreach ($context->varsPossiblyInScope as $varId => $_) {
+            if (!isset($context->varsInScope[$varId])) {
+                $mixedVarIds[] = $varId;
             }
         }
 
 
-        $if_clauses = array_values(
+        $ifClauses = array_values(
             array_map(
                 /**
                  * @return \Psalm\Clause
                  */
-                function (\Psalm\Clause $c) use ($mixed_var_ids) {
+                function (\Psalm\Clause $c) use ($mixedVarIds) {
                     $keys = array_keys($c->possibilities);
 
                     foreach ($keys as $key) {
-                        foreach ($mixed_var_ids as $mixed_var_id) {
-                            if (preg_match('/^' . preg_quote($mixed_var_id, '/') . '(\[|-)/', $key)) {
+                        foreach ($mixedVarIds as $mixedVarId) {
+                            if (preg_match('/^' . preg_quote($mixedVarId, '/') . '(\[|-)/', $key)) {
                                 return new \Psalm\Clause([], true);
                             }
                         }
@@ -78,130 +78,130 @@ class TernaryChecker
 
                     return $c;
                 },
-                $if_clauses
+                $ifClauses
             )
         );
 
-        $ternary_clauses = Algebra::simplifyCNF(array_merge($context->clauses, $if_clauses));
+        $ternaryClauses = Algebra::simplifyCNF(array_merge($context->clauses, $ifClauses));
 
-        $negated_clauses = Algebra::negateFormula($if_clauses);
+        $negatedClauses = Algebra::negateFormula($ifClauses);
 
-        $negated_if_types = Algebra::getTruthsFromFormula(
+        $negatedIfTypes = Algebra::getTruthsFromFormula(
             Algebra::simplifyCNF(
-                array_merge($context->clauses, $negated_clauses)
+                array_merge($context->clauses, $negatedClauses)
             )
         );
 
-        $reconcilable_if_types = Algebra::getTruthsFromFormula($ternary_clauses, $new_referenced_var_ids);
+        $reconcilableIfTypes = Algebra::getTruthsFromFormula($ternaryClauses, $newReferencedVarIds);
 
-        $changed_var_ids = [];
+        $changedVarIds = [];
 
-        $t_if_vars_in_scope_reconciled = Reconciler::reconcileKeyedTypes(
-            $reconcilable_if_types,
-            $t_if_context->vars_in_scope,
-            $changed_var_ids,
-            $new_referenced_var_ids,
-            $statements_checker,
-            new CodeLocation($statements_checker->getSource(), $stmt->cond),
-            $statements_checker->getSuppressedIssues()
+        $tIfVarsInScopeReconciled = Reconciler::reconcileKeyedTypes(
+            $reconcilableIfTypes,
+            $tIfContext->varsInScope,
+            $changedVarIds,
+            $newReferencedVarIds,
+            $statementsChecker,
+            new CodeLocation($statementsChecker->getSource(), $stmt->cond),
+            $statementsChecker->getSuppressedIssues()
         );
 
-        $t_if_context->vars_in_scope = $t_if_vars_in_scope_reconciled;
-        $t_else_context = clone $context;
+        $tIfContext->varsInScope = $tIfVarsInScopeReconciled;
+        $tElseContext = clone $context;
 
         if ($stmt->if) {
-            if (ExpressionChecker::analyze($statements_checker, $stmt->if, $t_if_context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $stmt->if, $tIfContext) === false) {
                 return false;
             }
 
-            foreach ($t_if_context->vars_in_scope as $var_id => $type) {
-                if (isset($context->vars_in_scope[$var_id])) {
-                    $context->vars_in_scope[$var_id] = Type::combineUnionTypes($context->vars_in_scope[$var_id], $type);
+            foreach ($tIfContext->varsInScope as $varId => $type) {
+                if (isset($context->varsInScope[$varId])) {
+                    $context->varsInScope[$varId] = Type::combineUnionTypes($context->varsInScope[$varId], $type);
                 }
             }
 
-            $context->referenced_var_ids = array_merge(
-                $context->referenced_var_ids,
-                $t_if_context->referenced_var_ids
+            $context->referencedVarIds = array_merge(
+                $context->referencedVarIds,
+                $tIfContext->referencedVarIds
             );
 
-            $context->unreferenced_vars = array_intersect_key(
-                $context->unreferenced_vars,
-                $t_if_context->unreferenced_vars
+            $context->unreferencedVars = array_intersect_key(
+                $context->unreferencedVars,
+                $tIfContext->unreferencedVars
             );
         }
 
-        if ($negated_if_types) {
-            $t_else_vars_in_scope_reconciled = Reconciler::reconcileKeyedTypes(
-                $negated_if_types,
-                $t_else_context->vars_in_scope,
-                $changed_var_ids,
-                $new_referenced_var_ids,
-                $statements_checker,
-                new CodeLocation($statements_checker->getSource(), $stmt->else),
-                $statements_checker->getSuppressedIssues()
+        if ($negatedIfTypes) {
+            $tElseVarsInScopeReconciled = Reconciler::reconcileKeyedTypes(
+                $negatedIfTypes,
+                $tElseContext->varsInScope,
+                $changedVarIds,
+                $newReferencedVarIds,
+                $statementsChecker,
+                new CodeLocation($statementsChecker->getSource(), $stmt->else),
+                $statementsChecker->getSuppressedIssues()
             );
 
-            $t_else_context->vars_in_scope = $t_else_vars_in_scope_reconciled;
+            $tElseContext->varsInScope = $tElseVarsInScopeReconciled;
         }
 
-        if (ExpressionChecker::analyze($statements_checker, $stmt->else, $t_else_context) === false) {
+        if (ExpressionChecker::analyze($statementsChecker, $stmt->else, $tElseContext) === false) {
             return false;
         }
 
-        foreach ($t_else_context->vars_in_scope as $var_id => $type) {
-            if (isset($context->vars_in_scope[$var_id])) {
-                $context->vars_in_scope[$var_id] = Type::combineUnionTypes(
-                    $context->vars_in_scope[$var_id],
+        foreach ($tElseContext->varsInScope as $varId => $type) {
+            if (isset($context->varsInScope[$varId])) {
+                $context->varsInScope[$varId] = Type::combineUnionTypes(
+                    $context->varsInScope[$varId],
                     $type
                 );
-            } elseif (isset($t_if_context->vars_in_scope[$var_id])) {
-                $context->vars_in_scope[$var_id] = Type::combineUnionTypes(
-                    $t_if_context->vars_in_scope[$var_id],
+            } elseif (isset($tIfContext->varsInScope[$varId])) {
+                $context->varsInScope[$varId] = Type::combineUnionTypes(
+                    $tIfContext->varsInScope[$varId],
                     $type
                 );
             }
         }
 
-        $context->vars_possibly_in_scope = array_merge(
-            $context->vars_possibly_in_scope,
-            $t_if_context->vars_possibly_in_scope,
-            $t_else_context->vars_possibly_in_scope
+        $context->varsPossiblyInScope = array_merge(
+            $context->varsPossiblyInScope,
+            $tIfContext->varsPossiblyInScope,
+            $tElseContext->varsPossiblyInScope
         );
 
-        $context->referenced_var_ids = array_merge(
-            $context->referenced_var_ids,
-            $t_else_context->referenced_var_ids
+        $context->referencedVarIds = array_merge(
+            $context->referencedVarIds,
+            $tElseContext->referencedVarIds
         );
 
-        $context->unreferenced_vars = array_intersect_key(
-            $context->unreferenced_vars,
-            $t_else_context->unreferenced_vars
+        $context->unreferencedVars = array_intersect_key(
+            $context->unreferencedVars,
+            $tElseContext->unreferencedVars
         );
 
-        $lhs_type = null;
+        $lhsType = null;
 
         if ($stmt->if) {
             if (isset($stmt->if->inferredType)) {
-                $lhs_type = $stmt->if->inferredType;
+                $lhsType = $stmt->if->inferredType;
             }
         } elseif (isset($stmt->cond->inferredType)) {
-            $if_return_type_reconciled = Reconciler::reconcileTypes(
+            $ifReturnTypeReconciled = Reconciler::reconcileTypes(
                 '!falsy',
                 $stmt->cond->inferredType,
                 '',
-                $statements_checker,
-                new CodeLocation($statements_checker->getSource(), $stmt),
-                $statements_checker->getSuppressedIssues()
+                $statementsChecker,
+                new CodeLocation($statementsChecker->getSource(), $stmt),
+                $statementsChecker->getSuppressedIssues()
             );
 
-            $lhs_type = $if_return_type_reconciled;
+            $lhsType = $ifReturnTypeReconciled;
         }
 
-        if (!$lhs_type || !isset($stmt->else->inferredType)) {
+        if (!$lhsType || !isset($stmt->else->inferredType)) {
             $stmt->inferredType = Type::getMixed();
         } else {
-            $stmt->inferredType = Type::combineUnionTypes($lhs_type, $stmt->else->inferredType);
+            $stmt->inferredType = Type::combineUnionTypes($lhsType, $stmt->else->inferredType);
         }
 
         return null;

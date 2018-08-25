@@ -6,19 +6,19 @@ abstract class PropertyIssue extends CodeIssue
     /**
      * @var string
      */
-    public $property_id;
+    public $propertyId;
 
     /**
      * @param string        $message
-     * @param \Psalm\CodeLocation  $code_location
-     * @param string        $property_id
+     * @param \Psalm\CodeLocation  $codeLocation
+     * @param string        $propertyId
      */
     public function __construct(
         $message,
-        \Psalm\CodeLocation $code_location,
-        $property_id
+        \Psalm\CodeLocation $codeLocation,
+        $propertyId
     ) {
-        parent::__construct($message, $code_location);
-        $this->property_id = $property_id;
+        parent::__construct($message, $codeLocation);
+        $this->propertyId = $propertyId;
     }
 }

@@ -12,139 +12,139 @@ class Functions
     /**
      * @var FileStorageProvider
      */
-    private $file_storage_provider;
+    private $fileStorageProvider;
 
     /**
      * @var array<string, FunctionLikeStorage>
      */
-    private static $stubbed_functions;
+    private static $stubbedFunctions;
 
     /**
      * @var Reflection
      */
     private $reflection;
 
-    public function __construct(FileStorageProvider $storage_provider, Reflection $reflection)
+    public function __construct(FileStorageProvider $storageProvider, Reflection $reflection)
     {
-        $this->file_storage_provider = $storage_provider;
+        $this->fileStorageProvider = $storageProvider;
         $this->reflection = $reflection;
 
-        self::$stubbed_functions = [];
+        self::$stubbedFunctions = [];
     }
 
     /**
-     * @param  StatementsChecker|null $statements_checker
-     * @param  string $function_id
+     * @param  StatementsChecker|null $statementsChecker
+     * @param  string $functionId
      *
      * @return FunctionLikeStorage
      */
-    public function getStorage($statements_checker, $function_id)
+    public function getStorage($statementsChecker, $functionId)
     {
-        if (isset(self::$stubbed_functions[strtolower($function_id)])) {
-            return self::$stubbed_functions[strtolower($function_id)];
+        if (isset(self::$stubbedFunctions[strtolower($functionId)])) {
+            return self::$stubbedFunctions[strtolower($functionId)];
         }
 
-        if ($this->reflection->hasFunction($function_id)) {
-            return $this->reflection->getFunctionStorage($function_id);
+        if ($this->reflection->hasFunction($functionId)) {
+            return $this->reflection->getFunctionStorage($functionId);
         }
 
-        if (!$statements_checker) {
-            throw new \UnexpectedValueException('$statements_checker must not be null here');
+        if (!$statementsChecker) {
+            throw new \UnexpectedValueException('$statementsChecker must not be null here');
         }
 
-        $file_path = $statements_checker->getRootFilePath();
-        $checked_file_path = $statements_checker->getFilePath();
-        $file_storage = $this->file_storage_provider->get($file_path);
+        $filePath = $statementsChecker->getRootFilePath();
+        $checkedFilePath = $statementsChecker->getFilePath();
+        $fileStorage = $this->fileStorageProvider->get($filePath);
 
-        $function_checkers = $statements_checker->getFunctionCheckers();
+        $functionCheckers = $statementsChecker->getFunctionCheckers();
 
-        if (isset($function_checkers[$function_id])) {
-            $function_id = $function_checkers[$function_id]->getMethodId();
+        if (isset($functionCheckers[$functionId])) {
+            $functionId = $functionCheckers[$functionId]->getMethodId();
 
-            if (isset($file_storage->functions[$function_id])) {
-                return $file_storage->functions[$function_id];
+            if (isset($fileStorage->functions[$functionId])) {
+                return $fileStorage->functions[$functionId];
             }
         }
 
         // closures can be returned here
-        if (isset($file_storage->functions[$function_id])) {
-            return $file_storage->functions[$function_id];
+        if (isset($fileStorage->functions[$functionId])) {
+            return $fileStorage->functions[$functionId];
         }
 
-        if (!isset($file_storage->declaring_function_ids[$function_id])) {
-            if ($checked_file_path !== $file_path) {
-                $file_storage = $this->file_storage_provider->get($checked_file_path);
+        if (!isset($fileStorage->declaringFunctionIds[$functionId])) {
+            if ($checkedFilePath !== $filePath) {
+                $fileStorage = $this->fileStorageProvider->get($checkedFilePath);
 
-                if (isset($file_storage->functions[$function_id])) {
-                    return $file_storage->functions[$function_id];
+                if (isset($fileStorage->functions[$functionId])) {
+                    return $fileStorage->functions[$functionId];
                 }
             }
 
             throw new \UnexpectedValueException(
-                'Expecting ' . $function_id . ' to have storage in ' . $file_path
+                'Expecting ' . $functionId . ' to have storage in ' . $filePath
             );
         }
 
-        $declaring_file_path = $file_storage->declaring_function_ids[$function_id];
+        $declaringFilePath = $fileStorage->declaringFunctionIds[$functionId];
 
-        $declaring_file_storage = $this->file_storage_provider->get($declaring_file_path);
+        $declaringFileStorage = $this->fileStorageProvider->get($declaringFilePath);
 
-        if (!isset($declaring_file_storage->functions[$function_id])) {
+        if (!isset($declaringFileStorage->functions[$functionId])) {
             throw new \UnexpectedValueException(
-                'Not expecting ' . $function_id . ' to not have storage in ' . $declaring_file_path
+                'Not expecting ' . $functionId . ' to not have storage in ' . $declaringFilePath
             );
         }
 
-        return $declaring_file_storage->functions[$function_id];
+        return $declaringFileStorage->functions[$functionId];
     }
 
     /**
-     * @param string $function_id
+     * @param string $functionId
      * @param FunctionLikeStorage $storage
      *
      * @return void
      */
-    public function addGlobalFunction($function_id, FunctionLikeStorage $storage)
+    public function addGlobalFunction($functionId, FunctionLikeStorage $storage)
     {
-        self::$stubbed_functions[strtolower($function_id)] = $storage;
+        self::$stubbedFunctions[strtolower($functionId)] = $storage;
     }
 
     /**
-     * @param  string  $function_id
+     * @param  string  $functionId
      *
      * @return bool
      */
-    public function hasStubbedFunction($function_id)
+    public function hasStubbedFunction($functionId)
     {
-        return isset(self::$stubbed_functions[strtolower($function_id)]);
+        return isset(self::$stubbedFunctions[strtolower($functionId)]);
     }
 
     /**
-     * @param  string $function_id
+     * @param  string $functionId
      *
      * @return bool
      */
-    public function functionExists(StatementsChecker $statements_checker, $function_id)
+    public function functionExists(StatementsChecker $statementsChecker, $functionId)
     {
-        $file_storage = $this->file_storage_provider->get($statements_checker->getRootFilePath());
+        $fileStorage = $this->fileStorageProvider->get($statementsChecker->getRootFilePath());
 
-        if (isset($file_storage->declaring_function_ids[$function_id])) {
+        if (isset($fileStorage->declaringFunctionIds[$functionId])) {
             return true;
         }
 
-        if ($this->reflection->hasFunction($function_id)) {
+        if ($this->reflection->hasFunction($functionId)) {
             return true;
         }
 
-        if (isset(self::$stubbed_functions[strtolower($function_id)])) {
+        if (isset(self::$stubbedFunctions[strtolower($functionId)])) {
             return true;
         }
 
-        if (isset($statements_checker->getFunctionCheckers()[$function_id])) {
+        if (isset($statementsChecker->getFunctionCheckers()[$functionId])) {
             return true;
         }
 
-        if ($this->reflection->registerFunction($function_id) === false) {
+        if ($this->reflection->registerFunction($functionId) === false) {
             return false;
         }
 
@@ -152,72 +152,72 @@ class Functions
     }
 
     /**
-     * @param  string                   $function_name
+     * @param  string                   $functionName
      * @param  StatementsSource         $source
      *
      * @return string
      */
-    public function getFullyQualifiedFunctionNameFromString($function_name, StatementsSource $source)
+    public function getFullyQualifiedFunctionNameFromString($functionName, StatementsSource $source)
     {
-        if (empty($function_name)) {
-            throw new \InvalidArgumentException('$function_name cannot be empty');
+        if (empty($functionName)) {
+            throw new \InvalidArgumentException('$functionName cannot be empty');
         }
 
-        if ($function_name[0] === '\\') {
-            return substr($function_name, 1);
+        if ($functionName[0] === '\\') {
+            return substr($functionName, 1);
         }
 
-        $function_name_lcase = strtolower($function_name);
+        $functionNameLcase = strtolower($functionName);
 
         $aliases = $source->getAliases();
 
-        $imported_function_namespaces = $aliases->functions;
-        $imported_namespaces = $aliases->uses;
+        $importedFunctionNamespaces = $aliases->functions;
+        $importedNamespaces = $aliases->uses;
 
-        if (strpos($function_name, '\\') !== false) {
-            $function_name_parts = explode('\\', $function_name);
-            $first_namespace = array_shift($function_name_parts);
-            $first_namespace_lcase = strtolower($first_namespace);
+        if (strpos($functionName, '\\') !== false) {
+            $functionNameParts = explode('\\', $functionName);
+            $firstNamespace = array_shift($functionNameParts);
+            $firstNamespaceLcase = strtolower($firstNamespace);
 
-            if (isset($imported_namespaces[$first_namespace_lcase])) {
-                return $imported_namespaces[$first_namespace_lcase] . '\\' . implode('\\', $function_name_parts);
+            if (isset($importedNamespaces[$firstNamespaceLcase])) {
+                return $importedNamespaces[$firstNamespaceLcase] . '\\' . implode('\\', $functionNameParts);
             }
 
-            if (isset($imported_function_namespaces[$first_namespace_lcase])) {
-                return $imported_function_namespaces[$first_namespace_lcase] . '\\' .
-                    implode('\\', $function_name_parts);
+            if (isset($importedFunctionNamespaces[$firstNamespaceLcase])) {
+                return $importedFunctionNamespaces[$firstNamespaceLcase] . '\\' .
+                    implode('\\', $functionNameParts);
             }
-        } elseif (isset($imported_namespaces[$function_name_lcase])) {
-            return $imported_namespaces[$function_name_lcase];
-        } elseif (isset($imported_function_namespaces[$function_name_lcase])) {
-            return $imported_function_namespaces[$function_name_lcase];
+        } elseif (isset($importedNamespaces[$functionNameLcase])) {
+            return $importedNamespaces[$functionNameLcase];
+        } elseif (isset($importedFunctionNamespaces[$functionNameLcase])) {
+            return $importedFunctionNamespaces[$functionNameLcase];
         }
 
         $namespace = $source->getNamespace();
 
-        return ($namespace ? $namespace . '\\' : '') . $function_name;
+        return ($namespace ? $namespace . '\\' : '') . $functionName;
     }
 
     /**
-     * @param  string $function_id
-     * @param  string $file_path
+     * @param  string $functionId
+     * @param  string $filePath
      *
      * @return bool
      */
-    public static function isVariadic(ProjectChecker $project_checker, $function_id, $file_path)
+    public static function isVariadic(ProjectChecker $projectChecker, $functionId, $filePath)
     {
-        $file_storage = $project_checker->file_storage_provider->get($file_path);
+        $fileStorage = $projectChecker->fileStorageProvider->get($filePath);
 
-        if (!isset($file_storage->declaring_function_ids[$function_id])) {
+        if (!isset($fileStorage->declaringFunctionIds[$functionId])) {
             return false;
         }
 
-        $declaring_file_path = $file_storage->declaring_function_ids[$function_id];
+        $declaringFilePath = $fileStorage->declaringFunctionIds[$functionId];
 
-        $file_storage = $declaring_file_path === $file_path
-            ? $file_storage
-            : $project_checker->file_storage_provider->get($declaring_file_path);
+        $fileStorage = $declaringFilePath === $filePath
+            ? $fileStorage
+            : $projectChecker->fileStorageProvider->get($declaringFilePath);
 
-        return isset($file_storage->functions[$function_id]) && $file_storage->functions[$function_id]->variadic;
+        return isset($fileStorage->functions[$functionId]) && $fileStorage->functions[$functionId]->variadic;
     }
 }

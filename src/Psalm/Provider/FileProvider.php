@@ -4,43 +4,43 @@ namespace Psalm\Provider;
 class FileProvider
 {
     /**
-     * @param  string  $file_path
+     * @param  string  $filePath
      *
      * @return string
      */
-    public function getContents($file_path)
+    public function getContents($filePath)
     {
-        return (string)file_get_contents($file_path);
+        return (string)file_get_contents($filePath);
     }
 
     /**
-     * @param  string  $file_path
-     * @param  string  $file_contents
+     * @param  string  $filePath
+     * @param  string  $fileContents
      *
      * @return void
      */
-    public function setContents($file_path, $file_contents)
+    public function setContents($filePath, $fileContents)
     {
-        file_put_contents($file_path, $file_contents);
+        file_put_contents($filePath, $fileContents);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return int
      */
-    public function getModifiedTime($file_path)
+    public function getModifiedTime($filePath)
     {
-        return (int)filemtime($file_path);
+        return (int)filemtime($filePath);
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return bool
      */
-    public function fileExists($file_path)
+    public function fileExists($filePath)
     {
-        return file_exists($file_path);
+        return file_exists($filePath);
     }
 }

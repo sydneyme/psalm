@@ -117,13 +117,13 @@ class RedundantConditionTest extends TestCase
                         return new A();
                     }
 
-                    $maybe_a = rand(0, 1) ? new A : null;
+                    $maybeA = rand(0, 1) ? new A : null;
 
-                    if ($maybe_a === null) {
-                        $maybe_a = getA();
+                    if ($maybeA === null) {
+                        $maybeA = getA();
                     }
 
-                    if ($maybe_a === null) {}',
+                    if ($maybeA === null) {}',
                 'assertions' => [],
                 'error_levels' => [
                     'DocblockTypeContradiction',

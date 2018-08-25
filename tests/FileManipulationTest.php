@@ -7,7 +7,7 @@ use Psalm\Context;
 class FileManipulationTest extends TestCase
 {
     /** @var \Psalm\Checker\ProjectChecker */
-    protected $project_checker;
+    protected $projectChecker;
 
     /**
      * @return void
@@ -17,77 +17,77 @@ class FileManipulationTest extends TestCase
         FileChecker::clearCache();
         \Psalm\FileManipulation\FunctionDocblockManipulator::clearCache();
 
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
     }
 
     /**
      * @dataProvider providerFileCheckerValidCodeParse
      *
-     * @param string $input_code
-     * @param string $output_code
-     * @param string $php_version
-     * @param string[] $issues_to_fix
-     * @param bool $safe_types
+     * @param string $inputCode
+     * @param string $outputCode
+     * @param string $phpVersion
+     * @param string[] $issuesToFix
+     * @param bool $safeTypes
      *
      * @return void
      */
-    public function testValidCode($input_code, $output_code, $php_version, array $issues_to_fix, $safe_types)
+    public function testValidCode($inputCode, $outputCode, $phpVersion, array $issuesToFix, $safeTypes)
     {
-        $test_name = $this->getTestName();
-        if (strpos($test_name, 'PHP7-') !== false) {
+        $testName = $this->getTestName();
+        if (strpos($testName, 'PHP7-') !== false) {
             if (version_compare(PHP_VERSION, '7.0.0dev', '<')) {
                 $this->markTestSkipped('Test case requires PHP 7.');
 
                 return;
             }
-        } elseif (strpos($test_name, 'SKIPPED-') !== false) {
+        } elseif (strpos($testName, 'SKIPPED-') !== false) {
             $this->markTestSkipped('Skipped due to a bug.');
         }
 
         $config = new TestConfig();
 
-        $this->project_checker = new \Psalm\Checker\ProjectChecker(
+        $this->projectChecker = new \Psalm\Checker\ProjectChecker(
             $config,
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider()
         );
 
-        if (empty($issues_to_fix)) {
+        if (empty($issuesToFix)) {
             $config->addPluginPath('examples/ClassUnqualifier.php');
-            $config->initializePlugins($this->project_checker);
+            $config->initializePlugins($this->projectChecker);
         }
 
         $context = new Context();
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
         $this->addFile(
-            $file_path,
-            $input_code
+            $filePath,
+            $inputCode
         );
 
-        list($php_major_version, $php_minor_version) = explode('.', $php_version);
+        list($phpMajorVersion, $phpMinorVersion) = explode('.', $phpVersion);
 
-        $keyed_issues_to_fix = [];
+        $keyedIssuesToFix = [];
 
-        foreach ($issues_to_fix as $issue) {
-            $keyed_issues_to_fix[$issue] = true;
+        foreach ($issuesToFix as $issue) {
+            $keyedIssuesToFix[$issue] = true;
         }
 
-        $this->project_checker->setIssuesToFix($keyed_issues_to_fix);
-        $this->project_checker->alterCodeAfterCompletion(
-            (int) $php_major_version,
-            (int) $php_minor_version,
+        $this->projectChecker->setIssuesToFix($keyedIssuesToFix);
+        $this->projectChecker->alterCodeAfterCompletion(
+            (int) $phpMajorVersion,
+            (int) $phpMinorVersion,
             false,
-            $safe_types
+            $safeTypes
         );
 
-        $this->analyzeFile($file_path, $context);
+        $this->analyzeFile($filePath, $context);
 
-        $this->project_checker->getCodebase()->analyzer->updateFile($file_path, false);
-        $this->assertSame($output_code, $this->project_checker->getCodebase()->getFileContents($file_path));
+        $this->projectChecker->getCodebase()->analyzer->updateFile($filePath, false);
+        $this->assertSame($outputCode, $this->projectChecker->getCodebase()->getFileContents($filePath));
     }
 
     /**

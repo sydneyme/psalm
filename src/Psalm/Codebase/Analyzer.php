@@ -27,146 +27,146 @@ class Analyzer
     /**
      * @var FileProvider
      */
-    private $file_provider;
+    private $fileProvider;
 
     /**
      * @var FileStorageProvider
      */
-    private $file_storage_provider;
+    private $fileStorageProvider;
 
     /**
      * @var bool
      */
-    private $debug_output;
+    private $debugOutput;
 
     /**
      * Used to store counts of mixed vs non-mixed variables
      *
      * @var array<string, array{0: int, 1: int}
      */
-    private $mixed_counts = [];
+    private $mixedCounts = [];
 
     /**
      * @var bool
      */
-    private $count_mixed = true;
+    private $countMixed = true;
 
     /**
      * We analyze more files than we necessarily report errors in
      *
      * @var array<string, string>
      */
-    private $files_to_analyze = [];
+    private $filesToAnalyze = [];
 
     /**
-     * @param bool $debug_output
+     * @param bool $debugOutput
      */
     public function __construct(
         Config $config,
-        FileProvider $file_provider,
-        FileStorageProvider $file_storage_provider,
-        $debug_output
+        FileProvider $fileProvider,
+        FileStorageProvider $fileStorageProvider,
+        $debugOutput
     ) {
         $this->config = $config;
-        $this->file_provider = $file_provider;
-        $this->file_storage_provider = $file_storage_provider;
-        $this->debug_output = $debug_output;
+        $this->fileProvider = $fileProvider;
+        $this->fileStorageProvider = $fileStorageProvider;
+        $this->debugOutput = $debugOutput;
     }
 
     /**
-     * @param array<string, string> $files_to_analyze
+     * @param array<string, string> $filesToAnalyze
      *
      * @return void
      */
-    public function addFiles(array $files_to_analyze)
+    public function addFiles(array $filesToAnalyze)
     {
-        $this->files_to_analyze += $files_to_analyze;
+        $this->filesToAnalyze += $filesToAnalyze;
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return bool
      */
-    public function canReportIssues($file_path)
+    public function canReportIssues($filePath)
     {
-        return isset($this->files_to_analyze[$file_path]);
+        return isset($this->filesToAnalyze[$filePath]);
     }
 
     /**
-     * @param  string $file_path
-     * @param  array<string, string> $filetype_checkers
+     * @param  string $filePath
+     * @param  array<string, string> $filetypeCheckers
      *
      * @return FileChecker
      *
      * @psalm-suppress MixedOperand
      */
-    private function getFileChecker(ProjectChecker $project_checker, $file_path, array $filetype_checkers)
+    private function getFileChecker(ProjectChecker $projectChecker, $filePath, array $filetypeCheckers)
     {
-        $extension = (string)pathinfo($file_path)['extension'];
+        $extension = (string)pathinfo($filePath)['extension'];
 
-        $file_name = $this->config->shortenFileName($file_path);
+        $fileName = $this->config->shortenFileName($filePath);
 
-        if (isset($filetype_checkers[$extension])) {
+        if (isset($filetypeCheckers[$extension])) {
             /** @var FileChecker */
-            $file_checker = new $filetype_checkers[$extension]($project_checker, $file_path, $file_name);
+            $fileChecker = new $filetypeCheckers[$extension]($projectChecker, $filePath, $fileName);
         } else {
-            $file_checker = new FileChecker($project_checker, $file_path, $file_name);
+            $fileChecker = new FileChecker($projectChecker, $filePath, $fileName);
         }
 
-        if ($this->debug_output) {
-            echo 'Getting ' . $file_path . "\n";
+        if ($this->debugOutput) {
+            echo 'Getting ' . $filePath . "\n";
         }
 
-        return $file_checker;
+        return $fileChecker;
     }
 
     /**
-     * @param  ProjectChecker $project_checker
-     * @param  int            $pool_size
-     * @param  bool           $alter_code
+     * @param  ProjectChecker $projectChecker
+     * @param  int            $poolSize
+     * @param  bool           $alterCode
      *
      * @return void
      */
-    public function analyzeFiles(ProjectChecker $project_checker, $pool_size, $alter_code)
+    public function analyzeFiles(ProjectChecker $projectChecker, $poolSize, $alterCode)
     {
-        $filetype_checkers = $this->config->getFiletypeCheckers();
+        $filetypeCheckers = $this->config->getFiletypeCheckers();
 
-        $analysis_worker =
+        $analysisWorker =
             /**
              * @param int $_
-             * @param string $file_path
+             * @param string $filePath
              *
              * @return void
              */
-            function ($_, $file_path) use ($project_checker, $filetype_checkers) {
-                $file_checker = $this->getFileChecker($project_checker, $file_path, $filetype_checkers);
+            function ($_, $filePath) use ($projectChecker, $filetypeCheckers) {
+                $fileChecker = $this->getFileChecker($projectChecker, $filePath, $filetypeCheckers);
 
-                if ($this->debug_output) {
-                    echo 'Analyzing ' . $file_checker->getFilePath() . "\n";
+                if ($this->debugOutput) {
+                    echo 'Analyzing ' . $fileChecker->getFilePath() . "\n";
                 }
 
-                $file_checker->analyze(null);
+                $fileChecker->analyze(null);
             };
 
-        if ($pool_size > 1 && count($this->files_to_analyze) > $pool_size) {
-            $process_file_paths = [];
+        if ($poolSize > 1 && count($this->filesToAnalyze) > $poolSize) {
+            $processFilePaths = [];
 
             $i = 0;
 
-            foreach ($this->files_to_analyze as $file_path) {
-                $process_file_paths[$i % $pool_size][] = $file_path;
+            foreach ($this->filesToAnalyze as $filePath) {
+                $processFilePaths[$i % $poolSize][] = $filePath;
                 ++$i;
             }
 
             // Run analysis one file at a time, splitting the set of
             // files up among a given number of child processes.
             $pool = new \Psalm\Fork\Pool(
-                $process_file_paths,
+                $processFilePaths,
                 /** @return void */
                 function () {
                 },
-                $analysis_worker,
+                $analysisWorker,
                 /** @return array */
                 function () {
                     return [
@@ -184,99 +184,99 @@ class Analyzer
              *  snippet_from: int, snippet_to: int, column_from: int, column_to: int}>, file_references: array<string,
              *  array<string,bool>>, mixed_counts: array<string, array{0: int, 1: int}>}>
              */
-            $forked_pool_data = $pool->wait();
+            $forkedPoolData = $pool->wait();
 
-            foreach ($forked_pool_data as $pool_data) {
-                IssueBuffer::addIssues($pool_data['issues']);
-                FileReferenceProvider::addFileReferences($pool_data['file_references']);
+            foreach ($forkedPoolData as $poolData) {
+                IssueBuffer::addIssues($poolData['issues']);
+                FileReferenceProvider::addFileReferences($poolData['file_references']);
 
-                foreach ($pool_data['mixed_counts'] as $file_path => list($mixed_count, $nonmixed_count)) {
-                    if (!isset($this->mixed_counts[$file_path])) {
-                        $this->mixed_counts[$file_path] = [$mixed_count, $nonmixed_count];
+                foreach ($poolData['mixed_counts'] as $filePath => list($mixedCount, $nonmixedCount)) {
+                    if (!isset($this->mixedCounts[$filePath])) {
+                        $this->mixedCounts[$filePath] = [$mixedCount, $nonmixedCount];
                     } else {
-                        $this->mixed_counts[$file_path][0] += $mixed_count;
-                        $this->mixed_counts[$file_path][1] += $nonmixed_count;
+                        $this->mixedCounts[$filePath][0] += $mixedCount;
+                        $this->mixedCounts[$filePath][1] += $nonmixedCount;
                     }
                 }
             }
 
             // TODO: Tell the caller that the fork pool encountered an error in another PR?
-            // $did_fork_pool_have_error = $pool->didHaveError();
+            // $didForkPoolHaveError = $pool->didHaveError();
         } else {
             $i = 0;
 
-            foreach ($this->files_to_analyze as $file_path => $_) {
-                $analysis_worker($i, $file_path);
+            foreach ($this->filesToAnalyze as $filePath => $_) {
+                $analysisWorker($i, $filePath);
                 ++$i;
             }
         }
 
-        if ($alter_code) {
-            foreach ($this->files_to_analyze as $file_path) {
-                $this->updateFile($file_path, $project_checker->dry_run, true);
+        if ($alterCode) {
+            foreach ($this->filesToAnalyze as $filePath) {
+                $this->updateFile($filePath, $projectChecker->dryRun, true);
             }
         }
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return array{0:int, 1:int}
      */
-    public function getMixedCountsForFile($file_path)
+    public function getMixedCountsForFile($filePath)
     {
-        if (!isset($this->mixed_counts[$file_path])) {
-            $this->mixed_counts[$file_path] = [0, 0];
+        if (!isset($this->mixedCounts[$filePath])) {
+            $this->mixedCounts[$filePath] = [0, 0];
         }
 
-        return $this->mixed_counts[$file_path];
+        return $this->mixedCounts[$filePath];
     }
 
     /**
-     * @param  string $file_path
-     * @param  array{0:int, 1:int} $mixed_counts
+     * @param  string $filePath
+     * @param  array{0:int, 1:int} $mixedCounts
      *
      * @return void
      */
-    public function setMixedCountsForFile($file_path, array $mixed_counts)
+    public function setMixedCountsForFile($filePath, array $mixedCounts)
     {
-        $this->mixed_counts[$file_path] = $mixed_counts;
+        $this->mixedCounts[$filePath] = $mixedCounts;
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return void
      */
-    public function incrementMixedCount($file_path)
+    public function incrementMixedCount($filePath)
     {
-        if (!$this->count_mixed) {
+        if (!$this->countMixed) {
             return;
         }
 
-        if (!isset($this->mixed_counts[$file_path])) {
-            $this->mixed_counts[$file_path] = [0, 0];
+        if (!isset($this->mixedCounts[$filePath])) {
+            $this->mixedCounts[$filePath] = [0, 0];
         }
 
-        ++$this->mixed_counts[$file_path][0];
+        ++$this->mixedCounts[$filePath][0];
     }
 
     /**
-     * @param  string $file_path
+     * @param  string $filePath
      *
      * @return void
      */
-    public function incrementNonMixedCount($file_path)
+    public function incrementNonMixedCount($filePath)
     {
-        if (!$this->count_mixed) {
+        if (!$this->countMixed) {
             return;
         }
 
-        if (!isset($this->mixed_counts[$file_path])) {
-            $this->mixed_counts[$file_path] = [0, 0];
+        if (!isset($this->mixedCounts[$filePath])) {
+            $this->mixedCounts[$filePath] = [0, 0];
         }
 
-        ++$this->mixed_counts[$file_path][1];
+        ++$this->mixedCounts[$filePath][1];
     }
 
     /**
@@ -284,7 +284,7 @@ class Analyzer
      */
     public function getMixedCounts()
     {
-        return $this->mixed_counts;
+        return $this->mixedCounts;
     }
 
     /**
@@ -292,46 +292,46 @@ class Analyzer
      */
     public function getTypeInferenceSummary()
     {
-        $mixed_count = 0;
-        $nonmixed_count = 0;
+        $mixedCount = 0;
+        $nonmixedCount = 0;
 
-        $all_deep_scanned_files = [];
+        $allDeepScannedFiles = [];
 
-        foreach ($this->files_to_analyze as $file_path => $_) {
-            $all_deep_scanned_files[$file_path] = true;
+        foreach ($this->filesToAnalyze as $filePath => $_) {
+            $allDeepScannedFiles[$filePath] = true;
 
-            foreach ($this->file_storage_provider->get($file_path)->required_file_paths as $required_file_path) {
-                $all_deep_scanned_files[$required_file_path] = true;
+            foreach ($this->fileStorageProvider->get($filePath)->requiredFilePaths as $requiredFilePath) {
+                $allDeepScannedFiles[$requiredFilePath] = true;
             }
         }
 
-        foreach ($all_deep_scanned_files as $file_path => $_) {
-            if (!$this->config->reportTypeStatsForFile($file_path)) {
+        foreach ($allDeepScannedFiles as $filePath => $_) {
+            if (!$this->config->reportTypeStatsForFile($filePath)) {
                 continue;
             }
 
-            if (isset($this->mixed_counts[$file_path])) {
-                list($path_mixed_count, $path_nonmixed_count) = $this->mixed_counts[$file_path];
-                $mixed_count += $path_mixed_count;
-                $nonmixed_count += $path_nonmixed_count;
+            if (isset($this->mixedCounts[$filePath])) {
+                list($pathMixedCount, $pathNonmixedCount) = $this->mixedCounts[$filePath];
+                $mixedCount += $pathMixedCount;
+                $nonmixedCount += $pathNonmixedCount;
             }
         }
 
-        $total = $mixed_count + $nonmixed_count;
+        $total = $mixedCount + $nonmixedCount;
 
-        $total_files = count($all_deep_scanned_files);
+        $totalFiles = count($allDeepScannedFiles);
 
-        if (!$total_files) {
+        if (!$totalFiles) {
             return 'No files analyzed';
         }
 
         if (!$total) {
             return 'Psalm was unable to infer types in any of '
-                . $total_files . ' file' . ($total_files > 1 ? 's' : '');
+                . $totalFiles . ' file' . ($totalFiles > 1 ? 's' : '');
         }
 
-        return 'Psalm was able to infer types for ' . number_format(100 * $nonmixed_count / $total, 3) . '%'
-            . ' of analyzed code (' . $total_files . ' file' . ($total_files > 1 ? 's' : '') . ')';
+        return 'Psalm was able to infer types for ' . number_format(100 * $nonmixedCount / $total, 3) . '%'
+            . ' of analyzed code (' . $totalFiles . ' file' . ($totalFiles > 1 ? 's' : '') . ')';
     }
 
     /**
@@ -341,26 +341,26 @@ class Analyzer
     {
         $stats = '';
 
-        $all_deep_scanned_files = [];
+        $allDeepScannedFiles = [];
 
-        foreach ($this->files_to_analyze as $file_path => $_) {
-            $all_deep_scanned_files[$file_path] = true;
+        foreach ($this->filesToAnalyze as $filePath => $_) {
+            $allDeepScannedFiles[$filePath] = true;
 
-            if (!$this->config->reportTypeStatsForFile($file_path)) {
+            if (!$this->config->reportTypeStatsForFile($filePath)) {
                 continue;
             }
 
-            foreach ($this->file_storage_provider->get($file_path)->required_file_paths as $required_file_path) {
-                $all_deep_scanned_files[$required_file_path] = true;
+            foreach ($this->fileStorageProvider->get($filePath)->requiredFilePaths as $requiredFilePath) {
+                $allDeepScannedFiles[$requiredFilePath] = true;
             }
         }
 
-        foreach ($all_deep_scanned_files as $file_path => $_) {
-            if (isset($this->mixed_counts[$file_path])) {
-                list($path_mixed_count, $path_nonmixed_count) = $this->mixed_counts[$file_path];
-                $stats .= number_format(100 * $path_nonmixed_count / ($path_mixed_count + $path_nonmixed_count), 0)
-                    . '% ' . $this->config->shortenFileName($file_path)
-                    . ' (' . $path_mixed_count . ' mixed)' . "\n";
+        foreach ($allDeepScannedFiles as $filePath => $_) {
+            if (isset($this->mixedCounts[$filePath])) {
+                list($pathMixedCount, $pathNonmixedCount) = $this->mixedCounts[$filePath];
+                $stats .= number_format(100 * $pathNonmixedCount / ($pathMixedCount + $pathNonmixedCount), 0)
+                    . '% ' . $this->config->shortenFileName($filePath)
+                    . ' (' . $pathMixedCount . ' mixed)' . "\n";
             }
         }
 
@@ -372,7 +372,7 @@ class Analyzer
      */
     public function disableMixedCounts()
     {
-        $this->count_mixed = false;
+        $this->countMixed = false;
     }
 
     /**
@@ -380,33 +380,33 @@ class Analyzer
      */
     public function enableMixedCounts()
     {
-        $this->count_mixed = true;
+        $this->countMixed = true;
     }
 
     /**
-     * @param  string $file_path
-     * @param  bool $dry_run
-     * @param  bool $output_changes to console
+     * @param  string $filePath
+     * @param  bool $dryRun
+     * @param  bool $outputChanges to console
      *
      * @return void
      */
-    public function updateFile($file_path, $dry_run, $output_changes = false)
+    public function updateFile($filePath, $dryRun, $outputChanges = false)
     {
-        $new_return_type_manipulations = FunctionDocblockManipulator::getManipulationsForFile($file_path);
+        $newReturnTypeManipulations = FunctionDocblockManipulator::getManipulationsForFile($filePath);
 
-        $other_manipulations = FileManipulationBuffer::getForFile($file_path);
+        $otherManipulations = FileManipulationBuffer::getForFile($filePath);
 
-        $file_manipulations = array_merge($new_return_type_manipulations, $other_manipulations);
+        $fileManipulations = array_merge($newReturnTypeManipulations, $otherManipulations);
 
         usort(
-            $file_manipulations,
+            $fileManipulations,
             /**
              * @return int
              */
             function (FileManipulation $a, FileManipulation $b) {
                 if ($a->start === $b->start) {
                     if ($b->end === $a->end) {
-                        return $b->insertion_text > $a->insertion_text ? 1 : -1;
+                        return $b->insertionText > $a->insertionText ? 1 : -1;
                     }
 
                     return $b->end > $a->end ? 1 : -1;
@@ -416,20 +416,20 @@ class Analyzer
             }
         );
 
-        $docblock_update_count = count($file_manipulations);
+        $docblockUpdateCount = count($fileManipulations);
 
-        $existing_contents = $this->file_provider->getContents($file_path);
+        $existingContents = $this->fileProvider->getContents($filePath);
 
-        foreach ($file_manipulations as $manipulation) {
-            $existing_contents
-                = substr($existing_contents, 0, $manipulation->start)
-                    . $manipulation->insertion_text
-                    . substr($existing_contents, $manipulation->end);
+        foreach ($fileManipulations as $manipulation) {
+            $existingContents
+                = substr($existingContents, 0, $manipulation->start)
+                    . $manipulation->insertionText
+                    . substr($existingContents, $manipulation->end);
         }
 
-        if ($docblock_update_count) {
-            if ($dry_run) {
-                echo $file_path . ':' . "\n";
+        if ($docblockUpdateCount) {
+            if ($dryRun) {
+                echo $filePath . ':' . "\n";
 
                 $differ = new \PhpCsFixer\Diff\v2_0\Differ(
                     new \PhpCsFixer\Diff\GeckoPackages\DiffOutputBuilder\UnifiedDiffOutputBuilder([
@@ -438,16 +438,16 @@ class Analyzer
                     ])
                 );
 
-                echo (string) $differ->diff($this->file_provider->getContents($file_path), $existing_contents);
+                echo (string) $differ->diff($this->fileProvider->getContents($filePath), $existingContents);
 
                 return;
             }
 
-            if ($output_changes) {
-                echo 'Altering ' . $file_path . "\n";
+            if ($outputChanges) {
+                echo 'Altering ' . $filePath . "\n";
             }
 
-            $this->file_provider->setContents($file_path, $existing_contents);
+            $this->fileProvider->setContents($filePath, $existingContents);
         }
     }
 }

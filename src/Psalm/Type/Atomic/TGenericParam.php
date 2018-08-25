@@ -6,19 +6,19 @@ class TGenericParam extends \Psalm\Type\Atomic
     /**
      * @var string
      */
-    public $param_name;
+    public $paramName;
 
     /**
-     * @param string $param_name
+     * @param string $paramName
      */
-    public function __construct($param_name)
+    public function __construct($paramName)
     {
-        $this->param_name = $param_name;
+        $this->paramName = $paramName;
     }
 
     public function __toString()
     {
-        return $this->param_name;
+        return $this->paramName;
     }
 
     /**
@@ -26,7 +26,7 @@ class TGenericParam extends \Psalm\Type\Atomic
      */
     public function getKey()
     {
-        return $this->param_name;
+        return $this->paramName;
     }
 
     public function getId()
@@ -36,19 +36,19 @@ class TGenericParam extends \Psalm\Type\Atomic
 
     /**
      * @param  string|null   $namespace
-     * @param  array<string> $aliased_classes
-     * @param  string|null   $this_class
-     * @param  int           $php_major_version
-     * @param  int           $php_minor_version
+     * @param  array<string> $aliasedClasses
+     * @param  string|null   $thisClass
+     * @param  int           $phpMajorVersion
+     * @param  int           $phpMinorVersion
      *
      * @return null
      */
     public function toPhpString(
         $namespace,
-        array $aliased_classes,
-        $this_class,
-        $php_major_version,
-        $php_minor_version
+        array $aliasedClasses,
+        $thisClass,
+        $phpMajorVersion,
+        $phpMinorVersion
     ) {
         return null;
     }

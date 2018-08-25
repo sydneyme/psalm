@@ -14,7 +14,7 @@ class AnnotationTest extends TestCase
      */
     public function testPhpStormGenericsWithValidArgument()
     {
-        Config::getInstance()->allow_phpstorm_generics = true;
+        Config::getInstance()->allowPhpstormGenerics = true;
 
         $this->addFile(
             'somefile.php',
@@ -40,7 +40,7 @@ class AnnotationTest extends TestCase
      */
     public function testPhpStormGenericsWithClassProperty()
     {
-        Config::getInstance()->allow_phpstorm_generics = true;
+        Config::getInstance()->allowPhpstormGenerics = true;
 
         $this->addFile(
             'somefile.php',
@@ -68,7 +68,7 @@ class AnnotationTest extends TestCase
      */
     public function testPhpStormGenericsWithValidIterableArgument()
     {
-        Config::getInstance()->allow_phpstorm_generics = true;
+        Config::getInstance()->allowPhpstormGenerics = true;
 
         $this->addFile(
             'somefile.php',
@@ -94,7 +94,7 @@ class AnnotationTest extends TestCase
      */
     public function testPhpStormGenericsInvalidArgument()
     {
-        Config::getInstance()->allow_phpstorm_generics = true;
+        Config::getInstance()->allowPhpstormGenerics = true;
 
         $this->addFile(
             'somefile.php',
@@ -119,7 +119,7 @@ class AnnotationTest extends TestCase
      */
     public function testPhpStormGenericsNoTypehint()
     {
-        Config::getInstance()->allow_phpstorm_generics = true;
+        Config::getInstance()->allowPhpstormGenerics = true;
 
         $this->addFile(
             'somefile.php',
@@ -159,7 +159,7 @@ class AnnotationTest extends TestCase
      */
     public function testInvalidParamDefaultButAllowedInConfig()
     {
-        Config::getInstance()->add_param_default_to_docblock_type = true;
+        Config::getInstance()->addParamDefaultToDocblockType = true;
 
         $this->addFile(
             'somefile.php',
@@ -184,7 +184,7 @@ class AnnotationTest extends TestCase
      */
     public function testInvalidTypehintParamDefaultButAllowedInConfig()
     {
-        Config::getInstance()->add_param_default_to_docblock_type = true;
+        Config::getInstance()->addParamDefaultToDocblockType = true;
 
         $this->addFile(
             'somefile.php',
@@ -203,7 +203,7 @@ class AnnotationTest extends TestCase
      */
     public function testUndocumentedThrow()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',
@@ -231,7 +231,7 @@ class AnnotationTest extends TestCase
      */
     public function testDocumentedThrow()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',
@@ -266,7 +266,7 @@ class AnnotationTest extends TestCase
      */
     public function testUndocumentedThrowInFunctionCall()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',
@@ -302,7 +302,7 @@ class AnnotationTest extends TestCase
      */
     public function testDocumentedThrowInFunctionCall()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',
@@ -342,7 +342,7 @@ class AnnotationTest extends TestCase
      */
     public function testCaughtThrowInFunctionCall()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',
@@ -385,7 +385,7 @@ class AnnotationTest extends TestCase
      */
     public function testUncaughtThrowInFunctionCall()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',
@@ -425,7 +425,7 @@ class AnnotationTest extends TestCase
      */
     public function testCaughtAllThrowInFunctionCall()
     {
-        Config::getInstance()->check_for_throws_docblock = true;
+        Config::getInstance()->checkForThrowsDocblock = true;
 
         $this->addFile(
             'somefile.php',

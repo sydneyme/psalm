@@ -10,26 +10,26 @@ class NoFileStorageCacheProvider extends \Psalm\Provider\FileStorageCacheProvide
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return void
      */
-    public function writeToCache(FileStorage $storage, $file_contents)
+    public function writeToCache(FileStorage $storage, $fileContents)
     {
     }
 
     /**
-     * @param  string $file_path
-     * @param  string $file_contents
+     * @param  string $filePath
+     * @param  string $fileContents
      *
      * @return FileStorage|null
      */
-    public function getLatestFromCache($file_path, $file_contents)
+    public function getLatestFromCache($filePath, $fileContents)
     {
     }
 
-    public function removeCacheForFile($file_path)
+    public function removeCacheForFile($filePath)
     {
     }
 }

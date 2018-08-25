@@ -208,9 +208,9 @@ class MagicPropertyTest extends TestCase
                         /** @var string|null */
                         public $foo;
 
-                        public function __get(string $var_name) : ?string {
-                            if ($var_name === "foo") {
-                                return $this->$var_name;
+                        public function __get(string $varName) : ?string {
+                            if ($varName === "foo") {
+                                return $this->$varName;
                             }
 
                             return null;
@@ -618,9 +618,9 @@ class MagicPropertyTest extends TestCase
                         /** @var string|null */
                         public $foo;
 
-                        public function __get(string $var_name) : ?string {
-                            if ($var_name === "bar") {
-                                return $this->$var_name;
+                        public function __get(string $varName) : ?string {
+                            if ($varName === "bar") {
+                                return $this->$varName;
                             }
 
                             return null;

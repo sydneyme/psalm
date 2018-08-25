@@ -10,17 +10,17 @@ class FileManipulation
     public $end;
 
     /** @var string */
-    public $insertion_text;
+    public $insertionText;
 
     /**
      * @param int $start
      * @param int $end
-     * @param string $insertion_text
+     * @param string $insertionText
      */
-    public function __construct($start, $end, $insertion_text)
+    public function __construct($start, $end, $insertionText)
     {
         $this->start = $start;
         $this->end = $end;
-        $this->insertion_text = $insertion_text;
+        $this->insertionText = $insertionText;
     }
 }

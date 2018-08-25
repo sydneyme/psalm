@@ -9,7 +9,7 @@ class PropertyStorage
     /**
      * @var bool
      */
-    public $is_static;
+    public $isStatic;
 
     /**
      * @var int
@@ -24,7 +24,7 @@ class PropertyStorage
     /**
      * @var CodeLocation|null
      */
-    public $type_location;
+    public $typeLocation;
 
     /**
      * @var Type\Union|false
@@ -34,12 +34,12 @@ class PropertyStorage
     /**
      * @var Type\Union|null
      */
-    public $suggested_type;
+    public $suggestedType;
 
     /**
      * @var bool
      */
-    public $has_default = false;
+    public $hasDefault = false;
 
     /**
      * @var bool
@@ -49,5 +49,5 @@ class PropertyStorage
     /**
      * @var array<string, array<int, CodeLocation>>|null
      */
-    public $referencing_locations;
+    public $referencingLocations;
 }

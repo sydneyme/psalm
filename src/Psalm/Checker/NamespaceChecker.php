@@ -24,14 +24,14 @@ class NamespaceChecker extends SourceChecker implements StatementsSource
     /**
      * @var string
      */
-    private $namespace_name;
+    private $namespaceName;
 
     /**
      * A lookup table for public namespace constants
      *
      * @var array<string, array<string, Type\Union>>
      */
-    protected static $public_namespace_constants = [];
+    protected static $publicNamespaceConstants = [];
 
     /**
      * @param Namespace_        $namespace
@@ -41,7 +41,7 @@ class NamespaceChecker extends SourceChecker implements StatementsSource
     {
         $this->source = $source;
         $this->namespace = $namespace;
-        $this->namespace_name = $this->namespace->name ? implode('\\', $this->namespace->name->parts) : '';
+        $this->namespaceName = $this->namespace->name ? implode('\\', $this->namespace->name->parts) : '';
     }
 
     /**
@@ -49,16 +49,16 @@ class NamespaceChecker extends SourceChecker implements StatementsSource
      */
     public function collectAnalyzableInformation()
     {
-        $leftover_stmts = [];
+        $leftoverStmts = [];
 
-        if (!isset(self::$public_namespace_constants[$this->namespace_name])) {
-            self::$public_namespace_constants[$this->namespace_name] = [];
+        if (!isset(self::$publicNamespaceConstants[$this->namespaceName])) {
+            self::$publicNamespaceConstants[$this->namespaceName] = [];
         }
 
-        $codebase = $this->getFileChecker()->project_checker->codebase;
+        $codebase = $this->getFileChecker()->projectChecker->codebase;
 
-        $namespace_context = new Context();
-        $namespace_context->collect_references = $codebase->collect_references;
+        $namespaceContext = new Context();
+        $namespaceContext->collectReferences = $codebase->collectReferences;
 
         foreach ($this->namespace->stmts as $stmt) {
             if ($stmt instanceof PhpParser\Node\Stmt\ClassLike) {
@@ -69,21 +69,21 @@ class NamespaceChecker extends SourceChecker implements StatementsSource
                 $this->visitGroupUse($stmt);
             } elseif ($stmt instanceof PhpParser\Node\Stmt\Const_) {
                 foreach ($stmt->consts as $const) {
-                    self::$public_namespace_constants[$this->namespace_name][$const->name->name] = Type::getMixed();
+                    self::$publicNamespaceConstants[$this->namespaceName][$const->name->name] = Type::getMixed();
                 }
 
-                $leftover_stmts[] = $stmt;
+                $leftoverStmts[] = $stmt;
             } else {
-                $leftover_stmts[] = $stmt;
+                $leftoverStmts[] = $stmt;
             }
         }
 
-        if ($leftover_stmts) {
-            $statements_checker = new StatementsChecker($this);
+        if ($leftoverStmts) {
+            $statementsChecker = new StatementsChecker($this);
             $context = new Context();
-            $context->collect_references = $codebase->collect_references;
-            $context->is_global = true;
-            $statements_checker->analyze($leftover_stmts, $context);
+            $context->collectReferences = $codebase->collectReferences;
+            $context->isGlobal = true;
+            $statementsChecker->analyze($leftoverStmts, $context);
         }
     }
 
@@ -98,17 +98,17 @@ class NamespaceChecker extends SourceChecker implements StatementsSource
             throw new \UnexpectedValueException('Did not expect anonymous class here');
         }
 
-        $fq_class_name = Type::getFQCLNFromString($stmt->name->name, $this->getAliases());
+        $fqClassName = Type::getFQCLNFromString($stmt->name->name, $this->getAliases());
 
         if ($stmt instanceof PhpParser\Node\Stmt\Class_) {
             $this->source->addNamespacedClassChecker(
-                $fq_class_name,
-                new ClassChecker($stmt, $this, $fq_class_name)
+                $fqClassName,
+                new ClassChecker($stmt, $this, $fqClassName)
             );
         } elseif ($stmt instanceof PhpParser\Node\Stmt\Interface_) {
             $this->source->addNamespacedInterfaceChecker(
-                $fq_class_name,
-                new InterfaceChecker($stmt, $this, $fq_class_name)
+                $fqClassName,
+                new InterfaceChecker($stmt, $this, $fqClassName)
             );
         }
     }
@@ -118,35 +118,35 @@ class NamespaceChecker extends SourceChecker implements StatementsSource
      */
     public function getNamespace()
     {
-        return $this->namespace_name;
+        return $this->namespaceName;
     }
 
     /**
-     * @param string     $const_name
-     * @param Type\Union $const_type
+     * @param string     $constName
+     * @param Type\Union $constType
      *
      * @return void
      */
-    public function setConstType($const_name, Type\Union $const_type)
+    public function setConstType($constName, Type\Union $constType)
     {
-        self::$public_namespace_constants[$this->namespace_name][$const_name] = $const_type;
+        self::$publicNamespaceConstants[$this->namespaceName][$constName] = $constType;
     }
 
     /**
-     * @param  string $namespace_name
+     * @param  string $namespaceName
      * @param  mixed  $visibility
      *
      * @return array<string,Type\Union>
      */
-    public static function getConstantsForNamespace($namespace_name, $visibility)
+    public static function getConstantsForNamespace($namespaceName, $visibility)
     {
         // @todo this does not allow for loading in namespace constants not already defined in the current sweep
-        if (!isset(self::$public_namespace_constants[$namespace_name])) {
-            self::$public_namespace_constants[$namespace_name] = [];
+        if (!isset(self::$publicNamespaceConstants[$namespaceName])) {
+            self::$publicNamespaceConstants[$namespaceName] = [];
         }
 
         if ($visibility === \ReflectionProperty::IS_PUBLIC) {
-            return self::$public_namespace_constants[$namespace_name];
+            return self::$publicNamespaceConstants[$namespaceName];
         }
 
         throw new \InvalidArgumentException('Given $visibility not supported');

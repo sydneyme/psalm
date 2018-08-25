@@ -19,37 +19,37 @@ class FunctionLikeStorage
     /**
      * @var array<string, Type\Union|null>
      */
-    public $param_types = [];
+    public $paramTypes = [];
 
     /**
      * @var Type\Union|null
      */
-    public $return_type;
+    public $returnType;
 
     /**
      * @var CodeLocation|null
      */
-    public $return_type_location;
+    public $returnTypeLocation;
 
     /**
      * @var Type\Union|null
      */
-    public $signature_return_type;
+    public $signatureReturnType;
 
     /**
      * @var CodeLocation|null
      */
-    public $signature_return_type_location;
+    public $signatureReturnTypeLocation;
 
     /**
      * @var string
      */
-    public $cased_name;
+    public $casedName;
 
     /**
      * @var array<int, string>
      */
-    public $suppressed_issues = [];
+    public $suppressedIssues = [];
 
     /**
      * @var bool
@@ -64,47 +64,47 @@ class FunctionLikeStorage
     /**
      * @var bool
      */
-    public $returns_by_ref = false;
+    public $returnsByRef = false;
 
     /**
      * @var int
      */
-    public $required_param_count;
+    public $requiredParamCount;
 
     /**
      * @var array<string, Type\Union>
      */
-    public $defined_constants = [];
+    public $definedConstants = [];
 
     /**
      * @var array<string, bool>
      */
-    public $global_variables = [];
+    public $globalVariables = [];
 
     /**
      * @var array<string, Type\Union>
      */
-    public $global_types = [];
+    public $globalTypes = [];
 
     /**
      * @var array<string, Type\Union>|null
      */
-    public $template_types;
+    public $templateTypes;
 
     /**
      * @var array<int, string>|null
      */
-    public $template_typeof_params;
+    public $templateTypeofParams;
 
     /**
      * @var bool
      */
-    public $has_template_return_type;
+    public $hasTemplateReturnType;
 
     /**
      * @var array<string, array<int, CodeLocation>>|null
      */
-    public $referencing_locations;
+    public $referencingLocations;
 
     /**
      * @var array<int, Assertion>
@@ -114,17 +114,17 @@ class FunctionLikeStorage
     /**
      * @var array<int, Assertion>
      */
-    public $if_true_assertions = [];
+    public $ifTrueAssertions = [];
 
     /**
      * @var array<int, Assertion>
      */
-    public $if_false_assertions = [];
+    public $ifFalseAssertions = [];
 
     /**
      * @var bool
      */
-    public $has_visitor_issues = false;
+    public $hasVisitorIssues = false;
 
     /**
      * @var array<string, bool>
@@ -134,5 +134,5 @@ class FunctionLikeStorage
     /**
      * @var bool
      */
-    public $has_yield = false;
+    public $hasYield = false;
 }

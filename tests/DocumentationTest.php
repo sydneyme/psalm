@@ -8,54 +8,54 @@ use Psalm\Context;
 class DocumentationTest extends TestCase
 {
     /** @var \Psalm\Checker\ProjectChecker */
-    protected $project_checker;
+    protected $projectChecker;
 
     /**
      * @return array<string, array<int, string>>
      */
     private static function getCodeBlocksFromDocs()
     {
-        $issue_file = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'issues.md';
+        $issueFile = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'issues.md';
 
-        if (!file_exists($issue_file)) {
+        if (!file_exists($issueFile)) {
             throw new \UnexpectedValueException('docs not found');
         }
 
-        $file_contents = file_get_contents($issue_file);
+        $fileContents = file_get_contents($issueFile);
 
-        if (!$file_contents) {
+        if (!$fileContents) {
             throw new \UnexpectedValueException('Docs are empty');
         }
 
-        $file_lines = explode("\n", $file_contents);
+        $fileLines = explode("\n", $fileContents);
 
-        $issue_code = [];
+        $issueCode = [];
 
-        $current_issue = null;
+        $currentIssue = null;
 
-        for ($i = 0, $j = count($file_lines); $i < $j; ++$i) {
-            $current_line = $file_lines[$i];
+        for ($i = 0, $j = count($fileLines); $i < $j; ++$i) {
+            $currentLine = $fileLines[$i];
 
-            if (substr($current_line, 0, 4) === '### ') {
-                $current_issue = trim(substr($current_line, 4));
+            if (substr($currentLine, 0, 4) === '### ') {
+                $currentIssue = trim(substr($currentLine, 4));
                 ++$i;
                 continue;
             }
 
-            if (substr($current_line, 0, 6) === '```php' && $current_issue) {
-                $current_block = '';
+            if (substr($currentLine, 0, 6) === '```php' && $currentIssue) {
+                $currentBlock = '';
                 ++$i;
 
                 do {
-                    $current_block .= $file_lines[$i] . "\n";
+                    $currentBlock .= $fileLines[$i] . "\n";
                     ++$i;
-                } while (substr($file_lines[$i], 0, 3) !== '```' && $i < $j);
+                } while (substr($fileLines[$i], 0, 3) !== '```' && $i < $j);
 
-                $issue_code[(string) $current_issue][] = trim($current_block);
+                $issueCode[(string) $currentIssue][] = trim($currentBlock);
             }
         }
 
-        return $issue_code;
+        return $issueCode;
     }
 
     /**
@@ -66,11 +66,11 @@ class DocumentationTest extends TestCase
         FileChecker::clearCache();
         \Psalm\FileManipulation\FunctionDocblockManipulator::clearCache();
 
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
 
-        $this->project_checker = new \Psalm\Checker\ProjectChecker(
+        $this->projectChecker = new \Psalm\Checker\ProjectChecker(
             new TestConfig(),
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider()
@@ -82,19 +82,19 @@ class DocumentationTest extends TestCase
      */
     public function testAllIssuesCovered()
     {
-        $all_issues = ConfigTest::getAllIssues();
-        sort($all_issues);
+        $allIssues = ConfigTest::getAllIssues();
+        sort($allIssues);
 
-        $code_blocks = self::getCodeBlocksFromDocs();
+        $codeBlocks = self::getCodeBlocksFromDocs();
 
         // these cannot have code
-        $code_blocks['UnrecognizedExpression'] = true;
-        $code_blocks['UnrecognizedStatement'] = true;
+        $codeBlocks['UnrecognizedExpression'] = true;
+        $codeBlocks['UnrecognizedStatement'] = true;
 
-        $documented_issues = array_keys($code_blocks);
-        sort($documented_issues);
+        $documentedIssues = array_keys($codeBlocks);
+        sort($documentedIssues);
 
-        $this->assertSame(implode("\n", $all_issues), implode("\n", $documented_issues));
+        $this->assertSame(implode("\n", $allIssues), implode("\n", $documentedIssues));
     }
 
     /**
@@ -102,40 +102,40 @@ class DocumentationTest extends TestCase
      * @small
      *
      * @param string $code
-     * @param string $error_message
-     * @param array<string> $error_levels
-     * @param bool $check_references
+     * @param string $errorMessage
+     * @param array<string> $errorLevels
+     * @param bool $checkReferences
      *
      * @return void
      */
-    public function testInvalidCode($code, $error_message, $error_levels = [], $check_references = false)
+    public function testInvalidCode($code, $errorMessage, $errorLevels = [], $checkReferences = false)
     {
         if (strpos($this->getTestName(), 'SKIPPED-') !== false) {
             $this->markTestSkipped();
         }
 
-        if ($check_references) {
-            $this->project_checker->getCodebase()->reportUnusedCode();
+        if ($checkReferences) {
+            $this->projectChecker->getCodebase()->reportUnusedCode();
         }
 
-        foreach ($error_levels as $error_level) {
-            $this->project_checker->config->setCustomErrorLevel($error_level, Config::REPORT_SUPPRESS);
+        foreach ($errorLevels as $errorLevel) {
+            $this->projectChecker->config->setCustomErrorLevel($errorLevel, Config::REPORT_SUPPRESS);
         }
 
         $this->expectException('\Psalm\Exception\CodeException');
-        $this->expectExceptionMessageRegexp('/\b' . preg_quote($error_message, '/') . '\b/');
+        $this->expectExceptionMessageRegexp('/\b' . preg_quote($errorMessage, '/') . '\b/');
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
-        $this->addFile($file_path, $code);
+        $this->addFile($filePath, $code);
 
         $context = new Context();
-        $context->collect_references = $check_references;
+        $context->collectReferences = $checkReferences;
 
-        $this->analyzeFile($file_path, $context);
+        $this->analyzeFile($filePath, $context);
 
-        if ($check_references) {
-            $this->project_checker->getCodebase()->classlikes->checkClassReferences();
+        if ($checkReferences) {
+            $this->projectChecker->getCodebase()->classlikes->checkClassReferences();
         }
     }
 
@@ -144,10 +144,10 @@ class DocumentationTest extends TestCase
      */
     public function providerFileCheckerInvalidCodeParse()
     {
-        $invalid_code_data = [];
+        $invalidCodeData = [];
 
-        foreach (self::getCodeBlocksFromDocs() as $issue_name => $blocks) {
-            switch ($issue_name) {
+        foreach (self::getCodeBlocksFromDocs() as $issueName => $blocks) {
+            switch ($issueName) {
                 case 'MissingThrowsDocblock':
                     continue 2;
 
@@ -155,46 +155,46 @@ class DocumentationTest extends TestCase
                     continue 2;
 
                 case 'InvalidFalsableReturnType':
-                    $ignored_issues = ['FalsableReturnStatement'];
+                    $ignoredIssues = ['FalsableReturnStatement'];
                     break;
 
                 case 'InvalidNullableReturnType':
-                    $ignored_issues = ['NullableReturnStatement'];
+                    $ignoredIssues = ['NullableReturnStatement'];
                     break;
 
                 case 'InvalidReturnType':
-                    $ignored_issues = ['InvalidReturnStatement'];
+                    $ignoredIssues = ['InvalidReturnStatement'];
                     break;
 
                 case 'MixedInferredReturnType':
-                    $ignored_issues = ['MixedReturnStatement'];
+                    $ignoredIssues = ['MixedReturnStatement'];
                     break;
 
                 case 'MixedStringOffsetAssignment':
-                    $ignored_issues = ['MixedAssignment'];
+                    $ignoredIssues = ['MixedAssignment'];
                     break;
 
                 case 'ParadoxicalCondition':
-                    $ignored_issues = ['MissingParamType'];
+                    $ignoredIssues = ['MissingParamType'];
                     break;
 
                 case 'UnusedClass':
                 case 'UnusedMethod':
-                    $ignored_issues = ['UnusedVariable'];
+                    $ignoredIssues = ['UnusedVariable'];
                     break;
 
                 default:
-                    $ignored_issues = [];
+                    $ignoredIssues = [];
             }
 
-            $invalid_code_data[$issue_name] = [
+            $invalidCodeData[$issueName] = [
                 '<?php' . "\n" . $blocks[0],
-                $issue_name,
-                $ignored_issues,
-                strpos($issue_name, 'Unused') !== false || strpos($issue_name, 'Unevaluated') !== false,
+                $issueName,
+                $ignoredIssues,
+                strpos($issueName, 'Unused') !== false || strpos($issueName, 'Unevaluated') !== false,
             ];
         }
 
-        return $invalid_code_data;
+        return $invalidCodeData;
     }
 }

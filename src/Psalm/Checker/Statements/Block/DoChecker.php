@@ -16,93 +16,93 @@ class DoChecker
      * @return void
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Stmt\Do_ $stmt,
         Context $context
     ) {
-        $do_context = clone $context;
+        $doContext = clone $context;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
 
-        if ($project_checker->alter_code) {
-            $do_context->branch_point = $do_context->branch_point ?: (int) $stmt->getAttribute('startFilePos');
+        if ($projectChecker->alterCode) {
+            $doContext->branchPoint = $doContext->branchPoint ?: (int) $stmt->getAttribute('startFilePos');
         }
 
-        $loop_scope = new LoopScope($do_context, $context);
-        $loop_scope->protected_var_ids = $context->protected_var_ids;
+        $loopScope = new LoopScope($doContext, $context);
+        $loopScope->protectedVarIds = $context->protectedVarIds;
 
-        $suppressed_issues = $statements_checker->getSuppressedIssues();
+        $suppressedIssues = $statementsChecker->getSuppressedIssues();
 
-        if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-            $statements_checker->addSuppressedIssues(['RedundantCondition']);
+        if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+            $statementsChecker->addSuppressedIssues(['RedundantCondition']);
         }
-        if (!in_array('RedundantConditionGivenDocblockType', $suppressed_issues, true)) {
-            $statements_checker->addSuppressedIssues(['RedundantConditionGivenDocblockType']);
+        if (!in_array('RedundantConditionGivenDocblockType', $suppressedIssues, true)) {
+            $statementsChecker->addSuppressedIssues(['RedundantConditionGivenDocblockType']);
         }
-        if (!in_array('TypeDoesNotContainType', $suppressed_issues, true)) {
-            $statements_checker->addSuppressedIssues(['TypeDoesNotContainType']);
-        }
-
-        $do_context->loop_scope = $loop_scope;
-
-        $statements_checker->analyze($stmt->stmts, $do_context);
-
-        if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-            $statements_checker->removeSuppressedIssues(['RedundantCondition']);
-        }
-        if (!in_array('RedundantConditionGivenDocblockType', $suppressed_issues, true)) {
-            $statements_checker->removeSuppressedIssues(['RedundantConditionGivenDocblockType']);
-        }
-        if (!in_array('TypeDoesNotContainType', $suppressed_issues, true)) {
-            $statements_checker->removeSuppressedIssues(['TypeDoesNotContainType']);
+        if (!in_array('TypeDoesNotContainType', $suppressedIssues, true)) {
+            $statementsChecker->addSuppressedIssues(['TypeDoesNotContainType']);
         }
 
-        foreach ($context->vars_in_scope as $var => $type) {
+        $doContext->loopScope = $loopScope;
+
+        $statementsChecker->analyze($stmt->stmts, $doContext);
+
+        if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+            $statementsChecker->removeSuppressedIssues(['RedundantCondition']);
+        }
+        if (!in_array('RedundantConditionGivenDocblockType', $suppressedIssues, true)) {
+            $statementsChecker->removeSuppressedIssues(['RedundantConditionGivenDocblockType']);
+        }
+        if (!in_array('TypeDoesNotContainType', $suppressedIssues, true)) {
+            $statementsChecker->removeSuppressedIssues(['TypeDoesNotContainType']);
+        }
+
+        foreach ($context->varsInScope as $var => $type) {
             if ($type->isMixed()) {
                 continue;
             }
 
-            if ($do_context->hasVariable($var)) {
-                if ($context->vars_in_scope[$var]->isMixed()) {
-                    $do_context->vars_in_scope[$var] = $do_context->vars_in_scope[$var];
+            if ($doContext->hasVariable($var)) {
+                if ($context->varsInScope[$var]->isMixed()) {
+                    $doContext->varsInScope[$var] = $doContext->varsInScope[$var];
                 }
 
-                if ($do_context->vars_in_scope[$var]->getId() !== $type->getId()) {
-                    $do_context->vars_in_scope[$var] = Type::combineUnionTypes($do_context->vars_in_scope[$var], $type);
+                if ($doContext->varsInScope[$var]->getId() !== $type->getId()) {
+                    $doContext->varsInScope[$var] = Type::combineUnionTypes($doContext->varsInScope[$var], $type);
                 }
             }
         }
 
-        foreach ($do_context->vars_in_scope as $var_id => $type) {
-            if (!isset($context->vars_in_scope[$var_id])) {
-                $context->vars_in_scope[$var_id] = clone $type;
+        foreach ($doContext->varsInScope as $varId => $type) {
+            if (!isset($context->varsInScope[$varId])) {
+                $context->varsInScope[$varId] = clone $type;
             }
         }
 
-        $mixed_var_ids = [];
+        $mixedVarIds = [];
 
-        foreach ($do_context->vars_in_scope as $var_id => $type) {
+        foreach ($doContext->varsInScope as $varId => $type) {
             if ($type->isMixed()) {
-                $mixed_var_ids[] = $var_id;
+                $mixedVarIds[] = $varId;
             }
         }
 
-        $while_clauses = \Psalm\Type\Algebra::getFormula(
+        $whileClauses = \Psalm\Type\Algebra::getFormula(
             $stmt->cond,
             $context->self,
-            $statements_checker
+            $statementsChecker
         );
 
-        $while_clauses = array_values(
+        $whileClauses = array_values(
             array_filter(
-                $while_clauses,
+                $whileClauses,
                 /** @return bool */
-                function (Clause $c) use ($mixed_var_ids) {
+                function (Clause $c) use ($mixedVarIds) {
                     $keys = array_keys($c->possibilities);
 
                     foreach ($keys as $key) {
-                        foreach ($mixed_var_ids as $mixed_var_id) {
-                            if (preg_match('/^' . preg_quote($mixed_var_id, '/') . '(\[|-)/', $key)) {
+                        foreach ($mixedVarIds as $mixedVarId) {
+                            if (preg_match('/^' . preg_quote($mixedVarId, '/') . '(\[|-)/', $key)) {
                                 return false;
                             }
                         }
@@ -113,101 +113,101 @@ class DoChecker
             )
         );
 
-        if (!$while_clauses) {
-            $while_clauses = [new Clause([], true)];
+        if (!$whileClauses) {
+            $whileClauses = [new Clause([], true)];
         }
 
-        $reconcilable_while_types = \Psalm\Type\Algebra::getTruthsFromFormula($while_clauses);
+        $reconcilableWhileTypes = \Psalm\Type\Algebra::getTruthsFromFormula($whileClauses);
 
-        if ($reconcilable_while_types) {
-            $changed_var_ids = [];
-            $while_vars_in_scope_reconciled =
+        if ($reconcilableWhileTypes) {
+            $changedVarIds = [];
+            $whileVarsInScopeReconciled =
                 Type\Reconciler::reconcileKeyedTypes(
-                    $reconcilable_while_types,
-                    $do_context->vars_in_scope,
-                    $changed_var_ids,
+                    $reconcilableWhileTypes,
+                    $doContext->varsInScope,
+                    $changedVarIds,
                     [],
-                    $statements_checker,
-                    new \Psalm\CodeLocation($statements_checker->getSource(), $stmt->cond),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker,
+                    new \Psalm\CodeLocation($statementsChecker->getSource(), $stmt->cond),
+                    $statementsChecker->getSuppressedIssues()
                 );
 
-            $do_context->vars_in_scope = $while_vars_in_scope_reconciled;
+            $doContext->varsInScope = $whileVarsInScopeReconciled;
         }
 
-        $do_cond_context = clone $do_context;
+        $doCondContext = clone $doContext;
 
-        if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-            $statements_checker->addSuppressedIssues(['RedundantCondition']);
+        if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+            $statementsChecker->addSuppressedIssues(['RedundantCondition']);
         }
-        if (!in_array('RedundantConditionGivenDocblockType', $suppressed_issues, true)) {
-            $statements_checker->addSuppressedIssues(['RedundantConditionGivenDocblockType']);
-        }
-
-        ExpressionChecker::analyze($statements_checker, $stmt->cond, $do_cond_context);
-
-        if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-            $statements_checker->removeSuppressedIssues(['RedundantCondition']);
-        }
-        if (!in_array('RedundantConditionGivenDocblockType', $suppressed_issues, true)) {
-            $statements_checker->removeSuppressedIssues(['RedundantConditionGivenDocblockType']);
+        if (!in_array('RedundantConditionGivenDocblockType', $suppressedIssues, true)) {
+            $statementsChecker->addSuppressedIssues(['RedundantConditionGivenDocblockType']);
         }
 
-        if ($context->collect_references) {
-            $do_context->unreferenced_vars = $do_cond_context->unreferenced_vars;
+        ExpressionChecker::analyze($statementsChecker, $stmt->cond, $doCondContext);
+
+        if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+            $statementsChecker->removeSuppressedIssues(['RedundantCondition']);
+        }
+        if (!in_array('RedundantConditionGivenDocblockType', $suppressedIssues, true)) {
+            $statementsChecker->removeSuppressedIssues(['RedundantConditionGivenDocblockType']);
         }
 
-        foreach ($do_cond_context->vars_in_scope as $var_id => $type) {
-            if (isset($context->vars_in_scope[$var_id])) {
-                $context->vars_in_scope[$var_id] = Type::combineUnionTypes($context->vars_in_scope[$var_id], $type);
+        if ($context->collectReferences) {
+            $doContext->unreferencedVars = $doCondContext->unreferencedVars;
+        }
+
+        foreach ($doCondContext->varsInScope as $varId => $type) {
+            if (isset($context->varsInScope[$varId])) {
+                $context->varsInScope[$varId] = Type::combineUnionTypes($context->varsInScope[$varId], $type);
             }
         }
 
         LoopChecker::analyze(
-            $statements_checker,
+            $statementsChecker,
             $stmt->stmts,
             [$stmt->cond],
             [],
-            $loop_scope,
-            $inner_loop_context,
+            $loopScope,
+            $innerLoopContext,
             true
         );
 
-        foreach ($do_context->vars_in_scope as $var_id => $type) {
-            if (!isset($context->vars_in_scope[$var_id])) {
-                $context->vars_in_scope[$var_id] = $type;
+        foreach ($doContext->varsInScope as $varId => $type) {
+            if (!isset($context->varsInScope[$varId])) {
+                $context->varsInScope[$varId] = $type;
             }
         }
 
         // because it's a do {} while, inner loop vars belong to the main context
-        if (!$inner_loop_context) {
+        if (!$innerLoopContext) {
             throw new \UnexpectedValueException('Should never be null');
         }
 
-        foreach ($inner_loop_context->vars_in_scope as $var_id => $type) {
-            if (!isset($context->vars_in_scope[$var_id])) {
-                $context->vars_in_scope[$var_id] = $type;
+        foreach ($innerLoopContext->varsInScope as $varId => $type) {
+            if (!isset($context->varsInScope[$varId])) {
+                $context->varsInScope[$varId] = $type;
             }
         }
 
-        $context->vars_possibly_in_scope = array_merge(
-            $context->vars_possibly_in_scope,
-            $do_context->vars_possibly_in_scope
+        $context->varsPossiblyInScope = array_merge(
+            $context->varsPossiblyInScope,
+            $doContext->varsPossiblyInScope
         );
 
-        $context->referenced_var_ids = array_merge(
-            $context->referenced_var_ids,
-            $do_context->referenced_var_ids
+        $context->referencedVarIds = array_merge(
+            $context->referencedVarIds,
+            $doContext->referencedVarIds
         );
 
-        ExpressionChecker::analyze($statements_checker, $stmt->cond, $inner_loop_context);
+        ExpressionChecker::analyze($statementsChecker, $stmt->cond, $innerLoopContext);
 
-        if ($context->collect_references) {
-            $context->unreferenced_vars = $do_context->unreferenced_vars;
+        if ($context->collectReferences) {
+            $context->unreferencedVars = $doContext->unreferencedVars;
         }
 
-        if ($context->collect_exceptions) {
-            $context->possibly_thrown_exceptions += $inner_loop_context->possibly_thrown_exceptions;
+        if ($context->collectExceptions) {
+            $context->possiblyThrownExceptions += $innerLoopContext->possiblyThrownExceptions;
         }
     }
 }

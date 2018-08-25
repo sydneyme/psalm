@@ -17,354 +17,354 @@ use Psalm\Type\Union;
 class TryChecker
 {
     /**
-     * @param   StatementsChecker               $statements_checker
+     * @param   StatementsChecker               $statementsChecker
      * @param   PhpParser\Node\Stmt\TryCatch    $stmt
      * @param   Context                         $context
      *
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Stmt\TryCatch $stmt,
         Context $context
     ) {
-        $catch_actions = [];
-        $all_catches_leave = true;
+        $catchActions = [];
+        $allCatchesLeave = true;
 
-        $project_checker = $statements_checker->getFileChecker()->project_checker;
-        $codebase = $project_checker->codebase;
+        $projectChecker = $statementsChecker->getFileChecker()->projectChecker;
+        $codebase = $projectChecker->codebase;
 
         /** @var int $i */
         foreach ($stmt->catches as $i => $catch) {
-            $catch_actions[$i] = ScopeChecker::getFinalControlActions($catch->stmts, $codebase->config->exit_functions);
-            $all_catches_leave = $all_catches_leave && !in_array(ScopeChecker::ACTION_NONE, $catch_actions[$i], true);
+            $catchActions[$i] = ScopeChecker::getFinalControlActions($catch->stmts, $codebase->config->exitFunctions);
+            $allCatchesLeave = $allCatchesLeave && !in_array(ScopeChecker::ACTION_NONE, $catchActions[$i], true);
         }
 
-        $existing_thrown_exceptions = $context->possibly_thrown_exceptions;
+        $existingThrownExceptions = $context->possiblyThrownExceptions;
 
         /**
          * @var array<string, bool>
          */
-        $context->possibly_thrown_exceptions = [];
+        $context->possiblyThrownExceptions = [];
 
-        if ($all_catches_leave) {
-            $try_context = $context;
+        if ($allCatchesLeave) {
+            $tryContext = $context;
         } else {
-            $try_context = clone $context;
+            $tryContext = clone $context;
 
-            if ($project_checker->alter_code) {
-                $try_context->branch_point = $try_context->branch_point ?: (int) $stmt->getAttribute('startFilePos');
+            if ($projectChecker->alterCode) {
+                $tryContext->branchPoint = $tryContext->branchPoint ?: (int) $stmt->getAttribute('startFilePos');
             }
         }
 
-        $assigned_var_ids = $try_context->assigned_var_ids;
-        $context->assigned_var_ids = [];
+        $assignedVarIds = $tryContext->assignedVarIds;
+        $context->assignedVarIds = [];
 
-        $old_unreferenced_vars = $try_context->unreferenced_vars;
-        $newly_unreferenced_vars = [];
-        $reassigned_vars = [];
+        $oldUnreferencedVars = $tryContext->unreferencedVars;
+        $newlyUnreferencedVars = [];
+        $reassignedVars = [];
 
-        if ($statements_checker->analyze($stmt->stmts, $context) === false) {
+        if ($statementsChecker->analyze($stmt->stmts, $context) === false) {
             return false;
         }
 
         /** @var array<string, bool> */
-        $newly_assigned_var_ids = $context->assigned_var_ids;
+        $newlyAssignedVarIds = $context->assignedVarIds;
 
-        $context->assigned_var_ids = array_merge(
-            $assigned_var_ids,
-            $newly_assigned_var_ids
+        $context->assignedVarIds = array_merge(
+            $assignedVarIds,
+            $newlyAssignedVarIds
         );
 
-        if ($try_context !== $context) {
-            foreach ($context->vars_in_scope as $var_id => $type) {
-                if (!isset($try_context->vars_in_scope[$var_id])) {
-                    $try_context->vars_in_scope[$var_id] = clone $type;
-                    $try_context->vars_in_scope[$var_id]->from_docblock = true;
-                    $type->possibly_undefined_from_try = true;
+        if ($tryContext !== $context) {
+            foreach ($context->varsInScope as $varId => $type) {
+                if (!isset($tryContext->varsInScope[$varId])) {
+                    $tryContext->varsInScope[$varId] = clone $type;
+                    $tryContext->varsInScope[$varId]->fromDocblock = true;
+                    $type->possiblyUndefinedFromTry = true;
                 } else {
-                    $try_context->vars_in_scope[$var_id] = Type::combineUnionTypes(
-                        $try_context->vars_in_scope[$var_id],
+                    $tryContext->varsInScope[$varId] = Type::combineUnionTypes(
+                        $tryContext->varsInScope[$varId],
                         $type
                     );
                 }
             }
 
-            $try_context->vars_possibly_in_scope = $context->vars_possibly_in_scope;
+            $tryContext->varsPossiblyInScope = $context->varsPossiblyInScope;
 
-            $context->referenced_var_ids = array_merge(
-                $try_context->referenced_var_ids,
-                $context->referenced_var_ids
+            $context->referencedVarIds = array_merge(
+                $tryContext->referencedVarIds,
+                $context->referencedVarIds
             );
 
-            if ($context->collect_references) {
-                $newly_unreferenced_vars = array_merge(
-                    $newly_unreferenced_vars,
+            if ($context->collectReferences) {
+                $newlyUnreferencedVars = array_merge(
+                    $newlyUnreferencedVars,
                     array_diff_key(
-                        $context->unreferenced_vars,
-                        $old_unreferenced_vars
+                        $context->unreferencedVars,
+                        $oldUnreferencedVars
                     )
                 );
 
-                foreach ($context->unreferenced_vars as $var_id => $locations) {
-                    if (isset($old_unreferenced_vars[$var_id])
-                        && $old_unreferenced_vars[$var_id] !== $locations
+                foreach ($context->unreferencedVars as $varId => $locations) {
+                    if (isset($oldUnreferencedVars[$varId])
+                        && $oldUnreferencedVars[$varId] !== $locations
                     ) {
-                        $reassigned_vars[$var_id] = $locations;
+                        $reassignedVars[$varId] = $locations;
                     }
                 }
             }
         }
 
-        $try_leaves_loop = $context->loop_scope
-            && $context->loop_scope->final_actions
-            && !in_array(ScopeChecker::ACTION_NONE, $context->loop_scope->final_actions, true);
+        $tryLeavesLoop = $context->loopScope
+            && $context->loopScope->finalActions
+            && !in_array(ScopeChecker::ACTION_NONE, $context->loopScope->finalActions, true);
 
-        if (!$all_catches_leave) {
-            foreach ($newly_assigned_var_ids as $assigned_var_id => $_) {
-                $context->removeVarFromConflictingClauses($assigned_var_id);
+        if (!$allCatchesLeave) {
+            foreach ($newlyAssignedVarIds as $assignedVarId => $_) {
+                $context->removeVarFromConflictingClauses($assignedVarId);
             }
         } else {
-            foreach ($newly_assigned_var_ids as $assigned_var_id => $_) {
-                $try_context->removeVarFromConflictingClauses($assigned_var_id);
+            foreach ($newlyAssignedVarIds as $assignedVarId => $_) {
+                $tryContext->removeVarFromConflictingClauses($assignedVarId);
             }
         }
 
         // at this point we have two contexts – $context, in which it is assumed that everything was fine,
-        // and $try_context - which allows all variables to have the union of the values before and after
+        // and $tryContext - which allows all variables to have the union of the values before and after
         // the try was applied
-        $original_context = clone $try_context;
+        $originalContext = clone $tryContext;
 
         /** @var int $i */
         foreach ($stmt->catches as $i => $catch) {
-            $catch_context = clone $original_context;
+            $catchContext = clone $originalContext;
 
-            $fq_catch_classes = [];
+            $fqCatchClasses = [];
 
-            $catch_var_name = $catch->var->name;
+            $catchVarName = $catch->var->name;
 
-            if (!is_string($catch_var_name)) {
+            if (!is_string($catchVarName)) {
                 throw new \UnexpectedValueException('Catch var name must be a string');
             }
 
-            foreach ($catch->types as $catch_type) {
-                $fq_catch_class = ClassLikeChecker::getFQCLNFromNameObject(
-                    $catch_type,
-                    $statements_checker->getAliases()
+            foreach ($catch->types as $catchType) {
+                $fqCatchClass = ClassLikeChecker::getFQCLNFromNameObject(
+                    $catchType,
+                    $statementsChecker->getAliases()
                 );
 
-                if ($original_context->check_classes) {
+                if ($originalContext->checkClasses) {
                     if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                        $statements_checker,
-                        $fq_catch_class,
-                        new CodeLocation($statements_checker->getSource(), $catch_type, $context->include_location),
-                        $statements_checker->getSuppressedIssues(),
+                        $statementsChecker,
+                        $fqCatchClass,
+                        new CodeLocation($statementsChecker->getSource(), $catchType, $context->includeLocation),
+                        $statementsChecker->getSuppressedIssues(),
                         false
                     ) === false) {
                         return false;
                     }
                 }
 
-                if (($codebase->classExists($fq_catch_class)
-                        && strtolower($fq_catch_class) !== 'exception'
-                        && !($codebase->classExtends($fq_catch_class, 'Exception')
-                            || $codebase->classImplements($fq_catch_class, 'Throwable')))
-                    || ($codebase->interfaceExists($fq_catch_class)
-                        && strtolower($fq_catch_class) !== 'throwable'
-                        && !$codebase->interfaceExtends($fq_catch_class, 'Throwable'))
+                if (($codebase->classExists($fqCatchClass)
+                        && strtolower($fqCatchClass) !== 'exception'
+                        && !($codebase->classExtends($fqCatchClass, 'Exception')
+                            || $codebase->classImplements($fqCatchClass, 'Throwable')))
+                    || ($codebase->interfaceExists($fqCatchClass)
+                        && strtolower($fqCatchClass) !== 'throwable'
+                        && !$codebase->interfaceExtends($fqCatchClass, 'Throwable'))
                 ) {
                     if (IssueBuffer::accepts(
                         new InvalidCatch(
-                            'Class/interface ' . $fq_catch_class . ' cannot be caught',
-                            new CodeLocation($statements_checker->getSource(), $stmt)
+                            'Class/interface ' . $fqCatchClass . ' cannot be caught',
+                            new CodeLocation($statementsChecker->getSource(), $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }
                 }
 
-                $fq_catch_classes[] = $fq_catch_class;
+                $fqCatchClasses[] = $fqCatchClass;
             }
 
-            $potentially_caught_classes = array_flip($fq_catch_classes);
+            $potentiallyCaughtClasses = array_flip($fqCatchClasses);
 
-            if ($catch_context->collect_exceptions) {
-                foreach ($fq_catch_classes as $fq_catch_class) {
-                    $fq_catch_class_lower = strtolower($fq_catch_class);
+            if ($catchContext->collectExceptions) {
+                foreach ($fqCatchClasses as $fqCatchClass) {
+                    $fqCatchClassLower = strtolower($fqCatchClass);
 
-                    foreach ($context->possibly_thrown_exceptions as $exception_fqcln => $_) {
-                        $exception_fqcln_lower = strtolower($exception_fqcln);
+                    foreach ($context->possiblyThrownExceptions as $exceptionFqcln => $_) {
+                        $exceptionFqclnLower = strtolower($exceptionFqcln);
 
-                        if ($exception_fqcln_lower === $fq_catch_class_lower) {
-                            unset($context->possibly_thrown_exceptions[$exception_fqcln]);
+                        if ($exceptionFqclnLower === $fqCatchClassLower) {
+                            unset($context->possiblyThrownExceptions[$exceptionFqcln]);
                             continue;
                         }
 
-                        if ($codebase->classExists($exception_fqcln)
+                        if ($codebase->classExists($exceptionFqcln)
                             && $codebase->classExtendsOrImplements(
-                                $exception_fqcln,
-                                $fq_catch_class
+                                $exceptionFqcln,
+                                $fqCatchClass
                             )
                         ) {
-                            unset($context->possibly_thrown_exceptions[$exception_fqcln]);
+                            unset($context->possiblyThrownExceptions[$exceptionFqcln]);
                             continue;
                         }
 
-                        if ($codebase->interfaceExists($exception_fqcln)
+                        if ($codebase->interfaceExists($exceptionFqcln)
                             && $codebase->interfaceExtends(
-                                $exception_fqcln,
-                                $fq_catch_class
+                                $exceptionFqcln,
+                                $fqCatchClass
                             )
                         ) {
-                            unset($context->possibly_thrown_exceptions[$exception_fqcln]);
+                            unset($context->possiblyThrownExceptions[$exceptionFqcln]);
                             continue;
                         }
                     }
                 }
             }
 
-            $catch_var_id = '$' . $catch_var_name;
+            $catchVarId = '$' . $catchVarName;
 
-            $catch_context->vars_in_scope[$catch_var_id] = new Union(
+            $catchContext->varsInScope[$catchVarId] = new Union(
                 array_map(
                     /**
-                     * @param string $fq_catch_class
+                     * @param string $fqCatchClass
                      *
                      * @return Type\Atomic
                      */
-                    function ($fq_catch_class) use ($codebase) {
-                        $catch_class_type = new TNamedObject($fq_catch_class);
+                    function ($fqCatchClass) use ($codebase) {
+                        $catchClassType = new TNamedObject($fqCatchClass);
 
                         if (version_compare(PHP_VERSION, '7.0.0dev', '>=')
-                            && $codebase->interfaceExists($fq_catch_class)
-                            && !$codebase->interfaceExtends($fq_catch_class, 'Throwable')
+                            && $codebase->interfaceExists($fqCatchClass)
+                            && !$codebase->interfaceExtends($fqCatchClass, 'Throwable')
                         ) {
-                            $catch_class_type->addIntersectionType(new TNamedObject('Throwable'));
+                            $catchClassType->addIntersectionType(new TNamedObject('Throwable'));
                         }
 
-                        return $catch_class_type;
+                        return $catchClassType;
                     },
-                    $fq_catch_classes
+                    $fqCatchClasses
                 )
             );
 
             // discard all clauses because crazy stuff may have happened in try block
-            $catch_context->clauses = [];
+            $catchContext->clauses = [];
 
-            $catch_context->vars_possibly_in_scope[$catch_var_id] = true;
+            $catchContext->varsPossiblyInScope[$catchVarId] = true;
 
-            if (!$statements_checker->hasVariable($catch_var_id)) {
+            if (!$statementsChecker->hasVariable($catchVarId)) {
                 $location = new CodeLocation(
-                    $statements_checker,
+                    $statementsChecker,
                     $catch->var,
-                    $context->include_location
+                    $context->includeLocation
                 );
-                $statements_checker->registerVariable(
-                    $catch_var_id,
+                $statementsChecker->registerVariable(
+                    $catchVarId,
                     $location,
-                    $try_context->branch_point
+                    $tryContext->branchPoint
                 );
-                $catch_context->unreferenced_vars[$catch_var_id] = [$location->getHash() => $location];
+                $catchContext->unreferencedVars[$catchVarId] = [$location->getHash() => $location];
             }
 
             // this registers the variable to avoid unfair deadcode issues
-            $catch_context->hasVariable($catch_var_id, $statements_checker);
+            $catchContext->hasVariable($catchVarId, $statementsChecker);
 
-            $suppressed_issues = $statements_checker->getSuppressedIssues();
+            $suppressedIssues = $statementsChecker->getSuppressedIssues();
 
-            if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-                $statements_checker->addSuppressedIssues(['RedundantCondition']);
+            if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+                $statementsChecker->addSuppressedIssues(['RedundantCondition']);
             }
 
-            $statements_checker->analyze($catch->stmts, $catch_context);
+            $statementsChecker->analyze($catch->stmts, $catchContext);
 
-            if (!in_array('RedundantCondition', $suppressed_issues, true)) {
-                $statements_checker->removeSuppressedIssues(['RedundantCondition']);
+            if (!in_array('RedundantCondition', $suppressedIssues, true)) {
+                $statementsChecker->removeSuppressedIssues(['RedundantCondition']);
             }
 
-            $context->referenced_var_ids = array_merge(
-                $catch_context->referenced_var_ids,
-                $context->referenced_var_ids
+            $context->referencedVarIds = array_merge(
+                $catchContext->referencedVarIds,
+                $context->referencedVarIds
             );
 
-            if ($context->collect_references && $catch_actions[$i] !== [ScopeChecker::ACTION_END]) {
-                foreach ($context->unreferenced_vars as $var_id => $_) {
-                    if (!isset($catch_context->unreferenced_vars[$var_id])) {
-                        unset($context->unreferenced_vars[$var_id]);
+            if ($context->collectReferences && $catchActions[$i] !== [ScopeChecker::ACTION_END]) {
+                foreach ($context->unreferencedVars as $varId => $_) {
+                    if (!isset($catchContext->unreferencedVars[$varId])) {
+                        unset($context->unreferencedVars[$varId]);
                     }
                 }
 
-                $newly_unreferenced_vars = array_merge(
-                    $newly_unreferenced_vars,
+                $newlyUnreferencedVars = array_merge(
+                    $newlyUnreferencedVars,
                     array_diff_key(
-                        $catch_context->unreferenced_vars,
-                        $old_unreferenced_vars
+                        $catchContext->unreferencedVars,
+                        $oldUnreferencedVars
                     )
                 );
 
-                foreach ($catch_context->unreferenced_vars as $var_id => $locations) {
-                    if (!isset($old_unreferenced_vars[$var_id])
-                        && (isset($context->unreferenced_vars[$var_id])
-                            || isset($newly_assigned_var_ids[$var_id]))
+                foreach ($catchContext->unreferencedVars as $varId => $locations) {
+                    if (!isset($oldUnreferencedVars[$varId])
+                        && (isset($context->unreferencedVars[$varId])
+                            || isset($newlyAssignedVarIds[$varId]))
                     ) {
-                        $statements_checker->registerVariableUses($locations);
-                    } elseif (isset($old_unreferenced_vars[$var_id])
-                        && $old_unreferenced_vars[$var_id] !== $locations
+                        $statementsChecker->registerVariableUses($locations);
+                    } elseif (isset($oldUnreferencedVars[$varId])
+                        && $oldUnreferencedVars[$varId] !== $locations
                     ) {
-                        $statements_checker->registerVariableUses($locations);
+                        $statementsChecker->registerVariableUses($locations);
                     }
                 }
             }
 
-            if ($context->collect_exceptions) {
-                $potentially_caught_classes = array_diff_key(
-                    $potentially_caught_classes,
-                    $context->possibly_thrown_exceptions
+            if ($context->collectExceptions) {
+                $potentiallyCaughtClasses = array_diff_key(
+                    $potentiallyCaughtClasses,
+                    $context->possiblyThrownExceptions
                 );
             }
 
-            if ($catch_actions[$i] !== [ScopeChecker::ACTION_END]) {
-                foreach ($catch_context->vars_in_scope as $var_id => $type) {
-                    if ($context->hasVariable($var_id)
-                        && $context->vars_in_scope[$var_id]->getId() !== $type->getId()
+            if ($catchActions[$i] !== [ScopeChecker::ACTION_END]) {
+                foreach ($catchContext->varsInScope as $varId => $type) {
+                    if ($context->hasVariable($varId)
+                        && $context->varsInScope[$varId]->getId() !== $type->getId()
                     ) {
-                        $context->vars_in_scope[$var_id] = Type::combineUnionTypes(
-                            $context->vars_in_scope[$var_id],
+                        $context->varsInScope[$varId] = Type::combineUnionTypes(
+                            $context->varsInScope[$varId],
                             $type
                         );
                     }
                 }
 
-                $context->vars_possibly_in_scope = array_merge(
-                    $catch_context->vars_possibly_in_scope,
-                    $context->vars_possibly_in_scope
+                $context->varsPossiblyInScope = array_merge(
+                    $catchContext->varsPossiblyInScope,
+                    $context->varsPossiblyInScope
                 );
             }
         }
 
-        if ($context->loop_scope
-            && !$try_leaves_loop
-            && !in_array(ScopeChecker::ACTION_NONE, $context->loop_scope->final_actions, true)
+        if ($context->loopScope
+            && !$tryLeavesLoop
+            && !in_array(ScopeChecker::ACTION_NONE, $context->loopScope->finalActions, true)
         ) {
-            $context->loop_scope->final_actions[] = ScopeChecker::ACTION_NONE;
+            $context->loopScope->finalActions[] = ScopeChecker::ACTION_NONE;
         }
 
         if ($stmt->finally) {
-            $statements_checker->analyze($stmt->finally->stmts, $context);
+            $statementsChecker->analyze($stmt->finally->stmts, $context);
         }
 
-        if ($context->collect_references) {
-            foreach ($old_unreferenced_vars as $var_id => $locations) {
-                if (isset($context->unreferenced_vars[$var_id])
-                    && $context->unreferenced_vars[$var_id] !== $locations
+        if ($context->collectReferences) {
+            foreach ($oldUnreferencedVars as $varId => $locations) {
+                if (isset($context->unreferencedVars[$varId])
+                    && $context->unreferencedVars[$varId] !== $locations
                 ) {
-                    $statements_checker->registerVariableUses($locations);
+                    $statementsChecker->registerVariableUses($locations);
                 }
             }
         }
 
-        $context->possibly_thrown_exceptions += $existing_thrown_exceptions;
+        $context->possiblyThrownExceptions += $existingThrownExceptions;
 
         return null;
     }

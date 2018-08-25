@@ -31,24 +31,24 @@ class ReturnChecker
      * @return false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
-        ProjectChecker $project_checker,
+        StatementsChecker $statementsChecker,
+        ProjectChecker $projectChecker,
         PhpParser\Node\Stmt\Return_ $stmt,
         Context $context
     ) {
-        $doc_comment_text = (string)$stmt->getDocComment();
+        $docCommentText = (string)$stmt->getDocComment();
 
-        $var_comments = [];
-        $var_comment_type = null;
+        $varComments = [];
+        $varCommentType = null;
 
-        $source = $statements_checker->getSource();
+        $source = $statementsChecker->getSource();
 
-        $codebase = $project_checker->codebase;
+        $codebase = $projectChecker->codebase;
 
-        if ($doc_comment_text) {
+        if ($docCommentText) {
             try {
-                $var_comments = CommentChecker::getTypeFromComment(
-                    $doc_comment_text,
+                $varComments = CommentChecker::getTypeFromComment(
+                    $docCommentText,
                     $source,
                     $source->getAliases()
                 );
@@ -63,30 +63,30 @@ class ReturnChecker
                 }
             }
 
-            foreach ($var_comments as $var_comment) {
-                $comment_type = ExpressionChecker::fleshOutType(
-                    $project_checker,
-                    $var_comment->type,
+            foreach ($varComments as $varComment) {
+                $commentType = ExpressionChecker::fleshOutType(
+                    $projectChecker,
+                    $varComment->type,
                     $context->self,
                     $context->self
                 );
 
-                if (!$var_comment->var_id) {
-                    $var_comment_type = $comment_type;
+                if (!$varComment->varId) {
+                    $varCommentType = $commentType;
                     continue;
                 }
 
-                $context->vars_in_scope[$var_comment->var_id] = $comment_type;
+                $context->varsInScope[$varComment->varId] = $commentType;
             }
         }
 
         if ($stmt->expr) {
-            if (ExpressionChecker::analyze($statements_checker, $stmt->expr, $context) === false) {
+            if (ExpressionChecker::analyze($statementsChecker, $stmt->expr, $context) === false) {
                 return false;
             }
 
-            if ($var_comment_type) {
-                $stmt->inferredType = $var_comment_type;
+            if ($varCommentType) {
+                $stmt->inferredType = $varCommentType;
             } elseif (isset($stmt->expr->inferredType)) {
                 $stmt->inferredType = $stmt->expr->inferredType;
 
@@ -105,46 +105,46 @@ class ReturnChecker
         ) {
             $source->addReturnTypes($stmt->expr ? (string) $stmt->inferredType : '', $context);
 
-            $storage = $source->getFunctionLikeStorage($statements_checker);
+            $storage = $source->getFunctionLikeStorage($statementsChecker);
 
-            $cased_method_id = $source->getCorrectlyCasedMethodId();
+            $casedMethodId = $source->getCorrectlyCasedMethodId();
 
             if ($stmt->expr) {
-                if ($storage->return_type && !$storage->return_type->isMixed()) {
-                    $inferred_type = ExpressionChecker::fleshOutType(
-                        $project_checker,
+                if ($storage->returnType && !$storage->returnType->isMixed()) {
+                    $inferredType = ExpressionChecker::fleshOutType(
+                        $projectChecker,
                         $stmt->inferredType,
                         $source->getFQCLN(),
                         $source->getFQCLN()
                     );
 
-                    $local_return_type = $source->getLocalReturnType($storage->return_type);
+                    $localReturnType = $source->getLocalReturnType($storage->returnType);
 
-                    if ($local_return_type->isGenerator() && $storage->has_yield) {
+                    if ($localReturnType->isGenerator() && $storage->hasYield) {
                         return null;
                     }
 
                     if ($stmt->inferredType->isMixed()) {
-                        if ($local_return_type->isVoid()) {
+                        if ($localReturnType->isVoid()) {
                             if (IssueBuffer::accepts(
                                 new InvalidReturnStatement(
-                                    'No return values are expected for ' . $cased_method_id,
+                                    'No return values are expected for ' . $casedMethodId,
                                     new CodeLocation($source, $stmt)
                                 ),
-                                $statements_checker->getSuppressedIssues()
+                                $statementsChecker->getSuppressedIssues()
                             )) {
                                 return false;
                             }
                         }
 
-                        $codebase->analyzer->incrementMixedCount($statements_checker->getFilePath());
+                        $codebase->analyzer->incrementMixedCount($statementsChecker->getFilePath());
 
                         if (IssueBuffer::accepts(
                             new MixedReturnStatement(
                                 'Could not infer a return type',
                                 new CodeLocation($source, $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -152,15 +152,15 @@ class ReturnChecker
                         return null;
                     }
 
-                    $codebase->analyzer->incrementNonMixedCount($statements_checker->getFilePath());
+                    $codebase->analyzer->incrementNonMixedCount($statementsChecker->getFilePath());
 
-                    if ($local_return_type->isVoid()) {
+                    if ($localReturnType->isVoid()) {
                         if (IssueBuffer::accepts(
                             new InvalidReturnStatement(
-                                'No return values are expected for ' . $cased_method_id,
+                                'No return values are expected for ' . $casedMethodId,
                                 new CodeLocation($source, $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
@@ -170,27 +170,27 @@ class ReturnChecker
 
                     if (!TypeChecker::isContainedBy(
                         $codebase,
-                        $inferred_type,
-                        $local_return_type,
+                        $inferredType,
+                        $localReturnType,
                         true,
                         true,
-                        $has_scalar_match,
-                        $type_coerced,
-                        $type_coerced_from_mixed,
-                        $to_string_cast,
-                        $type_coerced_from_scalar
+                        $hasScalarMatch,
+                        $typeCoerced,
+                        $typeCoercedFromMixed,
+                        $toStringCast,
+                        $typeCoercedFromScalar
                     )
                     ) {
                         // is the declared return type more specific than the inferred one?
-                        if ($type_coerced) {
-                            if ($type_coerced_from_mixed) {
+                        if ($typeCoerced) {
+                            if ($typeCoercedFromMixed) {
                                 if (IssueBuffer::accepts(
                                     new MixedTypeCoercion(
                                         'The type \'' . $stmt->inferredType . '\' is more general than the declared '
-                                            . 'return type \'' . $local_return_type . '\' for ' . $cased_method_id,
+                                            . 'return type \'' . $localReturnType . '\' for ' . $casedMethodId,
                                         new CodeLocation($source, $stmt)
                                     ),
-                                    $statements_checker->getSuppressedIssues()
+                                    $statementsChecker->getSuppressedIssues()
                                 )) {
                                     return false;
                                 }
@@ -198,40 +198,40 @@ class ReturnChecker
                                 if (IssueBuffer::accepts(
                                     new LessSpecificReturnStatement(
                                         'The type \'' . $stmt->inferredType . '\' is more general than the declared '
-                                            . 'return type \'' . $local_return_type . '\' for ' . $cased_method_id,
+                                            . 'return type \'' . $localReturnType . '\' for ' . $casedMethodId,
                                         new CodeLocation($source, $stmt)
                                     ),
-                                    $statements_checker->getSuppressedIssues()
+                                    $statementsChecker->getSuppressedIssues()
                                 )) {
                                     return false;
                                 }
                             }
 
-                            foreach ($local_return_type->getTypes() as $local_type_part) {
-                                if ($local_type_part instanceof Type\Atomic\TClassString
+                            foreach ($localReturnType->getTypes() as $localTypePart) {
+                                if ($localTypePart instanceof Type\Atomic\TClassString
                                     && $stmt->expr instanceof PhpParser\Node\Scalar\String_
                                 ) {
                                     if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                                        $statements_checker,
+                                        $statementsChecker,
                                         $stmt->expr->value,
                                         new CodeLocation($source, $stmt->expr),
-                                        $statements_checker->getSuppressedIssues()
+                                        $statementsChecker->getSuppressedIssues()
                                     ) === false
                                     ) {
                                         return false;
                                     }
-                                } elseif ($local_type_part instanceof Type\Atomic\TArray
+                                } elseif ($localTypePart instanceof Type\Atomic\TArray
                                     && $stmt->expr instanceof PhpParser\Node\Expr\Array_
                                 ) {
-                                    foreach ($local_type_part->type_params[1]->getTypes() as $local_array_type_part) {
-                                        if ($local_array_type_part instanceof Type\Atomic\TClassString) {
+                                    foreach ($localTypePart->typeParams[1]->getTypes() as $localArrayTypePart) {
+                                        if ($localArrayTypePart instanceof Type\Atomic\TClassString) {
                                             foreach ($stmt->expr->items as $item) {
                                                 if ($item && $item->value instanceof PhpParser\Node\Scalar\String_) {
                                                     if (ClassLikeChecker::checkFullyQualifiedClassLikeName(
-                                                        $statements_checker,
+                                                        $statementsChecker,
                                                         $item->value->value,
                                                         new CodeLocation($source, $item->value),
-                                                        $statements_checker->getSuppressedIssues()
+                                                        $statementsChecker->getSuppressedIssues()
                                                     ) === false
                                                     ) {
                                                         return false;
@@ -247,62 +247,62 @@ class ReturnChecker
                                 new InvalidReturnStatement(
                                     'The type \'' . $stmt->inferredType->getId()
                                         . '\' does not match the declared return '
-                                        . 'type \'' . $local_return_type->getId() . '\' for ' . $cased_method_id,
+                                        . 'type \'' . $localReturnType->getId() . '\' for ' . $casedMethodId,
                                     new CodeLocation($source, $stmt)
                                 ),
-                                $statements_checker->getSuppressedIssues()
+                                $statementsChecker->getSuppressedIssues()
                             )) {
                                 return false;
                             }
                         }
                     }
 
-                    if (!$stmt->inferredType->ignore_nullable_issues
-                        && $inferred_type->isNullable()
-                        && !$local_return_type->isNullable()
+                    if (!$stmt->inferredType->ignoreNullableIssues
+                        && $inferredType->isNullable()
+                        && !$localReturnType->isNullable()
                     ) {
                         if (IssueBuffer::accepts(
                             new NullableReturnStatement(
-                                'The declared return type \'' . $local_return_type . '\' for '
-                                    . $cased_method_id . ' is not nullable, but the function returns \''
-                                        . $inferred_type . '\'',
+                                'The declared return type \'' . $localReturnType . '\' for '
+                                    . $casedMethodId . ' is not nullable, but the function returns \''
+                                        . $inferredType . '\'',
                                 new CodeLocation($source, $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
                     }
 
-                    if (!$stmt->inferredType->ignore_falsable_issues
-                        && $inferred_type->isFalsable()
-                        && !$local_return_type->isFalsable()
-                        && !$local_return_type->hasBool()
+                    if (!$stmt->inferredType->ignoreFalsableIssues
+                        && $inferredType->isFalsable()
+                        && !$localReturnType->isFalsable()
+                        && !$localReturnType->hasBool()
                     ) {
                         if (IssueBuffer::accepts(
                             new FalsableReturnStatement(
-                                'The declared return type \'' . $local_return_type . '\' for '
-                                    . $cased_method_id . ' does not allow false, but the function returns \''
-                                        . $inferred_type . '\'',
+                                'The declared return type \'' . $localReturnType . '\' for '
+                                    . $casedMethodId . ' does not allow false, but the function returns \''
+                                        . $inferredType . '\'',
                                 new CodeLocation($source, $stmt)
                             ),
-                            $statements_checker->getSuppressedIssues()
+                            $statementsChecker->getSuppressedIssues()
                         )) {
                             return false;
                         }
                     }
                 }
             } else {
-                if ($storage->signature_return_type
-                    && !$storage->signature_return_type->isVoid()
-                    && (!$storage->signature_return_type->isGenerator() || !$storage->has_yield)
+                if ($storage->signatureReturnType
+                    && !$storage->signatureReturnType->isVoid()
+                    && (!$storage->signatureReturnType->isGenerator() || !$storage->hasYield)
                 ) {
                     if (IssueBuffer::accepts(
                         new InvalidReturnStatement(
-                            'Empty return statement is not expected in ' . $cased_method_id,
+                            'Empty return statement is not expected in ' . $casedMethodId,
                             new CodeLocation($source, $stmt)
                         ),
-                        $statements_checker->getSuppressedIssues()
+                        $statementsChecker->getSuppressedIssues()
                     )) {
                         return false;
                     }

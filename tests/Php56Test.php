@@ -44,16 +44,16 @@ class Php56Test extends TestCase
                     $c1 = C::ONE;
                     $c2 = C::TWO;
                     $c3 = C::THREE;
-                    $c1_3rd = C::ONE_THIRD;
-                    $c_sentence = C::SENTENCE;
+                    $c13rd = C::ONE_THIRD;
+                    $cSentence = C::SENTENCE;
                     $cf = (new C)->f();
                     $c4 = (new C)->four',
                 'assertions' => [
                     '$c1' => 'int',
                     '$c2' => 'int',
                     '$c3' => 'int',
-                    '$c1_3rd' => 'float|int',
-                    '$c_sentence' => 'string',
+                    '$c13rd' => 'float|int',
+                    '$cSentence' => 'string',
                     '$cf' => 'int',
                     '$c4' => 'int',
                 ],

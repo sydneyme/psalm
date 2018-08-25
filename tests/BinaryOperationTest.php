@@ -70,14 +70,14 @@ class BinaryOperationTest extends TestCase
 
         $this->analyzeFile('somefile.php', $context);
 
-        $actual_vars = [];
+        $actualVars = [];
         foreach ($assertions as $var => $_) {
-            if (isset($context->vars_in_scope[$var])) {
-                $actual_vars[$var] = (string)$context->vars_in_scope[$var];
+            if (isset($context->varsInScope[$var])) {
+                $actualVars[$var] = (string)$context->varsInScope[$var];
             }
         }
 
-        $this->assertSame($assertions, $actual_vars);
+        $this->assertSame($assertions, $actualVars);
     }
 
     /**

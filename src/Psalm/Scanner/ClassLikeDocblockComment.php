@@ -13,12 +13,12 @@ class ClassLikeDocblockComment
     /**
      * @var array<int, array<int, string>>
      */
-    public $template_type_names = [];
+    public $templateTypeNames = [];
 
     /**
      * @var array<int, string>
      */
-    public $template_parents = [];
+    public $templateParents = [];
 
     /**
      * @var array<int, array{name:string, type:string, tag:string, line_number:int}>
@@ -33,15 +33,15 @@ class ClassLikeDocblockComment
     /**
      * @var bool
      */
-    public $sealed_properties = false;
+    public $sealedProperties = false;
 
     /**
      * @var bool
      */
-    public $sealed_methods = false;
+    public $sealedMethods = false;
 
     /**
      * @var array<int, string>
      */
-    public $suppressed_issues = [];
+    public $suppressedIssues = [];
 }

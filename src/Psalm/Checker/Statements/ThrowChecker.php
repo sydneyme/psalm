@@ -17,36 +17,36 @@ class ThrowChecker
      * @return  false|null
      */
     public static function analyze(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Stmt\Throw_ $stmt,
         Context $context
     ) {
-        if (ExpressionChecker::analyze($statements_checker, $stmt->expr, $context) === false) {
+        if (ExpressionChecker::analyze($statementsChecker, $stmt->expr, $context) === false) {
             return false;
         }
 
-        if ($context->check_classes && isset($stmt->expr->inferredType) && !$stmt->expr->inferredType->isMixed()) {
-            $throw_type = $stmt->expr->inferredType;
+        if ($context->checkClasses && isset($stmt->expr->inferredType) && !$stmt->expr->inferredType->isMixed()) {
+            $throwType = $stmt->expr->inferredType;
 
-            $exception_type = new Union([new TNamedObject('Exception'), new TNamedObject('Throwable')]);
+            $exceptionType = new Union([new TNamedObject('Exception'), new TNamedObject('Throwable')]);
 
-            $file_checker = $statements_checker->getFileChecker();
-            $project_checker = $file_checker->project_checker;
+            $fileChecker = $statementsChecker->getFileChecker();
+            $projectChecker = $fileChecker->projectChecker;
 
-            if (!TypeChecker::isContainedBy($project_checker->codebase, $throw_type, $exception_type)) {
+            if (!TypeChecker::isContainedBy($projectChecker->codebase, $throwType, $exceptionType)) {
                 if (IssueBuffer::accepts(
                     new InvalidThrow(
-                        'Cannot throw ' . $throw_type . ' as it does not extend Exception or implement Throwable',
-                        new CodeLocation($file_checker, $stmt)
+                        'Cannot throw ' . $throwType . ' as it does not extend Exception or implement Throwable',
+                        new CodeLocation($fileChecker, $stmt)
                     ),
-                    $statements_checker->getSuppressedIssues()
+                    $statementsChecker->getSuppressedIssues()
                 )) {
                     return false;
                 }
-            } elseif ($context->collect_exceptions) {
-                foreach ($throw_type->getTypes() as $throw_atomic_type) {
-                    if ($throw_atomic_type instanceof TNamedObject) {
-                        $context->possibly_thrown_exceptions[$throw_atomic_type->value] = true;
+            } elseif ($context->collectExceptions) {
+                foreach ($throwType->getTypes() as $throwAtomicType) {
+                    if ($throwAtomicType instanceof TNamedObject) {
+                        $context->possiblyThrownExceptions[$throwAtomicType->value] = true;
                     }
                 }
             }

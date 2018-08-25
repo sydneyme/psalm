@@ -55,18 +55,18 @@ class CallableTest extends TestCase
             ],
             'varReturnType' => [
                 '<?php
-                    $add_one = function(int $a): int {
+                    $addOne = function(int $a): int {
                         return $a + 1;
                     };
 
-                    $a = $add_one(1);',
+                    $a = $addOne(1);',
                 'assertions' => [
                     '$a' => 'int',
                 ],
             ],
             'varCallableParamReturnType' => [
                 '<?php
-                    $add_one = function(int $a): int {
+                    $addOne = function(int $a): int {
                         return $a + 1;
                     };
 
@@ -77,7 +77,7 @@ class CallableTest extends TestCase
                         return $c(1);
                     }
 
-                    bar($add_one);',
+                    bar($addOne);',
             ],
             'callableToClosure' => [
                 '<?php
@@ -115,8 +115,8 @@ class CallableTest extends TestCase
             ],
             'correctParamType' => [
                 '<?php
-                    $take_string = function(string $s): string { return $s; };
-                    $take_string("string");',
+                    $takeString = function(string $s): string { return $s; };
+                    $takeString("string");',
             ],
             'callableMethod' => [
                 '<?php
@@ -150,8 +150,8 @@ class CallableTest extends TestCase
                     $b = array_map(["A", "bar"], ["one", "two"]);
                     $c = array_map([A::class, "bar"], ["one", "two"]);
                     $d = array_map([new A(), "bar"], ["one", "two"]);
-                    $a_instance = new A();
-                    $e = array_map([$a_instance, "bar"], ["one", "two"]);
+                    $aInstance = new A();
+                    $e = array_map([$aInstance, "bar"], ["one", "two"]);
                     $f = array_map("baz", ["one", "two"]);',
                 'assertions' => [
                     '$a' => 'array{0:string, 1:string}',
@@ -680,14 +680,14 @@ class CallableTest extends TestCase
             ],
             'stringFunctionCall' => [
                 '<?php
-                    $bad_one = "hello";
-                    $a = $bad_one(1);',
+                    $badOne = "hello";
+                    $a = $badOne(1);',
                 'error_message' => 'MixedAssignment',
             ],
             'wrongParamType' => [
                 '<?php
-                    $take_string = function(string $s): string { return $s; };
-                    $take_string(42);',
+                    $takeString = function(string $s): string { return $s; };
+                    $takeString(42);',
                 'error_message' => 'InvalidScalarArgument',
             ],
             'missingClosureReturnType' => [
@@ -699,7 +699,7 @@ class CallableTest extends TestCase
             ],
             'wrongCallableReturnType' => [
                 '<?php
-                    $add_one = function(int $a): int {
+                    $addOne = function(int $a): int {
                         return $a + 1;
                     };
 
@@ -710,7 +710,7 @@ class CallableTest extends TestCase
                         return $c(1);
                     }
 
-                    bar($add_one);',
+                    bar($addOne);',
                 'error_message' => 'InvalidReturnStatement',
             ],
             'returnsTypedClosureWithBadReturnType' => [

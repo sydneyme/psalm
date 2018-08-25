@@ -13,54 +13,54 @@ class FileScanner implements FileSource
     /**
      * @var string
      */
-    public $file_path;
+    public $filePath;
 
     /**
      * @var string
      */
-    public $file_name;
+    public $fileName;
 
     /**
      * @var bool
      */
-    public $will_analyze;
+    public $willAnalyze;
 
     /**
-     * @param string $file_path
-     * @param string $file_name
-     * @param bool $will_analyze
+     * @param string $filePath
+     * @param string $fileName
+     * @param bool $willAnalyze
      */
-    public function __construct($file_path, $file_name, $will_analyze)
+    public function __construct($filePath, $fileName, $willAnalyze)
     {
-        $this->file_path = $file_path;
-        $this->file_name = $file_name;
-        $this->will_analyze = $will_analyze;
+        $this->filePath = $filePath;
+        $this->fileName = $fileName;
+        $this->willAnalyze = $willAnalyze;
     }
 
     /**
      * @param array<mixed, PhpParser\Node> $stmts
-     * @param bool $storage_from_cache
-     * @param bool $debug_output
+     * @param bool $storageFromCache
+     * @param bool $debugOutput
      *
      * @return void
      */
     public function scan(
         Codebase $codebase,
-        FileStorage $file_storage,
-        $storage_from_cache = false,
-        $debug_output = false
+        FileStorage $fileStorage,
+        $storageFromCache = false,
+        $debugOutput = false
     ) {
-        if ((!$this->will_analyze || $file_storage->deep_scan)
-            && $storage_from_cache
-            && !$file_storage->has_trait
-            && !$codebase->register_stub_files
+        if ((!$this->willAnalyze || $fileStorage->deepScan)
+            && $storageFromCache
+            && !$fileStorage->hasTrait
+            && !$codebase->registerStubFiles
         ) {
             return;
         }
 
-        $stmts = $codebase->statements_provider->getStatementsForFile(
-            $file_storage->file_path,
-            $debug_output
+        $stmts = $codebase->statementsProvider->getStatementsForFile(
+            $fileStorage->filePath,
+            $debugOutput
         );
 
         foreach ($stmts as $stmt) {
@@ -68,24 +68,24 @@ class FileScanner implements FileSource
                 && !$stmt instanceof PhpParser\Node\Stmt\Function_
                 && !$stmt instanceof PhpParser\Node\Expr\Include_
             ) {
-                $file_storage->has_extra_statements = true;
+                $fileStorage->hasExtraStatements = true;
                 break;
             }
         }
 
-        if ($debug_output) {
-            if ($this->will_analyze) {
-                echo 'Deep scanning ' . $file_storage->file_path . "\n";
+        if ($debugOutput) {
+            if ($this->willAnalyze) {
+                echo 'Deep scanning ' . $fileStorage->filePath . "\n";
             } else {
-                echo 'Scanning ' . $file_storage->file_path . "\n";
+                echo 'Scanning ' . $fileStorage->filePath . "\n";
             }
         }
 
         $traverser = new NodeTraverser();
-        $traverser->addVisitor(new DependencyFinderVisitor($codebase, $file_storage, $this));
+        $traverser->addVisitor(new DependencyFinderVisitor($codebase, $fileStorage, $this));
         $traverser->traverse($stmts);
 
-        $file_storage->deep_scan = $this->will_analyze;
+        $fileStorage->deepScan = $this->willAnalyze;
     }
 
     /**
@@ -93,7 +93,7 @@ class FileScanner implements FileSource
      */
     public function getFilePath()
     {
-        return $this->file_path;
+        return $this->filePath;
     }
 
     /**
@@ -101,7 +101,7 @@ class FileScanner implements FileSource
      */
     public function getFileName()
     {
-        return $this->file_name;
+        return $this->fileName;
     }
 
     /**
@@ -109,7 +109,7 @@ class FileScanner implements FileSource
      */
     public function getRootFilePath()
     {
-        return $this->file_path;
+        return $this->filePath;
     }
 
     /**
@@ -117,7 +117,7 @@ class FileScanner implements FileSource
      */
     public function getRootFileName()
     {
-        return $this->file_name;
+        return $this->fileName;
     }
 
     /**

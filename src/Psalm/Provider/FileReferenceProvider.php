@@ -18,66 +18,66 @@ class FileReferenceProvider
      *
      * @var array<string, array<string,bool>>
      */
-    protected static $file_references_to_class = [];
+    protected static $fileReferencesToClass = [];
 
     /**
      * A lookup table used for getting all the files that reference any other file
      *
      * @var array<string,array<string,bool>>
      */
-    protected static $referencing_files = [];
+    protected static $referencingFiles = [];
 
     /**
      * @var array<string, array<int,string>>
      */
-    protected static $files_inheriting_classes = [];
+    protected static $filesInheritingClasses = [];
 
     /**
      * A list of all files deleted since the last successful run
      *
      * @var array<int, string>|null
      */
-    protected static $deleted_files = null;
+    protected static $deletedFiles = null;
 
     /**
      * A lookup table used for getting all the files referenced by a file
      *
      * @var array<string, array{a:array<int, string>, i:array<int, string>}>
      */
-    protected static $file_references = [];
+    protected static $fileReferences = [];
 
     /**
      * @return array<string>
      */
     public static function getDeletedReferencedFiles()
     {
-        if (self::$deleted_files === null) {
-            self::$deleted_files = array_filter(
-                array_keys(self::$file_references),
+        if (self::$deletedFiles === null) {
+            self::$deletedFiles = array_filter(
+                array_keys(self::$fileReferences),
                 /**
-                 * @param  string $file_name
+                 * @param  string $fileName
                  *
                  * @return bool
                  */
-                function ($file_name) {
-                    return !file_exists($file_name);
+                function ($fileName) {
+                    return !file_exists($fileName);
                 }
             );
         }
 
-        return self::$deleted_files;
+        return self::$deletedFiles;
     }
 
     /**
-     * @param string $source_file
-     * @param string $fq_class_name_lc
+     * @param string $sourceFile
+     * @param string $fqClassNameLc
      *
      * @return void
      */
-    public static function addFileReferenceToClass($source_file, $fq_class_name_lc)
+    public static function addFileReferenceToClass($sourceFile, $fqClassNameLc)
     {
-        self::$referencing_files[$source_file] = true;
-        self::$file_references_to_class[$fq_class_name_lc][$source_file] = true;
+        self::$referencingFiles[$sourceFile] = true;
+        self::$fileReferencesToClass[$fqClassNameLc][$sourceFile] = true;
     }
 
     /**
@@ -85,7 +85,7 @@ class FileReferenceProvider
      */
     public static function getAllFileReferences()
     {
-        return self::$file_references_to_class;
+        return self::$fileReferencesToClass;
     }
 
     /**
@@ -96,18 +96,18 @@ class FileReferenceProvider
      */
     public static function addFileReferences(array $references)
     {
-        self::$file_references_to_class = array_merge_recursive($references, self::$file_references_to_class);
+        self::$fileReferencesToClass = array_merge_recursive($references, self::$fileReferencesToClass);
     }
 
     /**
-     * @param string $source_file
-     * @param string $fq_class_name_lc
+     * @param string $sourceFile
+     * @param string $fqClassNameLc
      *
      * @return void
      */
-    public static function addFileInheritanceToClass($source_file, $fq_class_name_lc)
+    public static function addFileInheritanceToClass($sourceFile, $fqClassNameLc)
     {
-        self::$files_inheriting_classes[$fq_class_name_lc][$source_file] = true;
+        self::$filesInheritingClasses[$fqClassNameLc][$sourceFile] = true;
     }
 
     /**
@@ -115,22 +115,22 @@ class FileReferenceProvider
      *
      * @return  array
      */
-    public static function calculateFilesReferencingFile(ProjectChecker $project_checker, $file)
+    public static function calculateFilesReferencingFile(ProjectChecker $projectChecker, $file)
     {
-        $referenced_files = [];
+        $referencedFiles = [];
 
-        $file_classes = ClassLikeChecker::getClassesForFile($project_checker, $file);
+        $fileClasses = ClassLikeChecker::getClassesForFile($projectChecker, $file);
 
-        foreach ($file_classes as $file_class_lc => $_) {
-            if (isset(self::$file_references_to_class[$file_class_lc])) {
-                $referenced_files = array_merge(
-                    $referenced_files,
-                    array_keys(self::$file_references_to_class[$file_class_lc])
+        foreach ($fileClasses as $fileClassLc => $_) {
+            if (isset(self::$fileReferencesToClass[$fileClassLc])) {
+                $referencedFiles = array_merge(
+                    $referencedFiles,
+                    array_keys(self::$fileReferencesToClass[$fileClassLc])
                 );
             }
         }
 
-        return array_unique($referenced_files);
+        return array_unique($referencedFiles);
     }
 
     /**
@@ -138,22 +138,22 @@ class FileReferenceProvider
      *
      * @return  array
      */
-    public static function calculateFilesInheritingFile(ProjectChecker $project_checker, $file)
+    public static function calculateFilesInheritingFile(ProjectChecker $projectChecker, $file)
     {
-        $referenced_files = [];
+        $referencedFiles = [];
 
-        $file_classes = ClassLikeChecker::getClassesForFile($project_checker, $file);
+        $fileClasses = ClassLikeChecker::getClassesForFile($projectChecker, $file);
 
-        foreach ($file_classes as $file_class_lc => $_) {
-            if (isset(self::$files_inheriting_classes[$file_class_lc])) {
-                $referenced_files = array_merge(
-                    $referenced_files,
-                    array_keys(self::$files_inheriting_classes[$file_class_lc])
+        foreach ($fileClasses as $fileClassLc => $_) {
+            if (isset(self::$filesInheritingClasses[$fileClassLc])) {
+                $referencedFiles = array_merge(
+                    $referencedFiles,
+                    array_keys(self::$filesInheritingClasses[$fileClassLc])
                 );
             }
         }
 
-        return array_unique($referenced_files);
+        return array_unique($referencedFiles);
     }
 
     /**
@@ -161,18 +161,18 @@ class FileReferenceProvider
      */
     public static function removeDeletedFilesFromReferences()
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        $deleted_files = self::getDeletedReferencedFiles();
+        $deletedFiles = self::getDeletedReferencedFiles();
 
-        if ($deleted_files) {
-            foreach ($deleted_files as $file) {
-                unset(self::$file_references[$file]);
+        if ($deletedFiles) {
+            foreach ($deletedFiles as $file) {
+                unset(self::$fileReferences[$file]);
             }
 
             file_put_contents(
-                $cache_directory . DIRECTORY_SEPARATOR . self::REFERENCE_CACHE_NAME,
-                serialize(self::$file_references)
+                $cacheDirectory . DIRECTORY_SEPARATOR . self::REFERENCE_CACHE_NAME,
+                serialize(self::$fileReferences)
             );
         }
     }
@@ -184,7 +184,7 @@ class FileReferenceProvider
      */
     public static function getFilesReferencingFile($file)
     {
-        return isset(self::$file_references[$file]['a']) ? self::$file_references[$file]['a'] : [];
+        return isset(self::$fileReferences[$file]['a']) ? self::$fileReferences[$file]['a'] : [];
     }
 
     /**
@@ -194,7 +194,7 @@ class FileReferenceProvider
      */
     public static function getFilesInheritingFromFile($file)
     {
-        return isset(self::$file_references[$file]['i']) ? self::$file_references[$file]['i'] : [];
+        return isset(self::$fileReferences[$file]['i']) ? self::$fileReferences[$file]['i'] : [];
     }
 
     /**
@@ -204,19 +204,19 @@ class FileReferenceProvider
      */
     public static function loadReferenceCache()
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if ($cache_directory) {
-            $cache_location = $cache_directory . DIRECTORY_SEPARATOR . self::REFERENCE_CACHE_NAME;
+        if ($cacheDirectory) {
+            $cacheLocation = $cacheDirectory . DIRECTORY_SEPARATOR . self::REFERENCE_CACHE_NAME;
 
-            if (is_readable($cache_location)) {
-                $reference_cache = unserialize((string) file_get_contents($cache_location));
+            if (is_readable($cacheLocation)) {
+                $referenceCache = unserialize((string) file_get_contents($cacheLocation));
 
-                if (!is_array($reference_cache)) {
+                if (!is_array($referenceCache)) {
                     throw new \UnexpectedValueException('The reference cache must be an array');
                 }
 
-                self::$file_references = $reference_cache;
+                self::$fileReferences = $referenceCache;
 
                 return true;
             }
@@ -226,39 +226,39 @@ class FileReferenceProvider
     }
 
     /**
-     * @param  array<string, bool>  $visited_files
+     * @param  array<string, bool>  $visitedFiles
      *
      * @return void
      */
-    public static function updateReferenceCache(ProjectChecker $project_checker, array $visited_files)
+    public static function updateReferenceCache(ProjectChecker $projectChecker, array $visitedFiles)
     {
-        $cache_directory = Config::getInstance()->getCacheDirectory();
+        $cacheDirectory = Config::getInstance()->getCacheDirectory();
 
-        if ($cache_directory) {
-            $cache_location = $cache_directory . DIRECTORY_SEPARATOR . self::REFERENCE_CACHE_NAME;
+        if ($cacheDirectory) {
+            $cacheLocation = $cacheDirectory . DIRECTORY_SEPARATOR . self::REFERENCE_CACHE_NAME;
 
-            foreach ($visited_files as $file => $_) {
-                $all_file_references = array_unique(
+            foreach ($visitedFiles as $file => $_) {
+                $allFileReferences = array_unique(
                     array_merge(
-                        isset(self::$file_references[$file]['a']) ? self::$file_references[$file]['a'] : [],
-                        FileReferenceProvider::calculateFilesReferencingFile($project_checker, $file)
+                        isset(self::$fileReferences[$file]['a']) ? self::$fileReferences[$file]['a'] : [],
+                        FileReferenceProvider::calculateFilesReferencingFile($projectChecker, $file)
                     )
                 );
 
-                $inheritance_references = array_unique(
+                $inheritanceReferences = array_unique(
                     array_merge(
-                        isset(self::$file_references[$file]['i']) ? self::$file_references[$file]['i'] : [],
-                        FileReferenceProvider::calculateFilesInheritingFile($project_checker, $file)
+                        isset(self::$fileReferences[$file]['i']) ? self::$fileReferences[$file]['i'] : [],
+                        FileReferenceProvider::calculateFilesInheritingFile($projectChecker, $file)
                     )
                 );
 
-                self::$file_references[$file] = [
-                    'a' => $all_file_references,
-                    'i' => $inheritance_references,
+                self::$fileReferences[$file] = [
+                    'a' => $allFileReferences,
+                    'i' => $inheritanceReferences,
                 ];
             }
 
-            file_put_contents($cache_location, serialize(self::$file_references));
+            file_put_contents($cacheLocation, serialize(self::$fileReferences));
         }
     }
 }

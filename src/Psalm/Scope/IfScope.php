@@ -10,57 +10,57 @@ class IfScope
     /**
      * @var array<string, Type\Union>|null
      */
-    public $new_vars = null;
+    public $newVars = null;
 
     /**
      * @var array<string, bool>
      */
-    public $new_vars_possibly_in_scope = [];
+    public $newVarsPossiblyInScope = [];
 
     /**
      * @var array<string, Type\Union>|null
      */
-    public $redefined_vars = null;
+    public $redefinedVars = null;
 
     /**
      * @var array<string, bool>|null
      */
-    public $assigned_var_ids = null;
+    public $assignedVarIds = null;
 
     /**
      * @var array<string, bool>
      */
-    public $possibly_assigned_var_ids = [];
+    public $possiblyAssignedVarIds = [];
 
     /**
      * @var array<string, Type\Union>
      */
-    public $possibly_redefined_vars = [];
+    public $possiblyRedefinedVars = [];
 
     /**
      * @var array<string, bool>
      */
-    public $updated_vars = [];
+    public $updatedVars = [];
 
     /**
      * @var array<string, array<int, array<int, string>>>
      */
-    public $negated_types = [];
+    public $negatedTypes = [];
 
     /**
      * @var array<mixed, string>
      */
-    public $if_cond_changed_var_ids = [];
+    public $ifCondChangedVarIds = [];
 
     /**
      * @var array<string, string>|null
      */
-    public $negatable_if_types = null;
+    public $negatableIfTypes = null;
 
     /**
      * @var array<int, Clause>
      */
-    public $negated_clauses = [];
+    public $negatedClauses = [];
 
     /**
      * These are the set of clauses that could be applied after the `if`
@@ -69,22 +69,22 @@ class IfScope
      *
      * @var array<int, Clause>
      */
-    public $reasonable_clauses = [];
+    public $reasonableClauses = [];
 
     /**
      * Variables that were mixed, but are no longer
      *
      * @var array<string, Type\Union>|null
      */
-    public $possible_param_types = null;
+    public $possibleParamTypes = null;
 
     /**
      * @var string[]
      */
-    public $final_actions = [];
+    public $finalActions = [];
 
     /**
      * @var array<string, array<string, CodeLocation>>
      */
-    public $new_unreferenced_vars = [];
+    public $newUnreferencedVars = [];
 }

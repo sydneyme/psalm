@@ -13,22 +13,22 @@ abstract class Plugin
     /**
      * Called after an expression has been checked
      *
-     * @param  StatementsChecker    $statements_checker
+     * @param  StatementsChecker    $statementsChecker
      * @param  PhpParser\Node\Expr  $stmt
      * @param  Context              $context
-     * @param  CodeLocation         $code_location
-     * @param  string[]             $suppressed_issues
-     * @param  FileManipulation[]   $file_replacements
+     * @param  CodeLocation         $codeLocation
+     * @param  string[]             $suppressedIssues
+     * @param  FileManipulation[]   $fileReplacements
      *
      * @return null|false
      */
     public static function afterExpressionCheck(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node\Expr $stmt,
         Context $context,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        array &$file_replacements = []
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        array &$fileReplacements = []
     ) {
         return null;
     }
@@ -36,28 +36,28 @@ abstract class Plugin
     /**
      * Called after a statement has been checked
      *
-     * @param  StatementsChecker                        $statements_checker
+     * @param  StatementsChecker                        $statementsChecker
      * @param  PhpParser\Node\Stmt|PhpParser\Node\Expr  $stmt
      * @param  Context                                  $context
-     * @param  CodeLocation                             $code_location
-     * @param  string[]                                 $suppressed_issues
-     * @param  FileManipulation[]                       $file_replacements
+     * @param  CodeLocation                             $codeLocation
+     * @param  string[]                                 $suppressedIssues
+     * @param  FileManipulation[]                       $fileReplacements
      *
      * @return null|false
      */
     public static function afterStatementCheck(
-        StatementsChecker $statements_checker,
+        StatementsChecker $statementsChecker,
         PhpParser\Node $stmt,
         Context $context,
-        CodeLocation $code_location,
-        array $suppressed_issues,
-        array &$file_replacements = []
+        CodeLocation $codeLocation,
+        array $suppressedIssues,
+        array &$fileReplacements = []
     ) {
         return null;
     }
 
     /**
-     * @param  FileManipulation[] $file_replacements
+     * @param  FileManipulation[] $fileReplacements
      *
      * @return void
      */
@@ -66,63 +66,63 @@ abstract class Plugin
         ClassLikeStorage $storage,
         FileScanner $file,
         Aliases $aliases,
-        array &$file_replacements = []
+        array &$fileReplacements = []
     ) {
     }
 
     /**
-     * @param  string             $fq_class_name
-     * @param  FileManipulation[] $file_replacements
+     * @param  string             $fqClassName
+     * @param  FileManipulation[] $fileReplacements
      *
      * @return void
      */
     public static function afterClassLikeExistsCheck(
-        StatementsSource $statements_source,
-        $fq_class_name,
-        CodeLocation $code_location,
-        array &$file_replacements = []
+        StatementsSource $statementsSource,
+        $fqClassName,
+        CodeLocation $codeLocation,
+        array &$fileReplacements = []
     ) {
     }
 
     /**
-     * @param  string $method_id - the method id being checked
-     * @param  string $appearing_method_id - the method id of the class that the method appears in
-     * @param  string $declaring_method_id - the method id of the class or trait that declares the method
-     * @param  string|null $var_id - a reference to the LHS of the variable
+     * @param  string $methodId - the method id being checked
+     * @param  string $appearingMethodId - the method id of the class that the method appears in
+     * @param  string $declaringMethodId - the method id of the class or trait that declares the method
+     * @param  string|null $varId - a reference to the LHS of the variable
      * @param  PhpParser\Node\Arg[] $args
-     * @param  FileManipulation[] $file_replacements
+     * @param  FileManipulation[] $fileReplacements
      *
      * @return void
      */
     public static function afterMethodCallCheck(
-        StatementsSource $statements_source,
-        $method_id,
-        $appearing_method_id,
-        $declaring_method_id,
-        $var_id,
+        StatementsSource $statementsSource,
+        $methodId,
+        $appearingMethodId,
+        $declaringMethodId,
+        $varId,
         array $args,
-        CodeLocation $code_location,
+        CodeLocation $codeLocation,
         Context $context,
-        array &$file_replacements = [],
-        Union &$return_type_candidate = null
+        array &$fileReplacements = [],
+        Union &$returnTypeCandidate = null
     ) {
     }
 
     /**
-     * @param  string $function_id - the method id being checked
+     * @param  string $functionId - the method id being checked
      * @param  PhpParser\Node\Arg[] $args
-     * @param  FileManipulation[] $file_replacements
+     * @param  FileManipulation[] $fileReplacements
      *
      * @return void
      */
     public static function afterFunctionCallCheck(
-        StatementsSource $statements_source,
-        $function_id,
+        StatementsSource $statementsSource,
+        $functionId,
         array $args,
-        CodeLocation $code_location,
+        CodeLocation $codeLocation,
         Context $context,
-        array &$file_replacements = [],
-        Union &$return_type_candidate = null
+        array &$fileReplacements = [],
+        Union &$returnTypeCandidate = null
     ) {
     }
 }

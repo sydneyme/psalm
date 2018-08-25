@@ -19,10 +19,10 @@ class VariadicTest extends TestCase
             'somefile.php',
             '<?php
                 /**
-                 * @param array<int, int> $a_list
+                 * @param array<int, int> $aList
                  * @return void
                  */
-                function f(int ...$a_list) {
+                function f(int ...$aList) {
                 }
                 f(1, 2, "3");
                 '
@@ -65,10 +65,10 @@ class VariadicTest extends TestCase
             'variadicArray' => [
                 '<?php
                     /**
-                     * @param array<int, int> $a_list
+                     * @param array<int, int> $aList
                      * @return array<int, int>
                      */
-                    function f(int ...$a_list) {
+                    function f(int ...$aList) {
                         return array_map(
                             /**
                              * @return int
@@ -76,7 +76,7 @@ class VariadicTest extends TestCase
                             function (int $a) {
                                 return $a + 1;
                             },
-                            $a_list
+                            $aList
                         );
                     }
 
@@ -85,10 +85,10 @@ class VariadicTest extends TestCase
                     f(1, 2, 3);
 
                     /**
-                     * @param string ...$a_list
+                     * @param string ...$aList
                      * @return void
                      */
-                    function g(string ...$a_list) {
+                    function g(string ...$aList) {
                     }',
             ],
         ];

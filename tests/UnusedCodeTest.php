@@ -8,7 +8,7 @@ use Psalm\Context;
 class UnusedCodeTest extends TestCase
 {
     /** @var \Psalm\Checker\ProjectChecker */
-    protected $project_checker;
+    protected $projectChecker;
 
     /**
      * @return void
@@ -17,94 +17,94 @@ class UnusedCodeTest extends TestCase
     {
         FileChecker::clearCache();
 
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
 
-        $this->project_checker = new \Psalm\Checker\ProjectChecker(
+        $this->projectChecker = new \Psalm\Checker\ProjectChecker(
             new TestConfig(),
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider()
         );
 
-        $this->project_checker->getCodebase()->reportUnusedCode();
+        $this->projectChecker->getCodebase()->reportUnusedCode();
     }
 
     /**
      * @dataProvider providerFileCheckerValidCodeParse
      *
      * @param string $code
-     * @param array<string> $error_levels
+     * @param array<string> $errorLevels
      *
      * @return void
      */
-    public function testValidCode($code, array $error_levels = [])
+    public function testValidCode($code, array $errorLevels = [])
     {
-        $test_name = $this->getTestName();
-        if (strpos($test_name, 'PHP7-') !== false) {
+        $testName = $this->getTestName();
+        if (strpos($testName, 'PHP7-') !== false) {
             if (version_compare(PHP_VERSION, '7.0.0dev', '<')) {
                 $this->markTestSkipped('Test case requires PHP 7.');
 
                 return;
             }
-        } elseif (strpos($test_name, 'SKIPPED-') !== false) {
+        } elseif (strpos($testName, 'SKIPPED-') !== false) {
             $this->markTestSkipped('Skipped due to a bug.');
         }
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
         $this->addFile(
-            $file_path,
+            $filePath,
             $code
         );
 
-        foreach ($error_levels as $error_level) {
-            $this->project_checker->config->setCustomErrorLevel($error_level, Config::REPORT_SUPPRESS);
+        foreach ($errorLevels as $errorLevel) {
+            $this->projectChecker->config->setCustomErrorLevel($errorLevel, Config::REPORT_SUPPRESS);
         }
 
         $context = new Context();
-        $context->collect_references = true;
+        $context->collectReferences = true;
 
-        $this->analyzeFile($file_path, $context);
+        $this->analyzeFile($filePath, $context);
 
-        $this->project_checker->checkClassReferences();
+        $this->projectChecker->checkClassReferences();
     }
 
     /**
      * @dataProvider providerFileCheckerInvalidCodeParse
      *
      * @param string $code
-     * @param string $error_message
-     * @param array<string> $error_levels
+     * @param string $errorMessage
+     * @param array<string> $errorLevels
      *
      * @return void
      */
-    public function testInvalidCode($code, $error_message, $error_levels = [])
+    public function testInvalidCode($code, $errorMessage, $errorLevels = [])
     {
         if (strpos($this->getTestName(), 'SKIPPED-') !== false) {
             $this->markTestSkipped();
         }
 
         $this->expectException('\Psalm\Exception\CodeException');
-        $this->expectExceptionMessageRegexp('/\b' . preg_quote($error_message, '/') . '\b/');
+        $this->expectExceptionMessageRegexp('/\b' . preg_quote($errorMessage, '/') . '\b/');
 
-        $file_path = self::$src_dir_path . 'somefile.php';
+        $filePath = self::$srcDirPath . 'somefile.php';
 
-        foreach ($error_levels as $error_level) {
-            $this->project_checker->config->setCustomErrorLevel($error_level, Config::REPORT_SUPPRESS);
+        foreach ($errorLevels as $errorLevel) {
+            $this->projectChecker->config->setCustomErrorLevel($errorLevel, Config::REPORT_SUPPRESS);
         }
 
         $this->addFile(
-            $file_path,
+            $filePath,
             $code
         );
 
         $context = new Context();
-        $context->collect_references = true;
+        $context->collectReferences = true;
 
-        $this->analyzeFile($file_path, $context);
+        $this->analyzeFile($filePath, $context);
 
-        $this->project_checker->checkClassReferences();
+        $this->projectChecker->checkClassReferences();
     }
 
     /**

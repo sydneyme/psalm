@@ -319,14 +319,14 @@ class FunctionCallTest extends TestCase
                     $vars = ["x" => "a", "y" => "b"];
                     $c = array_rand($vars);
                     $d = $vars[$c];
-                    $more_vars = ["a", "b"];
-                    $e = array_rand($more_vars);',
+                    $moreVars = ["a", "b"];
+                    $e = array_rand($moreVars);',
 
                 'assertions' => [
                     '$vars' => 'array{x:string, y:string}',
                     '$c' => 'string',
                     '$d' => 'string',
-                    '$more_vars' => 'array{0:string, 1:string}',
+                    '$moreVars' => 'array{0:string, 1:string}',
                     '$e' => 'int',
                 ],
             ],
@@ -698,12 +698,12 @@ class FunctionCallTest extends TestCase
                 '<?php
                     /**
                      * @param string|false $str
-                     * @param array<string, string> $replace_pairs
+                     * @param array<string, string> $replacePairs
                      * @return string
                      */
-                    function strtr_wrapper($str, array $replace_pairs) {
+                    function strtr_wrapper($str, array $replacePairs) {
                         /** @psalm-suppress PossiblyFalseArgument */
-                        return strtr($str, $replace_pairs);
+                        return strtr($str, $replacePairs);
                     }',
             ],
             'splatArrayIntersect' => [
@@ -730,7 +730,7 @@ class FunctionCallTest extends TestCase
                         return $carry * $item;
                     };
 
-                    $direct_closure_result = array_reduce(
+                    $directClosureResult = array_reduce(
                         $arr,
                         function (int $carry, int $item) : int {
                             return $carry * $item;
@@ -738,28 +738,28 @@ class FunctionCallTest extends TestCase
                         1
                     );
 
-                    $passed_closure_result = array_reduce(
+                    $passedClosureResult = array_reduce(
                         $arr,
                         $f2,
                         1
                     );
 
-                    $function_call_result = array_reduce(
+                    $functionCallResult = array_reduce(
                         $arr,
                         "multiply",
                         1
                     );',
                 'assertions' => [
-                    '$direct_closure_result' => 'int',
-                    '$passed_closure_result' => 'int',
-                    '$function_call_result' => 'int',
+                    '$directClosureResult' => 'int',
+                    '$passedClosureResult' => 'int',
+                    '$functionCallResult' => 'int',
                 ],
             ],
             'arrayReduceMixedReturn' => [
                 '<?php
                     $arr = [2, 3, 4, 5];
 
-                    $direct_closure_result = array_reduce(
+                    $directClosureResult = array_reduce(
                         $arr,
                         function (int $carry, int $item) {
                             return $_GET["boo"];
@@ -1203,7 +1203,7 @@ class FunctionCallTest extends TestCase
                 '<?php
                     $arr = [2, 3, 4, 5];
 
-                    $direct_closure_result = array_reduce(
+                    $directClosureResult = array_reduce(
                         $arr,
                         function (int $carry) : int {
                             return 5;
@@ -1217,7 +1217,7 @@ class FunctionCallTest extends TestCase
                 '<?php
                     $arr = [2, 3, 4, 5];
 
-                    $direct_closure_result = array_reduce(
+                    $directClosureResult = array_reduce(
                         $arr,
                         function (int $carry, stdClass $item) {
                             return $_GET["boo"];
@@ -1231,7 +1231,7 @@ class FunctionCallTest extends TestCase
                 '<?php
                     $arr = [2, 3, 4, 5];
 
-                    $direct_closure_result = array_reduce(
+                    $directClosureResult = array_reduce(
                         $arr,
                         function (stdClass $carry, int $item) {
                             return $_GET["boo"];
@@ -1245,7 +1245,7 @@ class FunctionCallTest extends TestCase
                 '<?php
                     $arr = [2, 3, 4, 5];
 
-                    $direct_closure_result = array_reduce(
+                    $directClosureResult = array_reduce(
                         $arr,
                         function (int $carry, int $item) : stdClass {
                             return new stdClass;

@@ -10,27 +10,27 @@ trait CanAlias
     /**
      * @var array<string, string>
      */
-    private $aliased_classes = [];
+    private $aliasedClasses = [];
 
     /**
      * @var array<string, CodeLocation>
      */
-    private $aliased_class_locations = [];
+    private $aliasedClassLocations = [];
 
     /**
      * @var array<string, string>
      */
-    private $aliased_classes_flipped = [];
+    private $aliasedClassesFlipped = [];
 
     /**
      * @var array<string, string>
      */
-    private $aliased_functions = [];
+    private $aliasedFunctions = [];
 
     /**
      * @var array<string, string>
      */
-    private $aliased_constants = [];
+    private $aliasedConstants = [];
 
     /**
      * @param  PhpParser\Node\Stmt\Use_ $stmt
@@ -40,32 +40,32 @@ trait CanAlias
     public function visitUse(PhpParser\Node\Stmt\Use_ $stmt)
     {
         foreach ($stmt->uses as $use) {
-            $use_path = implode('\\', $use->name->parts);
-            $use_alias = $use->alias ? $use->alias->name : $use->name->getLast();
+            $usePath = implode('\\', $use->name->parts);
+            $useAlias = $use->alias ? $use->alias->name : $use->name->getLast();
 
             switch ($use->type !== PhpParser\Node\Stmt\Use_::TYPE_UNKNOWN ? $use->type : $stmt->type) {
                 case PhpParser\Node\Stmt\Use_::TYPE_FUNCTION:
-                    $this->aliased_functions[strtolower($use_alias)] = $use_path;
+                    $this->aliasedFunctions[strtolower($useAlias)] = $usePath;
                     break;
 
                 case PhpParser\Node\Stmt\Use_::TYPE_CONSTANT:
-                    $this->aliased_constants[$use_alias] = $use_path;
+                    $this->aliasedConstants[$useAlias] = $usePath;
                     break;
 
                 case PhpParser\Node\Stmt\Use_::TYPE_NORMAL:
-                    if ($this->getFileChecker()->project_checker->getCodeBase()->collect_references) {
+                    if ($this->getFileChecker()->projectChecker->getCodeBase()->collectReferences) {
                         // register the path
-                        $codebase = $this->getFileChecker()->project_checker->codebase;
+                        $codebase = $this->getFileChecker()->projectChecker->codebase;
 
-                        $codebase->use_referencing_locations[strtolower($use_path)][$this->getFilePath()][] =
+                        $codebase->useReferencingLocations[strtolower($usePath)][$this->getFilePath()][] =
                             new \Psalm\CodeLocation($this, $use);
 
-                        $codebase->use_referencing_files[$this->getFilePath()][strtolower($use_path)] = true;
+                        $codebase->useReferencingFiles[$this->getFilePath()][strtolower($usePath)] = true;
                     }
 
-                    $this->aliased_classes[strtolower($use_alias)] = $use_path;
-                    $this->aliased_class_locations[strtolower($use_alias)] = new CodeLocation($this, $stmt);
-                    $this->aliased_classes_flipped[strtolower($use_path)] = $use_alias;
+                    $this->aliasedClasses[strtolower($useAlias)] = $usePath;
+                    $this->aliasedClassLocations[strtolower($useAlias)] = new CodeLocation($this, $stmt);
+                    $this->aliasedClassesFlipped[strtolower($usePath)] = $useAlias;
                     break;
             }
         }
@@ -78,32 +78,32 @@ trait CanAlias
      */
     public function visitGroupUse(PhpParser\Node\Stmt\GroupUse $stmt)
     {
-        $use_prefix = implode('\\', $stmt->prefix->parts);
+        $usePrefix = implode('\\', $stmt->prefix->parts);
 
         foreach ($stmt->uses as $use) {
-            $use_path = $use_prefix . '\\' . implode('\\', $use->name->parts);
-            $use_alias = $use->alias ? $use->alias->name : $use->name->getLast();
+            $usePath = $usePrefix . '\\' . implode('\\', $use->name->parts);
+            $useAlias = $use->alias ? $use->alias->name : $use->name->getLast();
 
             switch ($use->type !== PhpParser\Node\Stmt\Use_::TYPE_UNKNOWN ? $use->type : $stmt->type) {
                 case PhpParser\Node\Stmt\Use_::TYPE_FUNCTION:
-                    $this->aliased_functions[strtolower($use_alias)] = $use_path;
+                    $this->aliasedFunctions[strtolower($useAlias)] = $usePath;
                     break;
 
                 case PhpParser\Node\Stmt\Use_::TYPE_CONSTANT:
-                    $this->aliased_constants[$use_alias] = $use_path;
+                    $this->aliasedConstants[$useAlias] = $usePath;
                     break;
 
                 case PhpParser\Node\Stmt\Use_::TYPE_NORMAL:
-                    if ($this->getFileChecker()->project_checker->getCodeBase()->collect_references) {
+                    if ($this->getFileChecker()->projectChecker->getCodeBase()->collectReferences) {
                         // register the path
-                        $codebase = $this->getFileChecker()->project_checker->codebase;
+                        $codebase = $this->getFileChecker()->projectChecker->codebase;
 
-                        $codebase->use_referencing_locations[$use_path][$this->getFilePath()][] =
+                        $codebase->useReferencingLocations[$usePath][$this->getFilePath()][] =
                             new \Psalm\CodeLocation($this, $use);
                     }
 
-                    $this->aliased_classes[strtolower($use_alias)] = $use_path;
-                    $this->aliased_classes_flipped[strtolower($use_path)] = $use_alias;
+                    $this->aliasedClasses[strtolower($useAlias)] = $usePath;
+                    $this->aliasedClassesFlipped[strtolower($usePath)] = $useAlias;
                     break;
             }
         }
@@ -114,7 +114,7 @@ trait CanAlias
      */
     public function getAliasedClassesFlipped()
     {
-        return $this->aliased_classes_flipped;
+        return $this->aliasedClassesFlipped;
     }
 
     /**
@@ -124,9 +124,9 @@ trait CanAlias
     {
         return new Aliases(
             $this->getNamespace(),
-            $this->aliased_classes,
-            $this->aliased_functions,
-            $this->aliased_constants
+            $this->aliasedClasses,
+            $this->aliasedFunctions,
+            $this->aliasedConstants
         );
     }
 }

@@ -9,19 +9,19 @@ class AssignmentMapVisitor extends PhpParser\NodeVisitorAbstract implements PhpP
     /**
      * @var array<string, array<string, bool>>
      */
-    protected $assignment_map = [];
+    protected $assignmentMap = [];
 
     /**
      * @var string|null
      */
-    protected $this_class_name;
+    protected $thisClassName;
 
     /**
-     * @param string|null $this_class_name
+     * @param string|null $thisClassName
      */
-    public function __construct($this_class_name)
+    public function __construct($thisClassName)
     {
-        $this->this_class_name = $this_class_name;
+        $this->thisClassName = $thisClassName;
     }
 
     /**
@@ -32,11 +32,11 @@ class AssignmentMapVisitor extends PhpParser\NodeVisitorAbstract implements PhpP
     public function enterNode(PhpParser\Node $node)
     {
         if ($node instanceof PhpParser\Node\Expr\Assign) {
-            $left_var_id = ExpressionChecker::getRootVarId($node->var, $this->this_class_name);
-            $right_var_id = ExpressionChecker::getRootVarId($node->expr, $this->this_class_name);
+            $leftVarId = ExpressionChecker::getRootVarId($node->var, $this->thisClassName);
+            $rightVarId = ExpressionChecker::getRootVarId($node->expr, $this->thisClassName);
 
-            if ($left_var_id) {
-                $this->assignment_map[$left_var_id][$right_var_id ?: 'isset'] = true;
+            if ($leftVarId) {
+                $this->assignmentMap[$leftVarId][$rightVarId ?: 'isset'] = true;
             }
 
             return PhpParser\NodeTraverser::DONT_TRAVERSE_CHILDREN;
@@ -46,19 +46,19 @@ class AssignmentMapVisitor extends PhpParser\NodeVisitorAbstract implements PhpP
             || $node instanceof PhpParser\Node\Expr\PreDec
             || $node instanceof PhpParser\Node\Expr\AssignOp
         ) {
-            $var_id = ExpressionChecker::getRootVarId($node->var, $this->this_class_name);
+            $varId = ExpressionChecker::getRootVarId($node->var, $this->thisClassName);
 
-            if ($var_id) {
-                $this->assignment_map[$var_id][$var_id] = true;
+            if ($varId) {
+                $this->assignmentMap[$varId][$varId] = true;
             }
 
             return PhpParser\NodeTraverser::DONT_TRAVERSE_CHILDREN;
         } elseif ($node instanceof PhpParser\Node\Expr\FuncCall) {
             foreach ($node->args as $arg) {
-                $arg_var_id = ExpressionChecker::getRootVarId($arg->value, $this->this_class_name);
+                $argVarId = ExpressionChecker::getRootVarId($arg->value, $this->thisClassName);
 
-                if ($arg_var_id) {
-                    $this->assignment_map[$arg_var_id][$arg_var_id] = true;
+                if ($argVarId) {
+                    $this->assignmentMap[$argVarId][$argVarId] = true;
                 }
             }
         }
@@ -71,6 +71,6 @@ class AssignmentMapVisitor extends PhpParser\NodeVisitorAbstract implements PhpP
      */
     public function getAssignmentMap()
     {
-        return $this->assignment_map;
+        return $this->assignmentMap;
     }
 }

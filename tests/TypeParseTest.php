@@ -548,11 +548,11 @@ class TypeParseTest extends TestCase
      */
     public function testVeryLargeType()
     {
-        $very_large_type = 'array{a:Closure():(array<mixed, mixed>|null), b?:Closure():array<mixed, mixed>, c?:Closure():array<mixed, mixed>, d?:Closure():array<mixed, mixed>, e?:Closure():(array{f:null|string, g:null|string, h:null|string, i:string, j:mixed, k:mixed, l:mixed, m:mixed, n:bool, o?:array{0:string}}|null), p?:Closure():(array{f:null|string, g:null|string, h:null|string, q:string, i:string, j:mixed, k:mixed, l:mixed, m:mixed, n:bool, o?:array{0:string}}|null), r?:Closure():(array<mixed, mixed>|null), s:array<mixed, mixed>}|null';
+        $veryLargeType = 'array{a:Closure():(array<mixed, mixed>|null), b?:Closure():array<mixed, mixed>, c?:Closure():array<mixed, mixed>, d?:Closure():array<mixed, mixed>, e?:Closure():(array{f:null|string, g:null|string, h:null|string, i:string, j:mixed, k:mixed, l:mixed, m:mixed, n:bool, o?:array{0:string}}|null), p?:Closure():(array{f:null|string, g:null|string, h:null|string, q:string, i:string, j:mixed, k:mixed, l:mixed, m:mixed, n:bool, o?:array{0:string}}|null), r?:Closure():(array<mixed, mixed>|null), s:array<mixed, mixed>}|null';
 
         $this->assertSame(
-            $very_large_type,
-            (string) Type::parseString($very_large_type)
+            $veryLargeType,
+            (string) Type::parseString($veryLargeType)
         );
     }
 
@@ -561,9 +561,9 @@ class TypeParseTest extends TestCase
      */
     public function testEnum()
     {
-        $docblock_type = Type::parseString('( \'foo\\\'with\' | "bar\"bar" | "baz" | "bat\\\\" | \'bang bang\' | 1 | 2 | 3)');
+        $docblockType = Type::parseString('( \'foo\\\'with\' | "bar\"bar" | "baz" | "bat\\\\" | \'bang bang\' | 1 | 2 | 3)');
 
-        $resolved_type = new Type\Union([
+        $resolvedType = new Type\Union([
             new Type\Atomic\TLiteralString('foo\'with'),
             new Type\Atomic\TLiteralString('bar"bar'),
             new Type\Atomic\TLiteralString('baz'),
@@ -574,7 +574,7 @@ class TypeParseTest extends TestCase
             new Type\Atomic\TLiteralInt(3)
         ]);
 
-        $this->assertSame($resolved_type->getId(), $docblock_type->getId());
+        $this->assertSame($resolvedType->getId(), $docblockType->getId());
     }
 
     /**
@@ -582,9 +582,9 @@ class TypeParseTest extends TestCase
      */
     public function testEnumWithoutSpaces()
     {
-        $docblock_type = Type::parseString('\'foo\\\'with\'|"bar\"bar"|"baz"|"bat\\\\"|\'bang bang\'|1|2|3');
+        $docblockType = Type::parseString('\'foo\\\'with\'|"bar\"bar"|"baz"|"bat\\\\"|\'bang bang\'|1|2|3');
 
-        $resolved_type = new Type\Union([
+        $resolvedType = new Type\Union([
             new Type\Atomic\TLiteralString('foo\'with'),
             new Type\Atomic\TLiteralString('bar"bar'),
             new Type\Atomic\TLiteralString('baz'),
@@ -595,7 +595,7 @@ class TypeParseTest extends TestCase
             new Type\Atomic\TLiteralInt(3)
         ]);
 
-        $this->assertSame($resolved_type->getId(), $docblock_type->getId());
+        $this->assertSame($resolvedType->getId(), $docblockType->getId());
     }
 
     /**
@@ -603,58 +603,58 @@ class TypeParseTest extends TestCase
      */
     public function testEnumWithClassConstants()
     {
-        $docblock_type = Type::parseString('("baz" | One2::TWO_THREE | Foo::BAR_BAR | Bat\Bar::BAZ_BAM)');
+        $docblockType = Type::parseString('("baz" | One2::TWO_THREE | Foo::BAR_BAR | Bat\Bar::BAZ_BAM)');
 
-        $resolved_type = new Type\Union([
+        $resolvedType = new Type\Union([
             new Type\Atomic\TLiteralString('baz'),
             new Type\Atomic\TScalarClassConstant('One2', 'TWO_THREE'),
             new Type\Atomic\TScalarClassConstant('Foo', 'BAR_BAR'),
             new Type\Atomic\TScalarClassConstant('Bat\\Bar', 'BAZ_BAM'),
         ]);
 
-        $this->assertSame($resolved_type->getId(), $docblock_type->getId());
+        $this->assertSame($resolvedType->getId(), $docblockType->getId());
     }
 
     /**
      * @dataProvider providerTestValidCallMapType
      *
-     * @param string $return_type
-     * @param string $param_type_1
-     * @param string $param_type_2
-     * @param string $param_type_3
-     * @param string $param_type_4
+     * @param string $returnType
+     * @param string $paramType1
+     * @param string $paramType2
+     * @param string $paramType3
+     * @param string $paramType4
      *
      * @return void
      */
     public function testValidCallMapType(
-        $return_type,
-        $param_type_1 = '',
-        $param_type_2 = '',
-        $param_type_3 = '',
-        $param_type_4 = ''
+        $returnType,
+        $paramType1 = '',
+        $paramType2 = '',
+        $paramType3 = '',
+        $paramType4 = ''
     ) {
-        if ($return_type && $return_type !== 'void') {
-            \Psalm\Type::parseString($return_type);
+        if ($returnType && $returnType !== 'void') {
+            \Psalm\Type::parseString($returnType);
         }
 
-        if ($param_type_1 && $param_type_1 !== 'mixed') {
-            if (strpos($param_type_1, 'oci-') !== false) {
+        if ($paramType1 && $paramType1 !== 'mixed') {
+            if (strpos($paramType1, 'oci-') !== false) {
                 return;
             }
 
-            \Psalm\Type::parseString($param_type_1);
+            \Psalm\Type::parseString($paramType1);
         }
 
-        if ($param_type_2 && $param_type_2 !== 'mixed') {
-            \Psalm\Type::parseString($param_type_2);
+        if ($paramType2 && $paramType2 !== 'mixed') {
+            \Psalm\Type::parseString($paramType2);
         }
 
-        if ($param_type_3 && $param_type_3 !== 'mixed') {
-            \Psalm\Type::parseString($param_type_3);
+        if ($paramType3 && $paramType3 !== 'mixed') {
+            \Psalm\Type::parseString($paramType3);
         }
 
-        if ($param_type_4 && $param_type_4 !== 'mixed') {
-            \Psalm\Type::parseString($param_type_4);
+        if ($paramType4 && $paramType4 !== 'mixed') {
+            \Psalm\Type::parseString($paramType4);
         }
     }
 

@@ -17,20 +17,20 @@ class ReportOutputTest extends TestCase
         // `TestCase::setUp()` creates its own ProjectChecker and Config instance, but we don't want to do that in this
         // case, so don't run a `parent::setUp()` call here.
         FileChecker::clearCache();
-        $this->file_provider = new Provider\FakeFileProvider();
+        $this->fileProvider = new Provider\FakeFileProvider();
 
         $config = new TestConfig();
-        $config->throw_exception = false;
+        $config->throwException = false;
 
-        $this->project_checker = new ProjectChecker(
+        $this->projectChecker = new ProjectChecker(
             $config,
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider(),
             false
         );
-        $this->project_checker->reports['json'] = __DIR__ . '/test-report.json';
+        $this->projectChecker->reports['json'] = __DIR__ . '/test-report.json';
     }
 
     /**
@@ -39,13 +39,13 @@ class ReportOutputTest extends TestCase
     public function testReportFormatValid()
     {
         $config = new TestConfig();
-        $config->throw_exception = false;
+        $config->throwException = false;
 
         // No exception
         foreach (['.xml', '.txt', '.json', '.emacs'] as $extension) {
             new ProjectChecker(
                 $config,
-                $this->file_provider,
+                $this->fileProvider,
                 new Provider\FakeParserCacheProvider(),
                 new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
                 new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider(),
@@ -67,11 +67,11 @@ class ReportOutputTest extends TestCase
     public function testReportFormatException()
     {
         $config = new TestConfig();
-        $config->throw_exception = false;
+        $config->throwException = false;
 
         new ProjectChecker(
             $config,
-            $this->file_provider,
+            $this->fileProvider,
             new Provider\FakeParserCacheProvider(),
             new \Psalm\Provider\NoCache\NoFileStorageCacheProvider(),
             new \Psalm\Provider\NoCache\NoClassLikeStorageCacheProvider(),
@@ -89,7 +89,7 @@ class ReportOutputTest extends TestCase
      */
     public function testJsonOutputForGetPsalmDotOrg()
     {
-        $file_contents = '<?php
+        $fileContents = '<?php
 function psalmCanVerify(int $your_code): ?string {
   return $as_you . "type";
 }
@@ -107,12 +107,12 @@ echo $a;';
 
         $this->addFile(
             'somefile.php',
-            $file_contents
+            $fileContents
         );
 
         $this->analyzeFile('somefile.php', new Context());
 
-        $issue_data = [
+        $issueData = [
             [
                 'severity' => 'error',
                 'line_from' => 3,
@@ -191,7 +191,7 @@ somefile.php:7:6:error - Const CHANGE_ME is not defined
 somefile.php:15:6:error - Possibly undefined global variable $a, first seen on line 10
 ';
         $this->assertSame(
-            $issue_data,
+            $issueData,
             json_decode(IssueBuffer::getOutput(ProjectChecker::TYPE_JSON, false), true)
         );
         $this->assertSame(
@@ -200,7 +200,7 @@ somefile.php:15:6:error - Possibly undefined global variable $a, first seen on l
         );
         // FIXME: The XML parser only return strings, all int value are casted, so the assertSame failed
         //$this->assertSame(
-        //    ['report' => ['item' => $issue_data]],
+        //    ['report' => ['item' => $issueData]],
         //    XML2Array::createArray(IssueBuffer::getOutput(ProjectChecker::TYPE_XML, false), LIBXML_NOCDATA)
         //);
     }
@@ -235,7 +235,7 @@ somefile.php:15:6:error - Possibly undefined global variable $a, first seen on l
         );
 
         ob_start();
-        IssueBuffer::finish($this->project_checker, true, 0);
+        IssueBuffer::finish($this->projectChecker, true, 0);
         ob_end_clean();
         $this->assertFileExists(__DIR__ . '/test-report.json');
         $this->assertSame('[]

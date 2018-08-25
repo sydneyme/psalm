@@ -22,12 +22,12 @@ class ArrayAssignmentTest extends TestCase
         );
 
         $context = new Context();
-        $context->vars_in_scope['$b'] = \Psalm\Type::getBool();
-        $context->vars_in_scope['$foo'] = \Psalm\Type::getArray();
+        $context->varsInScope['$b'] = \Psalm\Type::getBool();
+        $context->varsInScope['$foo'] = \Psalm\Type::getArray();
 
         $this->analyzeFile('somefile.php', $context);
 
-        $this->assertFalse(isset($context->vars_in_scope['$foo[\'a\']']));
+        $this->assertFalse(isset($context->varsInScope['$foo[\'a\']']));
     }
 
     /**
@@ -732,12 +732,12 @@ class ArrayAssignmentTest extends TestCase
             'keyedIntOffsetArrayValues' => [
                 '<?php
                     $a = ["hello", 5];
-                    $a_values = array_values($a);
-                    $a_keys = array_keys($a);',
+                    $aValues = array_values($a);
+                    $aKeys = array_keys($a);',
                 'assertions' => [
                     '$a' => 'array{0:string, 1:int}',
-                    '$a_values' => 'array<int, string|int>',
-                    '$a_keys' => 'array<int, int>',
+                    '$aValues' => 'array<int, string|int>',
+                    '$aKeys' => 'array<int, int>',
                 ],
             ],
             'changeIntOffsetKeyValuesWithDirectAssignment' => [
