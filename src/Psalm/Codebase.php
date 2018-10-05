@@ -964,4 +964,29 @@ class Codebase
             return null;
         }
     }
+
+    /**
+     * @param \LanguageServerProtocol\TextDocumentContentChangeEvent[] $changes
+     * @return void
+     */
+    public function addTemporaryFileChanges(string $file_path, array $changes)
+    {
+        $this->file_provider->addTemporaryFileChanges($file_path, $changes);
+        $this->invalidateInformationForFile($file_path);
+        $this->scanner->addFilesToDeepScan([$file_path => $file_path]);
+        $this->scanner->scanFiles($this->classlikes);
+        $this->populator->populateCodebase($this);
+    }
+
+    /**
+     * @return void
+     */
+    public function removeTemporaryFileChanges(string $file_path)
+    {
+        $this->file_provider->removeTemporaryFileChanges($file_path);
+        $this->invalidateInformationForFile($file_path);
+        $this->scanner->addFilesToDeepScan([$file_path => $file_path]);
+        $this->scanner->scanFiles($this->classlikes);
+        $this->populator->populateCodebase($this);
+    }
 }

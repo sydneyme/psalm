@@ -68,6 +68,9 @@ class TextDocument
      */
     public function didOpen(TextDocumentItem $textDocument)
     {
+        $this->server->invalidateFileAndDependents($textDocument->uri);
+        $this->server->analyzePath(LanguageServer::uriToPath($textDocument->uri));
+        $this->server->emitIssues($textDocument->uri);
     }
 
     /**
@@ -77,6 +80,7 @@ class TextDocument
     {
         $file_path = LanguageServer::uriToPath($textDocument->uri);
 
+        $this->codebase->removeTemporaryFileChanges($file_path);
         $this->server->invalidateFileAndDependents($textDocument->uri);
 
         $this->server->analyzePath($file_path);
@@ -92,6 +96,9 @@ class TextDocument
      */
     public function didChange(VersionedTextDocumentIdentifier $textDocument, array $contentChanges)
     {
+        $this->codebase->addTemporaryFileChanges(\LanguageServer\uriToPath($textDocument->uri), $contentChanges);
+        $this->server->analyzePath(\LanguageServer\uriToPath($textDocument->uri));
+        $this->server->emitIssues($textDocument->uri);
     }
 
     /**

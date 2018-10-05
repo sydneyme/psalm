@@ -7,12 +7,21 @@ use Psalm\Checker\ProjectChecker;
 class FileProvider
 {
     /**
+     * @var array<string, string>
+     */
+    private $temp_files = [];
+
+    /**
      * @param  string  $file_path
      *
      * @return string
      */
     public function getContents($file_path)
     {
+        if (isset($this->temp_files[strtolower($file_path)])) {
+            return $this->temp_files[strtolower($file_path)];
+        }
+
         return (string)file_get_contents($file_path);
     }
 
@@ -35,6 +44,23 @@ class FileProvider
     public function getModifiedTime($file_path)
     {
         return (int)filemtime($file_path);
+    }
+
+    /**
+     * @param \LanguageServerProtocol\TextDocumentContentChangeEvent[] $changes
+     * @return  void
+     */
+    public function addTemporaryFileChanges(string $file_path, array $changes)
+    {
+        $this->temp_files[strtolower($file_path)] = $changes[0]->text;
+    }
+
+    /**
+     * @return  void
+     */
+    public function removeTemporaryFileChanges(string $file_path)
+    {
+        unset($this->temp_files[strtolower($file_path)]);
     }
 
     /**
