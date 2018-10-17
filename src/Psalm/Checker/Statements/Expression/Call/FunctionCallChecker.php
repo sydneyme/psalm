@@ -261,6 +261,12 @@ class FunctionCallChecker extends \Psalm\Checker\Statements\Expression\CallCheck
                         $stmt->args
                     );
                 }
+
+                $codebase->analyzer->addNodeReference(
+                    $statements_checker->getFilePath(),
+                    $stmt->name,
+                    $function_id . '()'
+                );
             }
         }
 
@@ -454,6 +460,10 @@ class FunctionCallChecker extends \Psalm\Checker\Statements\Expression\CallCheck
 
                 $stmt->inferredType = new Type\Union([$atomic_type]);
             }
+        }
+
+        if (isset($stmt->inferredType)) {
+            $codebase->analyzer->addNodeType($statements_checker->getFilePath(), $stmt, (string) $stmt->inferredType);
         }
 
         if ($function_storage) {

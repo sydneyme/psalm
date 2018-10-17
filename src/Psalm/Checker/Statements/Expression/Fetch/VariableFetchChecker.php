@@ -38,6 +38,7 @@ class VariableFetchChecker
         $from_global = false
     ) {
         $project_checker = $statements_checker->getFileChecker()->project_checker;
+        $codebase = $project_checker->codebase;
 
         if ($stmt->name === 'this') {
             if ($statements_checker->isStatic()) {
@@ -70,6 +71,14 @@ class VariableFetchChecker
             }
 
             $stmt->inferredType = clone $context->vars_in_scope['$this'];
+
+            if (isset($stmt->inferredType)) {
+                $codebase->analyzer->addNodeType(
+                    $statements_checker->getFilePath(),
+                    $stmt,
+                    (string) $stmt->inferredType
+                );
+            }
 
             return null;
         }
@@ -261,6 +270,14 @@ class VariableFetchChecker
             }
         } else {
             $stmt->inferredType = clone $context->vars_in_scope[$var_name];
+
+            if (isset($stmt->inferredType)) {
+                $codebase->analyzer->addNodeType(
+                    $statements_checker->getFilePath(),
+                    $stmt,
+                    (string) $stmt->inferredType
+                );
+            }
         }
 
         return null;

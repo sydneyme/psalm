@@ -32,12 +32,18 @@ use Psalm\Provider\FileStorageProvider;
  *     column_to: int
  * }
  *
+ * @psalm-type  TaggedCodeType = array<int, array{0: int, 1: string}>
+ *
  * @psalm-type  WorkerData = array{
  *     issues: array<int, IssueData>,
  *     file_references: array<string, array<string,bool>>,
  *     mixed_counts: array<string, array{0: int, 1: int}>,
  *     method_references: array<string, array<string,bool>>,
- *     correct_methods: array<string, array<string, int>>
+ *     correct_methods: array<string, array<string, int>>,
+ *     file_maps: array<
+ *         string,
+ *         array{0: TaggedCodeType, 1: TaggedCodeType}
+ *     >
  * }
  */
 
@@ -101,6 +107,16 @@ class Analyzer
      * @var array<string, array<int, IssueData>>
      */
     private $existing_issues = [];
+
+    /**
+     * @var array<string, array<int, array{0: int, 1: string}>>
+     */
+    private $reference_map = [];
+
+    /**
+     * @var array<string, array<int, array{0: int, 1: string}>>
+     */
+    private $type_map = [];
 
     /**
      * @param bool $debug_output
@@ -227,6 +243,7 @@ class Analyzer
                         'method_references' => $file_reference_provider->getClassMethodReferences(),
                         'mixed_counts' => $analyzer->getMixedCounts(),
                         'correct_methods' => $analyzer->getCorrectMethods(),
+                        'file_maps' => $analyzer->getFileMaps(),
                     ];
                 }
             );
@@ -256,6 +273,11 @@ class Analyzer
                         $this->mixed_counts[$file_path][1] += $nonmixed_count;
                     }
                 }
+
+                foreach ($pool_data['file_maps'] as $file_path => list($reference_map, $type_map)) {
+                    $this->reference_map[$file_path] = $reference_map;
+                    $this->type_map[$file_path] = $type_map;
+                }
             }
 
             if ($pool->didHaveError()) {
@@ -276,6 +298,7 @@ class Analyzer
 
         $scanned_files = $project_checker->codebase->scanner->getScannedFiles();
         $project_checker->file_reference_provider->setCorrectMethods($this->correct_methods);
+        $project_checker->file_reference_provider->setFileMaps($this->getFileMaps());
         $project_checker->file_reference_provider->updateReferenceCache($project_checker->codebase, $scanned_files);
 
         if ($project_checker->diff_methods) {
@@ -299,6 +322,12 @@ class Analyzer
         ) {
             $this->correct_methods = $project_checker->file_reference_provider->getCorrectMethods();
             $this->existing_issues = $project_checker->file_reference_provider->getExistingIssues();
+            $file_maps = $project_checker->file_reference_provider->getFileMaps();
+
+            foreach ($file_maps as $file_path => list($reference_map, $type_map)) {
+                $this->reference_map[$file_path] = $reference_map;
+                $this->type_map[$file_path] = $type_map;
+            }
         }
 
         $statements_provider = $project_checker->codebase->statements_provider;
@@ -392,6 +421,7 @@ class Analyzer
 
         foreach ($this->files_to_analyze as $file_path) {
             $project_checker->file_reference_provider->clearExistingIssuesForFile($file_path);
+            $project_checker->file_reference_provider->clearExistingFileMapsForFile($file_path);
         }
     }
 
@@ -433,6 +463,74 @@ class Analyzer
                         }
 
                         continue 2;
+                    }
+                }
+            }
+        }
+
+        foreach ($this->reference_map as $file_path => &$reference_map) {
+            if (!isset($this->correct_methods[$file_path])) {
+                unset($this->reference_map[$file_path]);
+                continue;
+            }
+
+            $file_diff_map = $diff_map[$file_path] ?? [];
+
+            if (!$file_diff_map) {
+                continue;
+            }
+
+            $first_diff_offset = $file_diff_map[0][0];
+            $last_diff_offset = $file_diff_map[count($file_diff_map) - 1][1];
+
+            foreach ($reference_map as $reference_from => list($reference_to, $tag)) {
+                if ($reference_to < $first_diff_offset || $reference_from > $last_diff_offset) {
+                    continue;
+                }
+
+                foreach ($file_diff_map as list($from, $to, $file_offset)) {
+                    if ($reference_from >= $from && $reference_from <= $to) {
+                        if ($file_offset !== 0) {
+                            unset($reference_map[$reference_from]);
+                            $reference_map[$reference_from += $file_offset] = [
+                                $reference_to += $file_offset,
+                                $tag
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($this->type_map as $file_path => &$type_map) {
+            if (!isset($this->correct_methods[$file_path])) {
+                unset($this->type_map[$file_path]);
+                continue;
+            }
+
+            $file_diff_map = $diff_map[$file_path] ?? [];
+
+            if (!$file_diff_map) {
+                continue;
+            }
+
+            $first_diff_offset = $file_diff_map[0][0];
+            $last_diff_offset = $file_diff_map[count($file_diff_map) - 1][1];
+
+            foreach ($type_map as $type_from => list($type_to, $tag)) {
+                if ($type_to < $first_diff_offset || $type_from > $last_diff_offset) {
+                    continue;
+                }
+
+                foreach ($file_diff_map as list($from, $to, $file_offset)) {
+                    if ($type_from >= $from && $type_from <= $to) {
+                        if ($file_offset !== 0) {
+                            unset($type_map[$type_from]);
+                            $type_map[$type_from += $file_offset] = [
+                                $type_to += $file_offset,
+                                $tag
+                            ];
+                        }
                     }
                 }
             }
@@ -506,6 +604,22 @@ class Analyzer
     public function getMixedCounts()
     {
         return $this->mixed_counts;
+    }
+
+    public function addNodeType(string $file_path, PhpParser\Node $node, string $node_type) : void
+    {
+        $this->type_map[$file_path][(int)$node->getAttribute('startFilePos')] = [
+            (int)$node->getAttribute('endFilePos'),
+            $node_type
+        ];
+    }
+
+    public function addNodeReference(string $file_path, PhpParser\Node $node, string $reference) : void
+    {
+        $this->reference_map[$file_path][(int)$node->getAttribute('startFilePos')] = [
+            (int)$node->getAttribute('endFilePos'),
+            $reference
+        ];
     }
 
     /**
@@ -702,6 +816,39 @@ class Analyzer
     public function getCorrectMethods()
     {
         return $this->correct_methods;
+    }
+
+    /**
+     * @return array<string, array{0: TaggedCodeType, 1: TaggedCodeType}>
+     */
+    public function getFileMaps()
+    {
+        $file_maps = [];
+
+        foreach ($this->reference_map as $file_path => $reference_map) {
+            $file_maps[$file_path] = [$reference_map, []];
+        }
+
+        foreach ($this->type_map as $file_path => $type_map) {
+            if (isset($file_maps[$file_path])) {
+                $file_maps[$file_path][1] = $type_map;
+            } else {
+                $file_maps[$file_path] = [[], $type_map];
+            }
+        }
+
+        return $file_maps;
+    }
+
+    /**
+     * @return array{0: array<int, array{0: int, 1: string}>, 1: array<int, array{0: int, 1: string}>}
+     */
+    public function getMapsForFile(string $file_path)
+    {
+        return [
+            $this->reference_map[$file_path] ?? [],
+            $this->type_map[$file_path] ?? []
+        ];
     }
 
     /**

@@ -799,4 +799,93 @@ class Codebase
 
         $this->file_storage_provider->remove($file_path);
     }
+
+    public function getSymbolInformation(string $file_path, string $symbol) : ?string
+    {
+        error_log('getting info for ' . $symbol);
+        try {
+            if (strpos($symbol, '::')) {
+                list(, $symbol_name) = explode('::', $symbol);
+
+                if (strpos($symbol, '$') !== false) {
+                    $storage = $this->properties->getStorage($symbol);
+
+                    return $storage->getInfo() . ' ' . $symbol_name;
+                }
+
+                $declaring_method_id = $this->methods->getDeclaringMethodId($symbol);
+
+                if (!$declaring_method_id) {
+                    return null;
+                }
+
+                $storage = $this->methods->getStorage($declaring_method_id);
+
+                return (string) $storage;
+            }
+
+            if (strpos($symbol, '()')) {
+                $file_storage = $this->file_storage_provider->get($file_path);
+
+                $function_name = substr($symbol, 0, -2);
+
+                if (isset($file_storage->functions[$function_name])) {
+                    $function_storage = $file_storage->functions[$function_name];
+
+                    return (string)$function_storage;
+                }
+
+                return null;
+            }
+
+            $storage = $this->classlike_storage_provider->get($symbol);
+
+            return ($storage->abstract ? 'abstract ' : '') . 'class ' . $storage->name;
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            return null;
+        }
+    }
+
+    public function getSymbolLocation(string $file_path, string $symbol) : ?\Psalm\CodeLocation
+    {
+        try {
+            if (strpos($symbol, '::')) {
+                if (strpos($symbol, '$') !== false) {
+                    $storage = $this->properties->getStorage($symbol);
+
+                    return $storage->location;
+                }
+
+                $declaring_method_id = $this->methods->getDeclaringMethodId($symbol);
+
+                if (!$declaring_method_id) {
+                    return null;
+                }
+
+                $storage = $this->methods->getStorage($declaring_method_id);
+
+                return $storage->location;
+            }
+
+            if (strpos($symbol, '()')) {
+                $file_storage = $this->file_storage_provider->get($file_path);
+
+                $function_name = substr($symbol, 0, -2);
+
+                if (isset($file_storage->functions[$function_name])) {
+                    return $file_storage->functions[$function_name]->location;
+                }
+
+                return null;
+            }
+
+            $storage = $this->classlike_storage_provider->get($symbol);
+
+            return $storage->location;
+        } catch (\UnexpectedValueException $e) {
+            error_log($e->getMessage());
+            return null;
+        }
+    }
 }

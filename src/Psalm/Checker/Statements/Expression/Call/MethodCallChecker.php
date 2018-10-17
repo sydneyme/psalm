@@ -633,6 +633,14 @@ class MethodCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                         $args
                     );
 
+                    if ($method_id) {
+                        $codebase->analyzer->addNodeReference(
+                            $statements_checker->getFilePath(),
+                            $stmt->name,
+                            $method_id
+                        );
+                    }
+
                     if (isset($stmt->inferredType)) {
                         $return_type_candidate = $stmt->inferredType;
                     }
@@ -823,6 +831,10 @@ class MethodCallChecker extends \Psalm\Checker\Statements\Expression\CallChecker
                 new CodeLocation($statements_checker->getSource(), $stmt),
                 $statements_checker
             );
+        }
+
+        if (isset($stmt->inferredType)) {
+            $codebase->analyzer->addNodeType($statements_checker->getFilePath(), $stmt, (string) $stmt->inferredType);
         }
 
         if (!$config->remember_property_assignments_after_call && !$context->collect_initializations) {

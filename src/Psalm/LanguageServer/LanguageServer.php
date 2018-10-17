@@ -167,7 +167,8 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
 
                 if ($this->textDocument === null) {
                     $this->textDocument = new TextDocument(
-                        $this
+                        $this,
+                        $this->project_checker->codebase
                     );
                 }
 
@@ -180,11 +181,11 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                 // Support "Find all symbols in workspace"
                 $serverCapabilities->workspaceSymbolProvider = false;
                 // Support "Go to definition"
-                $serverCapabilities->definitionProvider = false;
+                $serverCapabilities->definitionProvider = true;
                 // Support "Find all references"
                 $serverCapabilities->referencesProvider = false;
                 // Support "Hover"
-                $serverCapabilities->hoverProvider = false;
+                $serverCapabilities->hoverProvider = true;
                 // Support "Completion"
                 /*
                 $serverCapabilities->completionProvider = new CompletionOptions;
@@ -222,6 +223,16 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
     {
         $file_path = self::uriToPath($uri);
         $this->project_checker->codebase->reloadFiles($this->project_checker, [$file_path]);
+    }
+
+    /**
+     * @return array{0: array<int, array{0: int, 1: string}>, 1: array<int, array{0: int, 1: string}>}
+     */
+    public function getMapsForPath(string $file_path) : array
+    {
+        $codebase = $this->project_checker->codebase;
+
+        return $codebase->analyzer->getMapsForFile($file_path);
     }
 
     /**
@@ -324,6 +335,27 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
     public function exit()
     {
         exit(0);
+    }
+
+    /**
+     * Transforms an absolute file path into a URI as used by the language server protocol.
+     *
+     * @param string $filepath
+     * @return string
+     */
+    public static function pathToUri(string $filepath): string
+    {
+        $filepath = trim(str_replace('\\', '/', $filepath), '/');
+        $parts = explode('/', $filepath);
+        // Don't %-encode the colon after a Windows drive letter
+        $first = array_shift($parts);
+        if (substr($first, -1) !== ':') {
+            $first = rawurlencode($first);
+        }
+        $parts = array_map('rawurlencode', $parts);
+        array_unshift($parts, $first);
+        $filepath = implode('/', $parts);
+        return 'file:///' . $filepath;
     }
 
     /**
