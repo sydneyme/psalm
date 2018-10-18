@@ -105,10 +105,13 @@ class StatementsProvider
                 echo 'Parsing ' . $file_path . "\n";
             }
 
+            $time = microtime(true);
             $stmts = self::parseStatements($file_contents, $file_path);
+            error_log('Parsing ' . $file_path . ' took ' . number_format(microtime(true) - $time, 2) . 's');
 
             $existing_file_contents = $this->parser_cache_provider->loadExistingFileContentsFromCache($file_path);
 
+            $time = microtime(true);
             if ($existing_file_contents) {
                 $existing_statements = $this->parser_cache_provider->loadExistingStatementsFromCache($file_path);
 
@@ -190,6 +193,8 @@ class StatementsProvider
             }
 
             $this->parser_cache_provider->cacheFileContents($file_path, $file_contents);
+
+            error_log('Doing cache stuff took ' . number_format(microtime(true) - $time, 2) . 's');
         } else {
             $from_cache = true;
             $this->diff_map[$file_path] = [];
@@ -291,7 +296,7 @@ class StatementsProvider
                 'comments', 'startLine', 'startFilePos', 'endFilePos',
             ];
 
-            $lexer = new PhpParser\Lexer\Emulative([ 'usedAttributes' => $attributes ]);
+            $lexer = new PhpParser\Lexer([ 'usedAttributes' => $attributes ]);
 
             self::$parser = (new PhpParser\ParserFactory())->create(PhpParser\ParserFactory::PREFER_PHP7, $lexer);
         }

@@ -58,10 +58,14 @@ class FileScanner implements FileSource
             return;
         }
 
+        $time = microtime(true);
+
         $stmts = $codebase->statements_provider->getStatementsForFile(
             $file_storage->file_path,
             $debug_output
         );
+
+        error_log('Getting statements took ' . number_format(microtime(true) - $time, 2) . 's');
 
         foreach ($stmts as $stmt) {
             if (!$stmt instanceof PhpParser\Node\Stmt\ClassLike
@@ -81,11 +85,15 @@ class FileScanner implements FileSource
             }
         }
 
+        $time = microtime(true);
+
         $traverser = new NodeTraverser();
         $traverser->addVisitor(new DependencyFinderVisitor($codebase, $file_storage, $this));
         $traverser->traverse($stmts);
 
         $file_storage->deep_scan = $this->will_analyze;
+
+        error_log('Traversing took ' . number_format(microtime(true) - $time, 2) . 's');
     }
 
     /**

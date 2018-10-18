@@ -316,6 +316,7 @@ class Scanner
      */
     public function scanFiles(ClassLikes $classlikes, int $pool_size = 1)
     {
+        $time = microtime(true);
         $has_changes = false;
 
         while ($this->files_to_scan || $this->classes_to_scan) {
@@ -327,6 +328,8 @@ class Scanner
                 $this->convertClassesToFilePaths($classlikes);
             }
         }
+
+        error_log('Scanning took ' . number_format(microtime(true) - $time, 2) . 's');
 
         return $has_changes;
     }
@@ -370,6 +373,8 @@ class Scanner
         } else {
             $pool_size = 1;
         }
+
+        $time = microtime(true);
 
         if ($pool_size > 1) {
             $process_file_paths = [];
@@ -464,6 +469,8 @@ class Scanner
                 ++$i;
             }
         }
+
+        error_log('Scanning files took ' . number_format(microtime(true) - $time, 2) . 's');
 
         if ($this->codebase->statements_provider->parser_cache_provider) {
             $this->codebase->statements_provider->parser_cache_provider->saveFileContentHashes();
